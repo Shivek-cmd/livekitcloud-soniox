@@ -1,0 +1,17 @@
+[Unit]
+Description=Punjab Da Dhaba Voice Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/livekit-sarvam
+EnvironmentFile=/opt/livekit-sarvam/.env
+ExecStart=/opt/livekit-sarvam/.venv/bin/python agent.py start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
