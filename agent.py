@@ -285,7 +285,7 @@ async def entrypoint(ctx: JobContext):
     )
 
     await session.say(
-        "Welcome to Bizbull Restaurant! I'm Sierra — how can I help you today?"
+        "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! Welcome to Bizbull Restaurant, I'm Sierra. How can I help you today?"
     )
 
 
