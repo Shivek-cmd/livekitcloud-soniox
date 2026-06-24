@@ -447,6 +447,19 @@ async def entrypoint(ctx: JobContext):
         room_input_options=RoomInputOptions(),
     )
 
+    @session.on("user_input_transcribed")
+    def _on_user_transcript(ev) -> None:
+        if ev.is_final:
+            logger.info(f"USER: {ev.transcript}")
+
+    @session.on("conversation_item_added")
+    def _on_conv_item(ev) -> None:
+        role = getattr(ev.item, "role", None)
+        if role == "assistant":
+            text = getattr(ev.item, "text_content", None) or ""
+            if text:
+                logger.info(f"SIERRA: {text}")
+
     await session.say(
         "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! Welcome to Bizbull Restaurant, I'm Sierra. How can I help you today?"
     )
