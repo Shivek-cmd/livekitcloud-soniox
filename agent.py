@@ -117,7 +117,7 @@ STEP E — FINAL CONFIRMATION (once only, never before this step)
   E1. Call get_order_summary() to get the full order data.
   E2. Read back the summary naturally:
       "Okay [Name] ji — [items with quantities and spice], [pickup/delivery],
-       total ₹[amount]. [Any special instructions if mentioned in step B.] All good?"
+       total $[amount]. [Any special instructions if mentioned in step B.] All good?"
   E3. Customer says yes → call place_order().
       Then say warmly: pickup ready in 20–25 minutes, delivery in 35–45 minutes.
   E4. Customer wants a change → fix it → go back to E1.
@@ -143,36 +143,36 @@ describe it briefly from the list below. Never invent ingredients, prices, or di
 If something is not on the menu, say so and suggest the closest option.
 
 STARTERS:
-  Paneer Tikka ₹280 (V) — cottage cheese in spiced yogurt marinade, char-grilled in tandoor
-  Chicken Tikka ₹320 — boneless chicken, spiced yogurt marinade, char-grilled
-  Amritsari Fish ₹340 — white fish in gram flour and ajwain batter, crispy fried
-  Veg Platter ₹350 (V) — assorted grilled vegetables and paneer from the tandoor
+  Paneer Tikka $16 (V) — cottage cheese in spiced yogurt marinade, char-grilled in tandoor
+  Chicken Tikka $18 — boneless chicken, spiced yogurt marinade, char-grilled
+  Amritsari Fish $19 — white fish in gram flour and ajwain batter, crispy fried
+  Veg Platter $20 (V) — assorted grilled vegetables and paneer from the tandoor
 
 MAINS:
-  Dal Makhani ₹220 (V) — black lentils slow-cooked overnight, butter, cream, tomato
-  Sarson da Saag ₹240 (V) — mustard greens, spinach, ginger, butter — pairs with Makki di Roti
-  Palak Paneer ₹260 (V) — cottage cheese in spiced creamy spinach gravy
-  Butter Chicken ₹320 — boneless chicken in creamy tomato butter gravy
-  Mutton Rogan Josh ₹420 — bone-in mutton slow-cooked in Kashmiri spices
-  Chole Bhature ₹160 (V) — spiced chickpea curry served with fried bread
-  Rajma Chawal ₹180 (V) — kidney bean curry served with steamed rice
+  Dal Makhani $15 (V) — black lentils slow-cooked overnight, butter, cream, tomato
+  Sarson da Saag $16 (V) — mustard greens, spinach, ginger, butter — pairs with Makki di Roti
+  Palak Paneer $16 (V) — cottage cheese in spiced creamy spinach gravy
+  Butter Chicken $19 — boneless chicken in creamy tomato butter gravy
+  Mutton Rogan Josh $25 — bone-in mutton slow-cooked in Kashmiri spices
+  Chole Bhature $14 (V) — spiced chickpea curry served with fried bread
+  Rajma Chawal $14 (V) — kidney bean curry served with steamed rice
 
 BREADS — no spice level, skip spice question:
-  Butter Naan ₹50 (V) — leavened bread, tandoor-baked, topped with butter
-  Tandoori Roti ₹30 (V) — whole wheat flatbread, tandoor-baked
-  Makki di Roti ₹40 (V) — cornmeal flatbread, traditional Punjabi
-  Aloo Paratha ₹80 (V) — whole wheat flatbread stuffed with spiced potato
+  Butter Naan $4 (V) — leavened bread, tandoor-baked, topped with butter
+  Tandoori Roti $3 (V) — whole wheat flatbread, tandoor-baked
+  Makki di Roti $4 (V) — cornmeal flatbread, traditional Punjabi
+  Aloo Paratha $6 (V) — whole wheat flatbread stuffed with spiced potato
 
 DRINKS — no spice level:
-  Sweet Lassi ₹80 (V) — yogurt, sugar, rose water
-  Salted Lassi ₹70 (V) — yogurt, salt, roasted cumin
-  Mango Lassi ₹100 (V) — yogurt, mango pulp
-  Masala Chai ₹40 (V) — spiced milk tea with ginger and cardamom
+  Sweet Lassi $6 (V) — yogurt, sugar, rose water
+  Salted Lassi $5 (V) — yogurt, salt, roasted cumin
+  Mango Lassi $7 (V) — yogurt, mango pulp
+  Masala Chai $4 (V) — spiced milk tea with ginger and cardamom
 
 DESSERTS — no spice level:
-  Gulab Jamun ₹80 (V) — milk solid dumplings in rose syrup, served 2 pieces
-  Kheer ₹90 (V) — creamy rice pudding with cardamom and dry fruits
-  Gajar Halwa ₹110 (V) — slow-cooked carrot with ghee, sugar, and cardamom
+  Gulab Jamun $6 (V) — milk solid dumplings in rose syrup, served 2 pieces
+  Kheer $6 (V) — creamy rice pudding with cardamom and dry fruits
+  Gajar Halwa $7 (V) — slow-cooked carrot with ghee, sugar, and cardamom
 
 (V) = vegetarian.
 
@@ -181,7 +181,7 @@ RESTAURANT INFORMATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Name: Bizbull Restaurant
 Hours: Monday to Sunday, 11 AM to 11 PM
-Delivery charge: ₹{DELIVERY_CHARGE} (minimum order ₹{MIN_ORDER_DELIVERY} for delivery)
+Delivery charge: ${DELIVERY_CHARGE} (minimum order ${MIN_ORDER_DELIVERY} for delivery)
 Address: [FILL IN RESTAURANT ADDRESS]
 If asked for something you don't know, say so and offer to transfer rather than guessing.
 
@@ -253,7 +253,7 @@ class RestaurantAgent(Agent):
             return "order_type must be 'pickup' or 'delivery'."
         self.cart.order_type = order_type
         if order_type == "delivery":
-            return f"Set to delivery. Delivery charge ₹{DELIVERY_CHARGE} will be added. Now ask for delivery address."
+            return f"Set to delivery. Delivery charge ${DELIVERY_CHARGE} will be added. Now ask for delivery address."
         return "Set to pickup. Ask for customer name and phone number."
 
     @function_tool
@@ -304,7 +304,7 @@ class RestaurantAgent(Agent):
 
         wait = "30-40 ਮਿੰਟ" if self.cart.order_type == "delivery" else "20-25 ਮਿੰਟ"
         return (
-            f"Order placed! Total ₹{self.cart.total}. "
+            f"Order placed! Total ${self.cart.total}. "
             f"Tell customer: ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। "
             f"{wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
         )
@@ -321,7 +321,7 @@ class RestaurantAgent(Agent):
         if not item:
             return f"'{item_name}' is not on our menu."
         veg = "Vegetarian" if item["veg"] else "Non-vegetarian"
-        return f"{item['name']} ({item['punjabi']}) — ₹{item['price']} — {veg}"
+        return f"{item['name']} ({item['punjabi']}) — ${item['price']} — {veg}"
 
     # ── TRANSFER ─────────────────────────────────────────────────────────────
 
