@@ -1,0 +1,17 @@
+[Unit]
+Description=Punjab Da Dhaba Token Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/livekit-sarvam
+EnvironmentFile=/opt/livekit-sarvam/.env
+ExecStart=/opt/livekit-sarvam/.venv/bin/uvicorn token_server:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
