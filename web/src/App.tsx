@@ -31,6 +31,8 @@ export default function App() {
           const el = track.attach()
           el.autoplay = true
           document.body.appendChild(el)
+          // Explicit play() because autoplay alone is blocked in many browsers
+          el.play().catch(() => {})
           audioEls.current.push(el)
         }
       })
@@ -56,6 +58,8 @@ export default function App() {
       })
 
       await room.connect(url, token)
+      // Resume AudioContext — must be called in response to a user gesture
+      await room.startAudio()
       await room.localParticipant.setMicrophoneEnabled(true, {
         echoCancellation: true,
         noiseSuppression: true,
@@ -85,8 +89,8 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="restaurant-name">
-          <h1>ਪੰਜਾਬ ਦਾ ਢਾਬਾ</h1>
-          <p>Punjab Da Dhaba</p>
+          <h1>Bizbull Restaurant</h1>
+          <p>ਪੰਜਾਬੀ ਖਾਣਾ · Punjabi Cuisine</p>
         </div>
       </header>
 
