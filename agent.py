@@ -240,7 +240,7 @@ async def entrypoint(ctx: JobContext):
             mode="transcribe",
             sample_rate=16000,
         ),
-        llm=sarvam.LLM(model="sarvam-30b-16k"),
+        llm=sarvam.LLM(model="sarvam-30b"),
         tts=sarvam.TTS(
             target_language_code="pa-IN",
             model="bulbul:v3",
