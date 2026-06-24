@@ -276,6 +276,10 @@ async def entrypoint(ctx: JobContext):
             speech_sample_rate=22050,
             pace=0.95 if is_phone else 1.0,
         ),
+        # Require 1.5s of continuous speech to interrupt the agent.
+        # Prevents phone echo / mic bleed from cutting the agent off mid-sentence.
+        interrupt_speech_duration=1.5,
+        min_endpointing_delay=0.8,
     )
 
     await session.start(
