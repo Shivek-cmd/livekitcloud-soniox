@@ -4,7 +4,7 @@ import uuid
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from livekit.api import AccessToken, VideoGrants
+from livekit.api import AccessToken, VideoGrants, LiveKitAPI, CreateAgentDispatchRequest
 
 load_dotenv()
 
@@ -42,6 +42,19 @@ async def get_token(room: str = None, identity: str = None):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    # Dispatch agent to the room so it joins when the customer connects
+    try:
+        async with LiveKitAPI(
+            url=LIVEKIT_URL,
+            api_key=LIVEKIT_API_KEY,
+            api_secret=LIVEKIT_API_SECRET,
+        ) as lk:
+            await lk.agent_dispatch.create_dispatch(
+                CreateAgentDispatchRequest(room=room_name, agent_name="")
+            )
+    except Exception:
+        pass  # Don't block the token if dispatch fails
 
     return {
         "token": token,
