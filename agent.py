@@ -413,21 +413,13 @@ async def entrypoint(ctx: JobContext):
         else {}
     )
 
-    phone_session_extras = (
-        {
-            "min_endpointing_delay": 0.8,
-            "min_interruption_duration": 1.0,
-        }
-        if is_phone
-        else {}
-    )
-
     session = AgentSession(
         stt=sarvam.STT(
-            language="pa-IN",
+            language="unknown",
             model="saaras:v3",
             mode="transcribe",
             sample_rate=16000,
+            flush_signal=True,
             **phone_stt_extras,
         ),
         llm=sarvam.LLM(model="sarvam-30b"),
@@ -438,7 +430,9 @@ async def entrypoint(ctx: JobContext):
             pace=0.95 if is_phone else 1.0,
             **phone_tts_extras,
         ),
-        **phone_session_extras,
+        turn_detection="stt",
+        min_endpointing_delay=0.2 if is_phone else 0.07,
+        **({"min_interruption_duration": 1.0} if is_phone else {}),
     )
 
     await session.start(
