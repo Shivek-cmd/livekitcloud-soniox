@@ -56,7 +56,11 @@ export default function App() {
       })
 
       await room.connect(url, token)
-      await room.localParticipant.setMicrophoneEnabled(true)
+      await room.localParticipant.setMicrophoneEnabled(true, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      })
       setCallState('connected')
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Connection failed')
