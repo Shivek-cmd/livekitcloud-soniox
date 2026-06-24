@@ -395,10 +395,10 @@ async def entrypoint(ctx: JobContext):
 
     phone_stt_extras = (
         {
-            "num_initial_ignored_frames": 10,
-            "interrupt_min_speech_frames": 8,
-            "first_turn_min_speech_frames": 10,
-            "min_speech_frames": 5,
+            "num_initial_ignored_frames": 25,   # ignore first ~2.5s of each speech burst (eats echo)
+            "interrupt_min_speech_frames": 20,  # need ~2s continuous speech to count as interruption
+            "first_turn_min_speech_frames": 25, # stricter on first turn (greeting echo is worst here)
+            "min_speech_frames": 20,            # need ~2s sustained speech to trigger at all
         }
         if is_phone
         else {}
