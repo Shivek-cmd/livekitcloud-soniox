@@ -2,12 +2,12 @@
 
 ## What We're Building
 
-A **Punjabi-first restaurant voice agent** that handles:
+A **Punjabi restaurant voice agent** named **Sierra** for **Bizbull Restaurant** that handles:
 - Food orders (pickup and delivery)
 - Reservation bookings
 - Menu queries and recommendations
 
-Customers call a phone number or open a web link — the agent answers in Punjabi, takes their order naturally, and confirms it. No human staff needed for routine order-taking.
+Customers call a phone number or open a web link — Sierra answers in natural Punjabi-English (the way real Canadian Punjabi restaurant staff speak), takes the order, and confirms it. No human staff needed for routine order-taking.
 
 ---
 
@@ -22,20 +22,20 @@ Punjabi-speaking customers ordering from a Punjabi restaurant. Primary channel i
 | Concern | Choice | Reason |
 |---|---|---|
 | Real-time voice transport | LiveKit (self-hosted) | Open-source WebRTC, full control, no per-minute billing |
-| Phone channel | Twilio SIP | Tested with LiveKit, Indian +91 numbers available |
+| Phone channel | Twilio SIP | Tested with LiveKit, Canadian numbers available |
 | STT | Sarvam Saaras v3 | Best Indian-language STT, native `pa-IN` (Punjabi) support |
 | LLM | Sarvam-30B | Understands Punjabi context, fast enough for real-time |
-| TTS | Sarvam Bulbul v3 | Natural Punjabi voice output |
+| TTS | Sarvam Bulbul v3 | Natural Punjabi voice output, handles code-mixed Punjabi+English |
 | Plugin bridge | `livekit-plugins-sarvam` | Official LiveKit plugin — STT + TTS + LLM in one package |
 
 ---
 
 ## Channels
 
-| Channel | How | Who Uses It |
+| Channel | How | Status |
 |---|---|---|
-| Phone | Twilio → SIP → LiveKit → Agent | Majority of restaurant callers |
-| Web | Browser → WebRTC → LiveKit → Agent | Tech-savvy, younger customers |
+| Phone | Twilio → SIP → LiveKit → Agent | **Live** — `+15878175156` |
+| Web | Browser → WebRTC → LiveKit → Agent | **Live** — `https://sarvam.bizbull.ai` |
 
 Same agent code handles both. Customer experience is identical.
 
@@ -45,29 +45,33 @@ Same agent code handles both. Customer experience is identical.
 
 ### Order Taking
 - Accept food orders for pickup or delivery
-- Handle multi-item orders ("2 paneer burgers and a mango lassi")
-- Clarify ambiguities ("ਕੀ ਤੁਸੀਂ ਸਪਾਈਸੀ ਚਾਹੁੰਦੇ ਹੋ?")
-- Confirm order before placing ("ਕੀ ਇਹ ਠੀਕ ਹੈ?")
-- Collect delivery address and contact number
+- Handle multi-item orders ("2 paneer tikka and a mango lassi")
+- Ask spice level (mild/medium/spicy) for all starters and mains
+- Ask for special instructions per item
+- Collect name and phone number (digit by digit)
+- Confirm full order before placing
 
 ### Reservation Booking
 - Take date, time, party size
 - Confirm availability
 - Collect customer name and phone number
+- Provide reference number
 
 ### Menu Queries
-- Answer "ਕੀ ਤੁਹਾਡੇ ਕੋਲ X ਹੈ?" (do you have X?)
-- Today's specials
-- Allergen/dietary queries (vegetarian, vegan)
-- Prices
+- Answer questions about specific items
+- Suggest popular dishes
+- Handle dietary queries (vegetarian options, etc.)
+- Quote prices
 
 ---
 
 ## Language Behaviour
 
-- **Primary**: Punjabi (Gurmukhi script in LLM, audio `pa-IN`)
-- **Code-mixed**: Handles Punjabi + English naturally ("delivery ਲਈ ਚਾਹੀਦਾ" = "want it for delivery")
-- **Fallback**: If STT detects Hindi or English, agent responds in same language (Phase 2)
+- **Style**: Natural mix of Punjabi and English — the way real Canadian Punjabi restaurant staff speak
+- **English words used always**: numbers, "mild/medium/spicy", "pickup/delivery", food item names, prices
+- **Punjabi used for**: warmth and conversational flow — "ਹਾਂ ਜੀ", "ਠੀਕ ਹੈ ਜੀ", "ਬਿਲਕੁਲ ਜੀ"
+- **Numbers**: always spoken digit by digit in English
+- **Adaptation**: if the customer speaks more English, Sierra leans more English
 
 ---
 
