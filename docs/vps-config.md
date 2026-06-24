@@ -152,12 +152,26 @@ SARVAM_API_KEY=sk_70uoawf4_UVla2uvKlDWjuo8PG3fVKm5g
 
 ---
 
-## Installation Checklist (Run Once on Fresh Session)
+## Installation Checklist
 
-- [ ] Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env`
-- [ ] Clone repo: `git clone https://github.com/Shivek-cmd/livekit-sarvam.git /opt/livekit-sarvam`
-- [ ] Create `.env` at `/opt/livekit-sarvam/.env` with credentials above
-- [ ] Run `cd /opt/livekit-sarvam && uv sync`
-- [ ] Verify: `uv run python -c "import livekit.agents; print(livekit.agents.__version__)"`
+- [x] Install uv 0.11.24 — `/root/.local/bin/uv`
+- [x] Clone repo → `/opt/livekit-sarvam/`
+- [x] Create `pyproject.toml` with `livekit-agents[sarvam]>=1.0,<2.0`
+- [x] Create `.env` at `/opt/livekit-sarvam/.env`
+- [x] Run `uv sync` — 83 packages installed, no conflicts
+- [x] Verified: `livekit-agents 1.6.3`, `livekit-plugins-sarvam 1.6.3`, STT/TTS/LLM all loaded
 - [ ] Add subdomains to `/etc/caddy/Caddyfile` and reload Caddy
 - [ ] Set up systemd services for agent + token server
+
+## Installed Package Versions (Locked)
+
+| Package | Version |
+|---|---|
+| livekit-agents | 1.6.3 |
+| livekit-plugins-sarvam | 1.6.3 |
+| livekit | 1.1.9 |
+| livekit-api | 1.1.1 |
+| fastapi | 0.138.0 |
+| uvicorn | 0.49.0 |
+| python-dotenv | 1.2.2 |
+| pydantic | 2.13.4 |
