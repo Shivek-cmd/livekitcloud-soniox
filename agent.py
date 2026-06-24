@@ -422,8 +422,8 @@ async def entrypoint(ctx: JobContext):
         stt=sarvam.STT(
             language="unknown",
             model="saaras:v3",
-            mode="transcribe",
-            sample_rate=16000,
+            mode="codemix",
+            sample_rate=8000 if is_phone else 16000,
             flush_signal=True,
             **phone_stt_extras,
         ),
