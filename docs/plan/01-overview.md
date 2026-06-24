@@ -1,32 +1,76 @@
 # Project Overview
 
-## Goal
+## What We're Building
 
-Build a real-time Punjabi voice agent using a self-hosted LiveKit server and Sarvam AI's Indian-language models.
+A **Punjabi-first restaurant voice agent** that handles:
+- Food orders (pickup and delivery)
+- Reservation bookings
+- Menu queries and recommendations
 
-## What It Does
+Customers call a phone number or open a web link — the agent answers in Punjabi, takes their order naturally, and confirms it. No human staff needed for routine order-taking.
 
-A user speaks Punjabi into a browser/app. The agent listens, understands, generates a response using a large language model, and speaks back — all in Punjabi, in real-time.
+---
+
+## Target Users
+
+Punjabi-speaking customers ordering from a Punjabi restaurant. Primary channel is phone (most restaurant callers use phone, not apps). Web is secondary for tech-savvy users.
+
+---
 
 ## Why This Stack
 
 | Concern | Choice | Reason |
 |---|---|---|
-| Real-time voice transport | LiveKit (self-hosted) | Open-source WebRTC, no vendor lock-in, full control |
-| STT | Sarvam Saaras v3 | Best-in-class for Indian languages, native `pa-IN` support |
-| LLM | Sarvam-30B / 105B | Trained on Indian languages, understands Punjabi context |
+| Real-time voice transport | LiveKit (self-hosted) | Open-source WebRTC, full control, no per-minute billing |
+| Phone channel | Twilio SIP | Tested with LiveKit, Indian +91 numbers available |
+| STT | Sarvam Saaras v3 | Best Indian-language STT, native `pa-IN` (Punjabi) support |
+| LLM | Sarvam-30B | Understands Punjabi context, fast enough for real-time |
 | TTS | Sarvam Bulbul v3 | Natural Punjabi voice output |
-| Plugin bridge | `livekit-plugins-sarvam` | Official LiveKit plugin — STT + TTS + LLM all wired in |
+| Plugin bridge | `livekit-plugins-sarvam` | Official LiveKit plugin — STT + TTS + LLM in one package |
 
-## Language Focus
+---
 
-Primary: **Punjabi (`pa-IN`)**
-Secondary: Hindi (`hi-IN`), English (`en-IN`) — code-mixed support via Saaras v3
+## Channels
 
-## Scope (Phase 1)
+| Channel | How | Who Uses It |
+|---|---|---|
+| Phone | Twilio → SIP → LiveKit → Agent | Majority of restaurant callers |
+| Web | Browser → WebRTC → LiveKit → Agent | Tech-savvy, younger customers |
 
-- Self-host LiveKit server via Docker
-- Build a Python voice agent worker
-- Wire Sarvam STT → Sarvam LLM → Sarvam TTS pipeline
-- Test end-to-end Punjabi conversation
-- Basic system prompt tuned for Punjabi responses
+Same agent code handles both. Customer experience is identical.
+
+---
+
+## Agent Capabilities (Phase 1 Scope)
+
+### Order Taking
+- Accept food orders for pickup or delivery
+- Handle multi-item orders ("2 paneer burgers and a mango lassi")
+- Clarify ambiguities ("ਕੀ ਤੁਸੀਂ ਸਪਾਈਸੀ ਚਾਹੁੰਦੇ ਹੋ?")
+- Confirm order before placing ("ਕੀ ਇਹ ਠੀਕ ਹੈ?")
+- Collect delivery address and contact number
+
+### Reservation Booking
+- Take date, time, party size
+- Confirm availability
+- Collect customer name and phone number
+
+### Menu Queries
+- Answer "ਕੀ ਤੁਹਾਡੇ ਕੋਲ X ਹੈ?" (do you have X?)
+- Today's specials
+- Allergen/dietary queries (vegetarian, vegan)
+- Prices
+
+---
+
+## Language Behaviour
+
+- **Primary**: Punjabi (Gurmukhi script in LLM, audio `pa-IN`)
+- **Code-mixed**: Handles Punjabi + English naturally ("delivery ਲਈ ਚਾਹੀਦਾ" = "want it for delivery")
+- **Fallback**: If STT detects Hindi or English, agent responds in same language (Phase 2)
+
+---
+
+## Latency Goal
+
+**< 1.2 seconds** from end of customer speech to first agent audio output on both web and phone. This requires all three streaming layers active (STT streaming + LLM streaming + TTS streaming). See [09-latency-analysis.md](09-latency-analysis.md) for full breakdown.
