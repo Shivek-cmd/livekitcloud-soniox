@@ -250,15 +250,46 @@ class RestaurantAgent(Agent):
 async def entrypoint(ctx: JobContext):
     await ctx.connect()
 
-    is_phone = any(
-        p.identity.startswith("sip_") or p.attributes.get("sip.callStatus") is not None
-        for p in ctx.room.remote_participants.values()
+    participant = await ctx.wait_for_participant()
+
+    is_phone = (
+        participant.identity.startswith("sip_")
+        or participant.attributes.get("sip.callStatus") is not None
     )
 
     logger.info(
         f"Session started | room={ctx.room.name} | "
         f"channel={'phone' if is_phone else 'web'} | "
-        f"participants={len(ctx.room.remote_participants)}"
+        f"participant={participant.identity}"
+    )
+
+    phone_stt_extras = (
+        {
+            "num_initial_ignored_frames": 10,
+            "interrupt_min_speech_frames": 8,
+            "first_turn_min_speech_frames": 10,
+            "min_speech_frames": 5,
+        }
+        if is_phone
+        else {}
+    )
+
+    phone_tts_extras = (
+        {
+            "speech_sample_rate": 8000,
+            "output_audio_codec": "mulaw",
+        }
+        if is_phone
+        else {}
+    )
+
+    phone_session_extras = (
+        {
+            "min_endpointing_delay": 0.8,
+            "min_interruption_duration": 1.0,
+        }
+        if is_phone
+        else {}
     )
 
     session = AgentSession(
@@ -267,15 +298,17 @@ async def entrypoint(ctx: JobContext):
             model="saaras:v3",
             mode="transcribe",
             sample_rate=16000,
+            **phone_stt_extras,
         ),
         llm=sarvam.LLM(model="sarvam-30b"),
         tts=sarvam.TTS(
             target_language_code="pa-IN",
             model="bulbul:v3",
             speaker="shubh",
-            speech_sample_rate=22050,
             pace=0.95 if is_phone else 1.0,
+            **phone_tts_extras,
         ),
+        **phone_session_extras,
     )
 
     await session.start(
