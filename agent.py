@@ -440,10 +440,19 @@ async def entrypoint(ctx: JobContext):
         **({"min_interruption_duration": 1.0} if is_phone else {}),
     )
 
+    room_input_options = RoomInputOptions()
+    if is_phone and os.getenv("NOISE_CANCELLATION") == "bvc_telephony":
+        from livekit.plugins import noise_cancellation
+
+        room_input_options = RoomInputOptions(
+            noise_cancellation=noise_cancellation.BVCTelephony()
+        )
+        logger.info("Noise cancellation enabled: Krisp BVCTelephony")
+
     await session.start(
         room=ctx.room,
         agent=RestaurantAgent(),
-        room_input_options=RoomInputOptions(),
+        room_input_options=room_input_options,
     )
 
     @session.on("user_input_transcribed")

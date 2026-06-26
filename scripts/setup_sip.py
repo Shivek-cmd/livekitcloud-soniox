@@ -24,10 +24,13 @@ from livekit.protocol.sip import (
 
 load_dotenv()
 
-LIVEKIT_URL = "ws://localhost:7880"
-LIVEKIT_API_KEY = "devkey"
-LIVEKIT_API_SECRET = "7fb987483e9c463c7777ea7e9a97e4bde86bcaa5"
-TWILIO_NUMBER = "+15878175156"
+import os
+
+LIVEKIT_URL = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
+LIVEKIT_API_KEY = os.environ.get("LIVEKIT_API_KEY", "devkey")
+LIVEKIT_API_SECRET = os.environ.get("LIVEKIT_API_SECRET", "7fb987483e9c463c7777ea7e9a97e4bde86bcaa5")
+TWILIO_NUMBER = os.environ.get("TWILIO_NUMBER", "+15878175156")
+KRISP_ENABLED = os.environ.get("KRISP_ENABLED", "").lower() in ("1", "true", "yes")
 
 
 async def main():
@@ -42,16 +45,17 @@ async def main():
                 break
 
         if not trunk_id:
+            trunk_info = SIPInboundTrunkInfo(
+                name="Twilio Restaurant Line",
+                numbers=[TWILIO_NUMBER],
+            )
+            if KRISP_ENABLED:
+                trunk_info.krisp_enabled = True
             trunk = await lk.sip.create_inbound_trunk(
-                CreateSIPInboundTrunkRequest(
-                    trunk=SIPInboundTrunkInfo(
-                        name="Twilio Restaurant Line",
-                        numbers=[TWILIO_NUMBER],
-                    )
-                )
+                CreateSIPInboundTrunkRequest(trunk=trunk_info)
             )
             trunk_id = trunk.sip_trunk_id
-            print(f"Trunk created: {trunk_id}")
+            print(f"Trunk created: {trunk_id} (krisp_enabled={KRISP_ENABLED})")
 
         # Remove any existing dispatch rules for this trunk
         rules = await lk.sip.list_dispatch_rule(ListSIPDispatchRuleRequest())
