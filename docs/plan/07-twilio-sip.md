@@ -45,10 +45,17 @@ KRISP_ENABLED=1 uv run python scripts/setup_sip.py
 
 ## Twilio setup
 
-1. **Elastic SIP Trunk** → Origination URI points at the LiveKit Cloud SIP URI
-   (`sip:<project-id>.sip.livekit.cloud`).
+1. **Elastic SIP Trunk** (`parkash-liveket`) → Origination URI must point at LiveKit Cloud:
+   `sip:5qg9858y0ak.sip.livekit.cloud` (not the old self-hosted `lk.bizbull.ai:5060`).
 2. **Phone number** `+15878175156` assigned to that trunk.
 3. Codec: G.711 µ-law (PCMU) — standard for LiveKit SIP.
+
+Reconfigure with:
+
+```bash
+uv run python scripts/setup_twilio_sip.py --apply   # Twilio origination → Cloud
+KRISP_ENABLED=1 uv run python scripts/setup_sip.py  # LiveKit Cloud trunk + dispatch
+```
 
 ---
 
