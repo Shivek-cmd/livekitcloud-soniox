@@ -78,3 +78,10 @@ Same agent code handles both. Customer experience is identical.
 ## Latency Goal
 
 **< 1.2 seconds** from end of customer speech to first agent audio output on both web and phone. This requires all three streaming layers active (STT streaming + LLM streaming + TTS streaming). See [09-latency-analysis.md](09-latency-analysis.md) for full breakdown.
+
+---
+
+## Reference & Diagnosis
+
+- **[../reference/](../reference/README.md)** — captured Sarvam + LiveKit docs (TTS, STT, turn detection/interruptions, noise cancellation) so we don't re-paste them each session.
+- **[../diagnosis/phone-call-quality.md](../diagnosis/phone-call-quality.md)** — root-cause analysis of the phone "slow voice" and "voice breaking / echo" problems.
