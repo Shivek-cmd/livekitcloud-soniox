@@ -14,6 +14,7 @@ from livekit.protocol.room import RoomConfiguration
 from livekit.protocol.sip import (
     CreateSIPDispatchRuleRequest,
     CreateSIPInboundTrunkRequest,
+    DeleteSIPDispatchRuleRequest,
     ListSIPDispatchRuleRequest,
     ListSIPInboundTrunkRequest,
     SIPDispatchRule,
@@ -57,7 +58,7 @@ async def main():
         for r in rules.items:
             if trunk_id in r.trunk_ids:
                 await lk.sip.delete_dispatch_rule(
-                    type("DeleteSIPDispatchRuleRequest", (), {"sip_dispatch_rule_id": r.sip_dispatch_rule_id})()
+                    DeleteSIPDispatchRuleRequest(sip_dispatch_rule_id=r.sip_dispatch_rule_id)
                 )
                 print(f"Deleted existing rule: {r.sip_dispatch_rule_id}")
 
