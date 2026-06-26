@@ -85,11 +85,11 @@ Created/updated by `scripts/setup_sip.py` against the **Cloud** credentials:
 - **Inbound trunk** bound to `+15878175156`, `krisp_enabled=True` (trunk-level noise cancellation).
 - **Dispatch rule**: per-caller room (`phone-` prefix) + `RoomAgentDispatch(agent_name="restaurant-agent")`.
 
-Twilio (`+15878175156`) origination URI points at the Cloud SIP URI (`sip:5qg9858y0ak.sip.livekit.cloud`).
+Twilio origination must point at Cloud (`sip:5qg9858y0ak.sip.livekit.cloud`), not the old self-hosted `lk.bizbull.ai:5060`. Use `scripts/setup_twilio_sip.py --apply` to fix.
 
 ```bash
-# (Re)create SIP trunk + dispatch on the Cloud project
-KRISP_ENABLED=1 uv run python scripts/setup_sip.py
+uv run python scripts/setup_twilio_sip.py --apply   # Twilio → LiveKit Cloud
+KRISP_ENABLED=1 uv run python scripts/setup_sip.py  # Cloud trunk + dispatch
 
 # Outbound test call
 LIVEKIT_SIP_URI='sip:+15878175156@5qg9858y0ak.sip.livekit.cloud' \
