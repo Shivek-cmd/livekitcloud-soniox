@@ -14,6 +14,23 @@ references in `docs/reference/`. All changes verified available in `livekit-agen
 
 ## Fixes in this PR
 
+### ✅ Fix 0 — Wrong-agent routing collision (CRITICAL, root cause)
+Live VPS logs proved that inbound phone calls were being routed **non-deterministically**
+to the wrong agent. A second, unrelated worker (`livekit-soniox-agent-1`) was registered
+to the **same** LiveKit server with an empty `agent_name`, exactly like our agent. With
+both workers nameless, the server load-balanced each call to whichever was free — a coin
+flip. When soniox won the toss it errored (`No restaurant_id in job metadata`) and exited,
+leaving the caller with dead air ("ringing, nobody picks up"). This explains a large share
+of the month-long "sometimes works, sometimes doesn't" instability.
+
+Fix (explicit dispatch):
+- Stopped the soniox agent and disabled its auto-restart on the VPS (no longer used).
+- Named our worker `restaurant-agent` and pointed every dispatch path at that name, so no
+  other worker can ever pick up a restaurant call again:
+  - `agent.py` — `WorkerOptions(..., agent_name="restaurant-agent")`
+  - `scripts/setup_sip.py` — `RoomAgentDispatch(agent_name="restaurant-agent")` (re-run on VPS)
+  - `token_server.py` — `CreateAgentDispatchRequest(..., agent_name="restaurant-agent")`
+
 ### ✅ Fix 1 — Un-interruptible greeting
 `agent.py`: the opening `session.say(...)` now passes `allow_interruptions=False`.
 Sierra's greeting always plays in full and can no longer be cut off by the echo of
@@ -38,7 +55,10 @@ the conversation stays fully interruptible.
 - `docs/diagnosis/phone-call-quality.md` — root-cause analysis + verified version compatibility.
 
 ## Files Modified
-- `agent.py` — greeting `say()` gains `allow_interruptions=False` (Fix 1).
+- `agent.py` — greeting `say()` gains `allow_interruptions=False` (Fix 1);
+  worker named `restaurant-agent` for explicit dispatch (Fix 0).
+- `scripts/setup_sip.py` — dispatch rule targets `restaurant-agent` (Fix 0).
+- `token_server.py` — web dispatch targets `restaurant-agent` (Fix 0).
 - `docs/plan/01-overview.md` — links to the new reference + diagnosis docs.
 - `.gitignore` — ignore `.cursor/mcp.json` (holds the Sarvam API key; must never be committed).
 
