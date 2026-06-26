@@ -13,8 +13,7 @@ from livekit.agents import (
     cli,
     function_tool,
 )
-from livekit.plugins import sarvam
-
+from restaurant.voice_stack import build_llm, build_stt, build_tts
 from restaurant.menu import (
     DELIVERY_CHARGE,
     MIN_ORDER_DELIVERY,
@@ -398,61 +397,22 @@ async def entrypoint(ctx: JobContext):
         f"participant={participant.identity}"
     )
 
-    phone_stt_extras = (
-        {
-            "num_initial_ignored_frames": 10,
-            "interrupt_min_speech_frames": 8,
-            "first_turn_min_speech_frames": 10,
-            "min_speech_frames": 5,
-        }
-        if is_phone
-        else {}
-    )
-
-    phone_tts_extras = (
-        {
-            "speech_sample_rate": 8000,
-            "output_audio_codec": "mulaw",
-        }
-        if is_phone
-        else {}
-    )
-
     session = AgentSession(
-        stt=sarvam.STT(
-            language="unknown",
-            model="saaras:v3",
-            mode="codemix",
-            sample_rate=8000 if is_phone else 16000,
-            flush_signal=True,
-            **phone_stt_extras,
-        ),
-        llm=sarvam.LLM(model="sarvam-30b"),
-        tts=sarvam.TTS(
-            target_language_code="pa-IN",
-            model="bulbul:v3",
-            speaker="shubh",
-            pace=0.95 if is_phone else 1.0,
-            **phone_tts_extras,
-        ),
+        stt=build_stt(is_phone),
+        llm=build_llm(),
+        tts=build_tts(is_phone),
         turn_detection="stt",
         min_endpointing_delay=0.2 if is_phone else 0.07,
+        preemptive_generation=True,
         **({"min_interruption_duration": 1.0} if is_phone else {}),
     )
 
-    room_input_options = RoomInputOptions()
-    if is_phone and os.getenv("NOISE_CANCELLATION") == "bvc_telephony":
-        from livekit.plugins import noise_cancellation
-
-        room_input_options = RoomInputOptions(
-            noise_cancellation=noise_cancellation.BVCTelephony()
-        )
-        logger.info("Noise cancellation enabled: Krisp BVCTelephony")
-
+    # Echo cancellation is handled by LiveKit Cloud's telephony media path +
+    # trunk-level Krisp noise cancellation (krisp_enabled on the SIP trunk).
     await session.start(
         room=ctx.room,
         agent=RestaurantAgent(),
-        room_input_options=room_input_options,
+        room_input_options=RoomInputOptions(),
     )
 
     @session.on("user_input_transcribed")

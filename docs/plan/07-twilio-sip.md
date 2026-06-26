@@ -1,140 +1,85 @@
-# Twilio SIP Integration
+# Phone Channel — Twilio → LiveKit Cloud SIP
 
 ## How It Works
 
-Twilio acts as a **SIP relay only** — it does not process audio. The flow is:
+Twilio is a **SIP relay only**. Inbound calls are handed to **LiveKit Cloud's** SIP service (not a
+self-hosted SIP container).
 
 ```
-User's Phone
-    │
+Caller's Phone (Canada)
     │ PSTN
     ▼
-Twilio (+91 number)
-    │
-    │ SIP trunk (UDP/TCP, port 5060)
+Twilio (+15878175156)
+    │ SIP trunk
     ▼
-LiveKit SIP Service
-    │
-    │ Creates SIP participant in LiveKit room
+LiveKit Cloud SIP  (sip:<project>.sip.livekit.cloud)
+    │ creates a SIP participant in a per-caller room
     ▼
-LiveKit Server
-    │
-    │ Audio frames (internally as WebRTC)
+LiveKit Cloud room
+    │ agent subscribes over wss
     ▼
-Agent Worker (same Python code as web channel)
+Agent Worker (Python on VPS) → Soniox STT → GPT → Soniox TTS
 ```
 
-Twilio is unaware of Sarvam or the agent. It just routes SIP audio.
+Twilio is unaware of Soniox/GPT or the agent — it just routes SIP audio. Echo cancellation is handled
+inside LiveKit Cloud (telephony media path + trunk-level Krisp).
 
 ---
 
-## Twilio Setup Steps
+## LiveKit Cloud SIP setup
 
-### 1. Create Elastic SIP Trunk
-
-In Twilio Console → Voice → SIP Trunking → Trunks → Create:
-
-- **Friendly Name**: `livekit-punjabi-agent`
-- **Origination SIP URI**: `sip:livekit.yourdomain.com:5060`
-- **Codecs**: G.711 µ-law (PCMU) — default, works with LiveKit SIP
-
-### 2. Buy Indian Phone Number
-
-Twilio Console → Phone Numbers → Buy → India (+91):
-- Select a local or toll-free number
-- Assign to the SIP trunk above
-
-### 3. Allowlist Twilio IPs on Firewall
-
-Twilio's SIP signaling IPs (add to server firewall for port 5060):
-```
-54.172.60.0/30
-54.244.51.0/30
-54.171.127.192/30
-52.215.127.0/30
-54.65.63.192/30
-54.169.127.128/30
-54.252.254.64/30
-177.71.206.192/30
-```
-*(Check Twilio docs for latest IP ranges — they update periodically)*
-
-### 4. Configure LiveKit SIP Inbound Trunk
-
-Using LiveKit CLI or REST API:
+Configured against the **Cloud** project credentials via `scripts/setup_sip.py`, which creates:
+- an **inbound trunk** bound to the Twilio number (`krisp_enabled=True` for trunk-level NC), and
+- a **dispatch rule** that gives each caller their own room and dispatches
+  `RoomAgentDispatch(agent_name="restaurant-agent")`.
 
 ```bash
-lk sip inbound create \
-  --name "twilio-punjabi" \
-  --numbers "+91XXXXXXXXXX" \
-  --allowed-addresses "54.172.60.0/30,54.244.51.0/30"  # Twilio IPs
+# Run with the Cloud LIVEKIT_URL/API_KEY/API_SECRET in the environment
+KRISP_ENABLED=1 uv run python scripts/setup_sip.py
 ```
 
-### 5. Create Dispatch Rule
+> The explicit `agent_name="restaurant-agent"` is important: it ensures *our* agent (not another
+> worker on the same project) answers, and avoids non-deterministic routing.
 
-Controls what happens when a call comes in — here every caller gets their own room and triggers a new agent session:
+---
+
+## Twilio setup
+
+1. **Elastic SIP Trunk** → Origination URI points at the LiveKit Cloud SIP URI
+   (`sip:<project-id>.sip.livekit.cloud`).
+2. **Phone number** `+15878175156` assigned to that trunk.
+3. Codec: G.711 µ-law (PCMU) — standard for LiveKit SIP.
+
+---
+
+## Testing
+
+Place an outbound test call (Twilio dials your phone and bridges to the Cloud SIP URI):
 
 ```bash
-lk sip dispatch create \
-  --trunk-id <inbound-trunk-id> \
-  --rule-type individual-room \
-  --room-prefix "phone-call-"
+LIVEKIT_SIP_URI='sip:+15878175156@<project-id>.sip.livekit.cloud' \
+  uv run python scripts/test_call.py +91XXXXXXXXXX
 ```
 
----
-
-## Audio Codec Consideration
-
-| Channel | Codec | Sample Rate |
-|---|---|---|
-| Web (WebRTC) | Opus | 48kHz |
-| Phone (Twilio SIP) | G.711 PCMU | 8kHz |
-
-LiveKit SIP Service handles the codec transcoding automatically. Sarvam STT accepts 16kHz — LiveKit upsamples from 8kHz internally before passing to the agent.
-
-> This 8kHz→16kHz upsampling may slightly reduce STT accuracy for phone calls vs web. Monitor and compare.
+`scripts/test_call.py` reads `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` from `.env` and
+`LIVEKIT_SIP_URI` from the environment.
 
 ---
 
-## Agent Metadata: Detect Channel in Code
+## Detect channel in code
 
-When a SIP participant joins, LiveKit sets participant attributes. You can detect the channel in `agent.py`:
+`agent.py` detects a phone call from the SIP participant:
 
 ```python
-async def entrypoint(ctx):
-    is_phone_call = any(
-        p.attributes.get("sip.callStatus") == "active"
-        for p in ctx.room.remote_participants.values()
-    )
-
-    if is_phone_call:
-        # Phone-specific adjustments
-        # e.g., shorter TTS sentences, no visual cues
-        pass
-```
-
----
-
-## Outbound Calls (Future)
-
-To have the agent call a user proactively:
-
-```python
-from livekit import api
-
-lk = api.LiveKitAPI(url, api_key, api_secret)
-await lk.sip.create_sip_participant(
-    api.CreateSIPParticipantRequest(
-        sip_trunk_id="<outbound-trunk-id>",
-        sip_call_to="+91XXXXXXXXXX",
-        room_name="outbound-room-1",
-        participant_identity="caller",
-    )
+is_phone = (
+    participant.identity.startswith("sip_")
+    or participant.attributes.get("sip.callStatus") is not None
 )
 ```
 
 ---
 
-## Testing Without Real Twilio
+## Outbound calls (future)
 
-Use a SIP softphone (e.g., Zoiper, Linphone) configured to point directly at `livekit.yourdomain.com:5060` — bypasses Twilio for local SIP testing.
+LiveKit Cloud SIP can also originate calls (`create_sip_participant`) for proactive outbound dialing —
+deferred for now (inbound only).

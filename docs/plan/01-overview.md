@@ -7,81 +7,82 @@ A **Punjabi restaurant voice agent** named **Sierra** for **Bizbull Restaurant**
 - Reservation bookings
 - Menu queries and recommendations
 
-Customers call a phone number or open a web link — Sierra answers in natural Punjabi-English (the way real Canadian Punjabi restaurant staff speak), takes the order, and confirms it. No human staff needed for routine order-taking.
+Customers call a phone number — Sierra answers in natural Punjabi-English (the way real Canadian
+Punjabi restaurant staff speak), takes the order, and confirms it. No human staff needed for routine
+order-taking. (A web channel also exists; phone is the primary focus.)
+
+The longer-term goal is a **multi-tenant SaaS**: many restaurants, each with its own number, prompt,
+and voice config.
 
 ---
 
 ## Target Users
 
-Punjabi-speaking customers ordering from a Punjabi restaurant. Primary channel is phone (most restaurant callers use phone, not apps). Web is secondary for tech-savvy users.
+Punjabi-speaking customers ordering from Punjabi restaurants **in Canada**. Primary channel is phone.
 
 ---
 
-## Why This Stack
+## The Stack (current)
 
-| Concern | Choice | Reason |
+| Concern | Choice | Why |
 |---|---|---|
-| Real-time voice transport | LiveKit (self-hosted) | Open-source WebRTC, full control, no per-minute billing |
-| Phone channel | Twilio SIP | Tested with LiveKit, Canadian numbers available |
-| STT | Sarvam Saaras v3 | Best Indian-language STT, native `pa-IN` (Punjabi) support |
-| LLM | Sarvam-30B | Understands Punjabi context, fast enough for real-time |
-| TTS | Sarvam Bulbul v3 | Natural Punjabi voice output, handles code-mixed Punjabi+English |
-| Plugin bridge | `livekit-plugins-sarvam` | Official LiveKit plugin — STT + TTS + LLM in one package |
+| Real-time voice transport | **LiveKit Cloud** | Managed WebRTC + telephony; clean echo cancellation; auto edge routing |
+| Phone channel | **Twilio** Elastic SIP → LiveKit Cloud SIP | Canadian numbers; SIP relay into Cloud |
+| STT | **Soniox** `stt-rt-v5` | Punjabi + code-mix, US/EU/JP-hosted (low latency for Canada) |
+| LLM | **OpenAI** `gpt-4o-mini` | Fast, US-hosted, strong at Punjabi/English/Hindi code-mix text |
+| TTS | **Soniox** `tts-rt-v1` (voice `Maya`) | Punjabi voice, US/EU/JP-hosted, streams pre-sentence (low latency) |
+| Agent runtime | Python `livekit-agents`, self-hosted on VPS, connected to LiveKit Cloud | Full control of agent logic |
+
+All three voice providers (STT/LLM/TTS) are hosted in North-America-reachable regions, so a Canada
+caller's whole pipeline stays on-continent. See `../reference/soniox-stt-tts-plugin.md`.
+
+> **History:** the project originally used an **India-hosted** STT+LLM+TTS stack on a **self-hosted**
+> LiveKit server. That caused (a) phone **echo** and (b) **latency** for Canada callers. Moving to
+> **LiveKit Cloud** fixed the echo, and switching to the **Soniox + GPT** stack fixed the latency.
+> The old stack and the self-hosted server are no longer used by this project.
 
 ---
 
 ## Channels
 
-| Channel | How | Status |
+| Channel | Path | Status |
 |---|---|---|
-| Phone | Twilio → SIP → LiveKit → Agent | **Live** — `+15878175156` |
-| Web | Browser → WebRTC → LiveKit → Agent | **Live** — `https://sarvam.bizbull.ai` |
+| Phone | Caller → Twilio → **LiveKit Cloud SIP** → Cloud room → Agent | **Primary** — `+15878175156` |
+| Web | Browser → WebRTC → LiveKit Cloud room → Agent | Secondary (token server + React app) |
 
-Same agent code handles both. Customer experience is identical.
+Same `agent.py` handles both.
 
 ---
 
-## Agent Capabilities (Phase 1 Scope)
+## Agent Capabilities (Phase 1)
 
 ### Order Taking
-- Accept food orders for pickup or delivery
-- Handle multi-item orders ("2 paneer tikka and a mango lassi")
-- Ask spice level (mild/medium/spicy) for all starters and mains
-- Ask for special instructions per item
-- Collect name and phone number (digit by digit)
-- Confirm full order before placing
+- Multi-item orders, spice level per starter/main, special instructions per item
+- Collect name + phone (digit by digit), confirm full order before placing
 
 ### Reservation Booking
-- Take date, time, party size
-- Confirm availability
-- Collect customer name and phone number
-- Provide reference number
+- Date, time, party size → availability → name + phone → reference number
 
 ### Menu Queries
-- Answer questions about specific items
-- Suggest popular dishes
-- Handle dietary queries (vegetarian options, etc.)
-- Quote prices
+- Item descriptions, recommendations, dietary (veg) queries, prices on request
 
 ---
 
 ## Language Behaviour
 
-- **Style**: Natural mix of Punjabi and English — the way real Canadian Punjabi restaurant staff speak
-- **English words used always**: numbers, "mild/medium/spicy", "pickup/delivery", food item names, prices
-- **Punjabi used for**: warmth and conversational flow — "ਹਾਂ ਜੀ", "ਠੀਕ ਹੈ ਜੀ", "ਬਿਲਕੁਲ ਜੀ"
-- **Numbers**: always spoken digit by digit in English
-- **Adaptation**: if the customer speaks more English, Sierra leans more English
+- Natural Punjabi + English code-mix (Canadian Punjabi restaurant style)
+- English always for: numbers, "mild/medium/spicy", "pickup/delivery", item names, prices
+- Punjabi for warmth: "ਹਾਂ ਜੀ", "ਠੀਕ ਹੈ ਜੀ", "ਬਿਲਕੁਲ ਜੀ"
+- Numbers spoken digit by digit
+- Adapts toward whichever language the caller leans on
 
 ---
 
-## Latency Goal
+## Where to look next
 
-**< 1.2 seconds** from end of customer speech to first agent audio output on both web and phone. This requires all three streaming layers active (STT streaming + LLM streaming + TTS streaming). See [09-latency-analysis.md](09-latency-analysis.md) for full breakdown.
-
----
-
-## Reference & Diagnosis
-
-- **[../reference/](../reference/README.md)** — captured Sarvam + LiveKit docs (TTS, STT, turn detection/interruptions, noise cancellation) so we don't re-paste them each session.
-- **[../diagnosis/phone-call-quality.md](../diagnosis/phone-call-quality.md)** — root-cause analysis of the phone "slow voice" and "voice breaking / echo" problems.
+- `02-architecture.md` — current system architecture and call flow
+- `07-twilio-sip.md` — phone path (Twilio → LiveKit Cloud SIP)
+- `08-web-app.md` — web channel
+- `06-milestones.md` — build phases and roadmap
+- `../vps-config.md` — deployment, services, SIP IDs, env, ops commands
+- `../reference/` — captured Soniox + LiveKit knowledge (so we don't re-paste docs each session)

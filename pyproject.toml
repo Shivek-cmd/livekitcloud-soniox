@@ -1,9 +1,11 @@
 [project]
-name = "livekit-sarvam-restaurant"
+name = "bizbull-restaurant-agent"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    "livekit-agents[sarvam]>=1.0,<2.0",
+    "livekit-agents>=1.0,<2.0",
+    "livekit-plugins-soniox",
+    "livekit-plugins-openai",
     "fastapi",
     "uvicorn[standard]",
     "python-dotenv",
