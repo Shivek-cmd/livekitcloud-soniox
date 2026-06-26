@@ -1,95 +1,52 @@
 # Milestones & Build Phases
 
 ## Phase 1 — Agent Core ✅ DONE
+Working Punjabi voice conversation, agent pipeline validated.
+- Python project (`uv`, `pyproject.toml`, `.env`)
+- `agent.py` — STT → LLM → TTS pipeline + restaurant tools (orders, reservations, menu)
+- `token_server.py` — FastAPI token + agent dispatch (web)
 
-**Goal**: Working Punjabi voice conversation, agent pipeline validated.
-
-| Task | Status |
-|---|---|
-| Set up Python project — `uv init`, `pyproject.toml`, `.env` | ✅ |
-| Install `livekit-agents[sarvam]` pinned to `~=1.6` | ✅ |
-| Write `agent.py` — Sarvam STT → LLM → TTS pipeline | ✅ |
-| Write `token_server.py` — FastAPI token + agent dispatch | ✅ |
-| Test via LiveKit agents-playground | ✅ |
-| Validate Punjabi voice round-trip | ✅ |
-
-**Notes**: Went straight to VPS rather than running locally. Tested via agents-playground with VPS credentials.
-
----
-
-## Phase 2 — Self-Hosted Production (Web Channel) ✅ DONE
-
-**Goal**: Deploy to VPS, web users can call from `https://sarvam.bizbull.ai`.
-
-| Task | Status |
-|---|---|
-| Reuse existing LiveKit server (`lk.bizbull.ai`) | ✅ |
-| Add `sarvam.bizbull.ai` to Caddyfile | ✅ |
-| Deploy agent worker — `restaurant-agent.service` systemd | ✅ |
-| Deploy token server — `restaurant-token.service` systemd on port 8001 | ✅ |
-| Build React web app — "Start Call" button + voice UI | ✅ |
-| Serve web app as static files via Caddy | ✅ |
-| Echo cancellation on mic | ✅ PR 006 |
-| Smoke test — open URL, speak Punjabi, hear reply | ✅ |
-
-**Notes**: Token server dispatches agent via `lk.agent_dispatch.create_dispatch()` on each web call. Echo cancellation constraints added to mic `getUserMedia`.
-
----
+## Phase 2 — Web Channel ✅ DONE
+- React web app ("Start Call" + voice UI), served via Caddy at `sarvam.bizbull.ai`
+- Token server dispatches the agent on each web call
 
 ## Phase 3 — Phone Channel (Twilio SIP) ✅ DONE
+- Twilio number `+15878175156` → SIP → LiveKit
+- `scripts/setup_sip.py` (trunk + dispatch) and `scripts/test_call.py` (outbound tester)
 
-**Goal**: Same agent reachable by dialing `+15878175156`.
+## Phase 4 — Echo Fix (LiveKit Cloud migration) ✅ DONE
+**Problem:** phone **echo / voice breaking** — the self-hosted setup had no usable echo cancellation
+(Krisp is Cloud-only). **Fix:** migrated to **LiveKit Cloud**. Verified on a real call: clean,
+multi-turn Punjabi conversation, no self-echo barge-in. Trunk-level Krisp NC enabled.
 
+## Phase 5 — Latency Fix (Soniox + GPT stack) ✅ DONE
+**Problem:** latency for Canada callers — the previous STT/LLM/TTS were India-hosted (~3 US↔India
+round-trips per turn). **Fix:** replaced the whole India-hosted stack with **Soniox STT + GPT LLM +
+Soniox TTS** (US/EU/JP-hosted) and enabled `preemptive_generation`. Soniox `Maya` voice chosen for
+Punjabi. The old India-hosted provider was **fully removed** from code, docs, and the VPS.
+
+## Phase 6 — Quality Tuning (in progress)
 | Task | Status |
 |---|---|
-| Reuse existing `livekit-sip-1` container | ✅ |
-| Create LiveKit SIP inbound trunk — `ST_ULoCL8A6UHRs` | ✅ |
-| Create dispatch rule with agent auto-dispatch — `SDR_VJLPyAuaAwEv` | ✅ PR 008 |
-| Reuse existing Twilio trunk `parkash-liveket` | ✅ |
-| Link Twilio number `+15878175156` to trunk | ✅ |
-| Write reproducible `scripts/setup_sip.py` | ✅ PR 008 |
-| Write `scripts/test_call.py` — outbound call tester | ✅ |
-| Test call — dial number → Sierra answers | ✅ |
+| Punjabi voice quality pass (Soniox voices) | ⬜ |
+| Latency profiling — measure TTFA end-to-end | ⬜ |
+| STT accuracy across Punjabi accents | ⬜ |
+| Digit/phone-number read-back accuracy | ⬜ |
+| Inbound Twilio routing → Cloud SIP for real customer calls (verify prod) | ⬜ |
 
-**Key fix**: SIP dispatch rule must include `room_config=RoomConfiguration(agents=[RoomAgentDispatch(agent_name="")])`. Without it the room is created but the agent never joins.
-
----
-
-## Phase 4 — Quality Tuning (In Progress)
-
-**Goal**: Conversation feels natural, not robotic.
-
-| Task | Status | Notes |
-|---|---|---|
-| Fix deprecated LLM model (`sarvam-30b-16k` → `sarvam-30b`) | ✅ PR 002 | |
-| Rewrite system prompt — Sierra persona, humanized | ✅ PR 009 | |
-| Natural Punjabi-English code-switching language | ✅ PR 009 | |
-| Spice level per item (starters + mains only) | ✅ PR 009 | |
-| Phone digit-by-digit confirmation | ✅ PR 009 | |
-| STT accuracy testing across Punjabi accents | ⬜ | |
-| Latency profiling — measure TTFA on both channels | ⬜ | |
-| TTS voice comparison across speakers | ⬜ | |
-
----
-
-## Phase 5 — Features (Deferred)
-
+## Phase 7 — Features (deferred)
 | Feature | Notes |
 |---|---|
-| Order persistence | Save orders to database (deferred) |
-| Order webhook | Notify POS/kitchen on new order (deferred) |
-| Multi-tenant | Multiple restaurants, each with own config (deferred — future SaaS) |
-| Outbound calls | Agent proactively calls users via Twilio |
+| **Multi-tenant** | Per-restaurant number, prompt, voice config (the SaaS goal) |
+| Order persistence | Save orders to a database |
+| Order webhook | Notify POS/kitchen on new order |
+| Outbound calls | Agent proactively calls users |
 | Analytics | Transcript logging, latency dashboard |
-| Hindi↔Punjabi switching | Bilingual conversation handling |
-| WhatsApp channel | LiveKit SIP connectors support WhatsApp |
+| WhatsApp channel | Via LiveKit SIP connectors |
 
----
-
-## What NOT to Build Yet
-
-- No database — persistence deferred
+## What NOT to build yet
+- No database / persistence — deferred
 - No order webhook — deferred
-- No multi-tenant architecture — deferred (user will sell service later)
-- No outbound calling — inbound only
-- No custom STT/TTS wrappers — `livekit-plugins-sarvam` handles this
+- No multi-tenant architecture yet — but `voice_stack.py` is structured to make per-tenant voice
+  config easy when we get there
+- Inbound only (no outbound)

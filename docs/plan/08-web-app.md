@@ -113,8 +113,8 @@ Run with: `uvicorn token_server:app --port 8080`
 ## Environment Variables (Frontend)
 
 ```env
-# .env (Vite)
-VITE_LIVEKIT_URL=wss://livekit.yourdomain.com
+# .env (Vite) — point at the LiveKit Cloud project URL
+VITE_LIVEKIT_URL=wss://bizbull-restaurant-cyeyyw0l.livekit.cloud
 ```
 
 ---
@@ -123,19 +123,20 @@ VITE_LIVEKIT_URL=wss://livekit.yourdomain.com
 
 ```
 livekit-sarvam/
-├── agent.py              # voice agent worker
-├── token_server.py       # FastAPI token backend
-├── web/                  # React frontend
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── src/
-│       ├── App.tsx
-│       └── main.tsx
-└── docker/
-    ├── docker-compose.yml
-    ├── livekit.yaml
-    └── sip-config.yaml
+├── agent.py              # voice agent worker (connects to LiveKit Cloud)
+├── token_server.py       # FastAPI token backend (web channel)
+├── restaurant/
+│   └── voice_stack.py    # Soniox STT/TTS + GPT LLM factory
+└── web/                  # React frontend
+    ├── package.json
+    ├── vite.config.ts
+    └── src/
+        ├── App.tsx
+        └── main.tsx
 ```
+
+> Transport is **LiveKit Cloud** — there are no self-hosted `docker/` media-server configs in this
+> project.
 
 ---
 
