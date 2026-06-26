@@ -460,7 +460,8 @@ async def entrypoint(ctx: JobContext):
                 logger.info(f"SIERRA: {text}")
 
     await session.say(
-        "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! Welcome to Bizbull Restaurant, I'm Sierra. How can I help you today?"
+        "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! Welcome to Bizbull Restaurant, I'm Sierra. How can I help you today?",
+        allow_interruptions=False,
     )
 
 
