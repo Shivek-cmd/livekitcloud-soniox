@@ -72,7 +72,7 @@ async def main():
                     )
                 ),
                 room_config=RoomConfiguration(
-                    agents=[RoomAgentDispatch(agent_name="")]
+                    agents=[RoomAgentDispatch(agent_name="restaurant-agent")]
                 ),
             )
         )
