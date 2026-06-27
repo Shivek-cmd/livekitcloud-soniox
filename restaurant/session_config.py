@@ -33,21 +33,18 @@ def _env_bool(name: str, default: bool) -> bool:
 
 def phone_greeting_settle_seconds() -> float:
     """Pause after opening greeting so mobile echo fades before listening."""
-    return _env_float("PHONE_GREETING_SETTLE_SEC", 2.5)
+    return _env_float("PHONE_GREETING_SETTLE_SEC", 2.0)
 
 
 def _phone_turn_handling() -> TurnHandlingOptions:
-    # Punjabi (pa) is not in TurnDetector's 14-language map; Soniox often tags hi/en.
-    # Slightly patient Hindi threshold reduces cutting off mid-sentence on code-mixed calls.
-    turn_detection = inference.TurnDetector(
-        unlikely_threshold={"hi": 0.52, "en": 0.48},
-    )
+    # Default TurnDetector thresholds (LiveKit-calibrated). Logs showed eou_delay
+    # hitting max_delay=2.5s — lower cap commits turns faster on Punjabi calls.
     return TurnHandlingOptions(
-        turn_detection=turn_detection,
+        turn_detection=inference.TurnDetector(version="v1-mini"),
         endpointing={
             "mode": "dynamic",
-            "min_delay": _env_float("PHONE_ENDPOINTING_MIN", 0.3),
-            "max_delay": _env_float("PHONE_ENDPOINTING_MAX", 2.5),
+            "min_delay": _env_float("PHONE_ENDPOINTING_MIN", 0.2),
+            "max_delay": _env_float("PHONE_ENDPOINTING_MAX", 1.2),
         },
         interruption={
             "mode": "adaptive",

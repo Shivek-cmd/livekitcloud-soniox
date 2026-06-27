@@ -75,26 +75,32 @@ def check_item(name: str) -> str:
     )
 
 
-def search_menu(query: str, *, limit: int = 8) -> str:
+def search_menu(query: str, *, limit: int = 2) -> str:
     cache = _get_cache()
     if not cache:
         return "Menu search is only available with Clover menu enabled."
     hits = cache.search(query, limit=limit)
     if not hits:
         return f"No menu items found matching '{query}'."
-    lines = [f"Found {len(hits)} item(s) for '{query}':"]
+    options: list[str] = []
     for item in hits:
-        tag = "V" if item.veg else "NV"
-        avail = "" if item.available else " [unavailable]"
-        lines.append(
-            f'  - {item.name} (say aloud: "{item.voice_line}", {item.speech_mode}) ({tag}){avail}'
+        if not item.available:
+            continue
+        options.append(f'{item.name} → say "{item.voice_line}"')
+    if not options:
+        return f"Items matching '{query}' exist but are currently unavailable."
+    if len(options) == 1:
+        return (
+            f"One match for '{query}': {options[0]}. "
+            "Confirm briefly in one sentence, then ask quantity if needed."
         )
-        if item.modifier_groups:
-            lines.append(f"    Options: {', '.join(g.name for g in item.modifier_groups)}")
-    lines.append(
-        "Use voice_line for dish names. Do NOT mention prices unless the customer asks."
+    joined = " | ".join(options[:2])
+    return (
+        f"Matches for '{query}' (mention at most TWO in ONE casual sentence — never a numbered list): "
+        f"{joined}. "
+        'Good: "ਹਾਂ ਜੀ, ਸਾਡੇ ਕੋਲ X ਤੇ Y ਹੈ — ਕਿਹੜਾ?" '
+        'Bad: "1 X, 2 Y" or "first X, second Y" or reading bullet points aloud.'
     )
-    return "\n".join(lines)
 
 
 def menu_source_label() -> str:
