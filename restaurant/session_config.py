@@ -44,7 +44,7 @@ def _phone_turn_handling() -> TurnHandlingOptions:
         endpointing={
             "mode": "dynamic",
             "min_delay": _env_float("PHONE_ENDPOINTING_MIN", 0.2),
-            "max_delay": _env_float("PHONE_ENDPOINTING_MAX", 1.2),
+            "max_delay": _env_float("PHONE_ENDPOINTING_MAX", 0.8),
         },
         interruption={
             "mode": "adaptive",
