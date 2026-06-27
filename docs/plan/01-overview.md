@@ -84,5 +84,6 @@ Same `agent.py` handles both.
 - `07-twilio-sip.md` — phone path (Twilio → LiveKit Cloud SIP)
 - `08-web-app.md` — web channel
 - `06-milestones.md` — build phases and roadmap
+- `09-clover-pos.md` — Clover POS integration plan (menu + orders → kitchen)
 - `../vps-config.md` — deployment, services, SIP IDs, env, ops commands
 - `../reference/` — captured Soniox + LiveKit knowledge (so we don't re-paste docs each session)

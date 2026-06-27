@@ -84,3 +84,11 @@ core reason Soniox beats an India-hosted stack for the Canada market.
 - Punjabi **voice naturalness** of `Maya` — judge by ear on real calls; try other voices if needed.
 - Whether `language="pa"` fixed at construction is ideal vs. switching per detected caller language.
 - Code-mix rendering quality when a Punjabi sentence contains English brand/menu words.
+
+## Menu item pronunciation (Clover + Punjabi)
+
+Soniox TTS with `language="pa"` pronounces **Gurmukhi script** well but often **mispronounces Roman**
+dish names (`Chole Bhature` spoken letter-by-letter or oddly). **Fix:** never send Roman Clover item
+names to TTS for dish labels — use a separate **`speak_as`** Gurmukhi field in the menu cache
+(same pattern as `punjabi` in `restaurant/menu.py`). Clover API still gets English `clover_name`.
+See [clover-inventory-menu.md](clover-inventory-menu.md#punjabi-tts--clover-name-vs-gurmukhi-speech-label).

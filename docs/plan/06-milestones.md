@@ -34,19 +34,28 @@ Punjabi. The old India-hosted provider was **fully removed** from code, docs, an
 | Digit/phone-number read-back accuracy | ⬜ |
 | Inbound Twilio routing → Cloud SIP for real customer calls (verify prod) | ⬜ |
 
-## Phase 7 — Features (deferred)
+## Phase 8 — Clover POS integration (planning → in progress)
+Voice orders flow into restaurant Clover POS. See **`09-clover-pos.md`** for full plan.
+
+| Sub-phase | Scope | Status |
+|---|---|---|
+| 8a | Sandbox probe — menu read + test atomic order | ⬜ |
+| 8b | Menu cache + tenant store | ⬜ |
+| 8c | Agent order placement + kitchen print | ⬜ |
+| 8d | Webhooks + availability | ⬜ |
+| 8e | Production pilot (one merchant, OAuth) | ⬜ |
+| 8f | Multi-tenant routing (SaaS) | ⬜ |
+
+## Phase 7 — Other features (deferred)
 | Feature | Notes |
 |---|---|
-| **Multi-tenant** | Per-restaurant number, prompt, voice config (the SaaS goal) |
-| Order persistence | Save orders to a database |
-| Order webhook | Notify POS/kitchen on new order |
+| **Multi-tenant** (non-POS) | Per-restaurant voice config — partially overlaps Phase 8f |
+| Order webhook to external POS | Covered by Clover in Phase 8 |
 | Outbound calls | Agent proactively calls users |
 | Analytics | Transcript logging, latency dashboard |
 | WhatsApp channel | Via LiveKit SIP connectors |
 
 ## What NOT to build yet
-- No database / persistence — deferred
-- No order webhook — deferred
-- No multi-tenant architecture yet — but `voice_stack.py` is structured to make per-tenant voice
-  config easy when we get there
+- No delivery / pay-on-call / non-Clover POS — see `09-clover-pos.md` out-of-scope list
+- No public Clover App Market listing until after pilot
 - Inbound only (no outbound)
