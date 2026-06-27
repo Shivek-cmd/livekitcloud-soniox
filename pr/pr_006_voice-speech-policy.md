@@ -1,35 +1,33 @@
-# PR 006 — Voice speech policy (Option B)
+# PR 006 — Voice speech policy + phone call quality
 
-Production speech layer for natural Canadian Punjabi-English restaurant calls.
+Production speech layer for natural Canadian Punjabi-English restaurant calls, plus phone echo and prompt fixes.
 
 ## Problem
 
-Sierra was forced to speak every dish in full Gurmukhi (`speak_as`), which sounded unnatural and
-sometimes wrong on phone calls (e.g. Fish Pakora → machhi/ਮੱਛੀ, Chole Bhature → full Gurmukhi
-instead of the English name customers actually use).
+1. Sierra forced every dish into full Gurmukhi (`speak_as`) — unnatural on Canadian calls (Fish Pakora → machhi).
+2. Unprompted prices and Punjabi spice questions ("mirchi kithe tak").
+3. Outbound/mobile calls: greeting echo caused dead air (STT heard Sierra's own TTS).
 
 ## Solution
 
-Central **speech policy** — not prompt-only tape:
+### Speech policy (Option B)
 
 | Field | Purpose |
 |-------|---------|
 | `voice_line` | Exact text Sierra says for the dish name |
-| `speech_mode` | `english` \| `mixed` \| `gurmukhi` — hints for sentence wrapping |
-| `speak_as` | Kept for STT aliases / legacy; not default TTS output |
+| `speech_mode` | `english` \| `mixed` \| `gurmukhi` |
+| `speak_as` | STT aliases only — not default TTS |
 
-### Category rules (defaults)
+### Phone echo recovery
 
-- **Combos, tandoor, non-veg mains** → English menu names
-- **Fish/meat starters** → English (Fish Pakora, Chicken Tikka)
-- **Veg mains, veg starters, drinks** → mixed (English dish name in Punjabi sentence)
-- **Traditional desserts** (Gulab Jamun, Kheer, etc.) → Gurmukhi
-- **Modifiers / spice** → always English
+- Greeting tail echo detection (`Help you today`, etc.)
+- Reprompt: "ਹਾਂ ਜੀ — go ahead, I'm listening."
+- No blanket STT mute; tuned endpointing + false-interruption recovery
 
-### Key overrides
+### Price / spice rules
 
-- `fish_pakora` → "Fish Pakora"
-- `chole_bhature_combo` → "Chole Bhature Combo"
+- Price in tool output marked INTERNAL — only say if customer asks or Step E total
+- Spice: English only — "Mild, medium, or spicy?"
 
 ## Files
 
@@ -37,29 +35,31 @@ Central **speech policy** — not prompt-only tape:
 |------|--------|
 | `restaurant/clover/speech_policy.py` | Policy engine |
 | `restaurant/clover/voice_labels.py` | Build/merge label entries |
-| `restaurant/clover/models.py` | `voice_line`, `speech_mode` on cache types |
+| `restaurant/clover/models.py` | `voice_line`, internal price in describe() |
 | `restaurant/clover/menu.py` | Sync/load/save/search |
-| `restaurant/menu_provider.py` | Tool output uses `voice_line` |
-| `restaurant/orders.py` | Cart summary uses `voice_line` |
-| `agent.py` | Natural voice prompt section |
-| `scripts/rebuild_voice_labels.py` | Re-apply policy to existing JSON |
-| `data/clover_voice_labels.json` | Regenerated with new fields |
+| `restaurant/menu_provider.py` | Tool output, no prices in search |
+| `restaurant/orders.py` | `voice_line` cart; no price in add_to_order return |
+| `restaurant/phone_echo.py` | Greeting tail + echo detection |
+| `agent.py` | Natural voice, price/spice rules, phone session tuning |
+| `scripts/rebuild_voice_labels.py` | Re-apply policy to JSON |
+| `data/clover_voice_labels.json` | Regenerated |
 
 ## Deploy (VPS)
 
 ```bash
 cd /opt/livekit-sarvam
-git pull
-python scripts/rebuild_voice_labels.py   # if JSON not yet updated on branch
-python scripts/clover_sync_menu.py
-sudo systemctl restart restaurant-agent
+git pull origin main
+PYTHONPATH=/opt/livekit-sarvam uv run python scripts/rebuild_voice_labels.py
+PYTHONPATH=/opt/livekit-sarvam uv run python scripts/clover_sync_menu.py
+systemctl restart restaurant-agent
 ```
 
 ## Test plan
 
-- [ ] Call and order **Fish Pakora** — Sierra says "Fish Pakora", not machhi
-- [ ] Order **Chole Bhature Combo** — English name in natural Punjabi sentence
-- [ ] **Gulab Jamun** / **Kheer** — Gurmukhi voice_line still works
-- [ ] Phone readback — English digits only
-- [ ] Spice/modifiers — mild, medium, spicy in English
-- [ ] `get_order_summary` — voice_line names in cart readback
+- [ ] Fish Pakora — says "Fish Pakora", not machhi
+- [ ] Chole Bhature Combo — English name in Punjabi sentence
+- [ ] Gulab Jamun / Kheer — Gurmukhi voice_line OK
+- [ ] No price until customer asks
+- [ ] Spice — "Mild, medium, or spicy?" in English
+- [ ] Phone: greeting → brief pause → responds after you speak (earpiece)
+- [ ] Phone digits read back in English at Step D
