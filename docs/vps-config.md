@@ -47,7 +47,35 @@ TWILIO_AUTH_TOKEN=<twilio token>
 
 ### Voice stack
 Soniox `stt-rt-v5` (STT) + OpenAI `gpt-4o-mini` (LLM) + Soniox `tts-rt-v1` voice `Maya` (TTS).
-Built in `restaurant/voice_stack.py`. All US/EU/JP-hosted (low latency for Canada callers).
+Built in `restaurant/voice_stack.py`. Phone/web session tuning in `restaurant/session_config.py`.
+All US/EU/JP-hosted (low latency for Canada callers).
+
+**Production commit (2026-06-27):** `dd8c5e2` — Tier A phone latency (TurnDetector, 0.8s endpointing).
+
+### Phone tuning env vars (optional — defaults in `session_config.py`)
+
+Add to `/opt/livekit-sarvam/.env` to override without code deploy:
+
+```
+USE_CLOVER_MENU=1
+PHONE_ENDPOINTING_MAX=0.8
+PHONE_ENDPOINTING_MIN=0.2
+PHONE_PREEMPTIVE_GENERATION=true
+PHONE_PREEMPTIVE_TTS=true
+PHONE_GREETING_SETTLE_SEC=2.0
+PHONE_AEC_WARMUP_SEC=1.0
+PHONE_INTERRUPTION_MIN_WORDS=1
+```
+
+Restart after change: `systemctl restart restaurant-agent`.
+
+### Latency / conversation logs
+
+```bash
+journalctl -u restaurant-agent -f | grep -E 'USER:|SIERRA:|LATENCY|Ignoring|EOU metrics'
+```
+
+Example `LATENCY` line: `eou_delay=0.56s | user_stop→speaking=3909ms | llm_ttft=1.62s`
 
 ---
 

@@ -1,5 +1,7 @@
 # Reference Knowledge Base
 
+> **New conversation?** Start with [`../HANDOFF.md`](../HANDOFF.md) — primary project state doc.
+
 Captured external knowledge (Soniox, LiveKit, Clover) so we don't re-paste docs each session.
 Each file lists its source URL and capture date. **Keep these updated** when plugin/pinned versions
 or upstream docs change.
@@ -16,6 +18,9 @@ or upstream docs change.
 | [clover-sierra-integration-notes.md](clover-sierra-integration-notes.md) | How Clover maps to Sierra — v1 scope, edge cases, open questions (planning only). |
 
 Related:
+- [**../HANDOFF.md**](../HANDOFF.md) — **start here** — current state, Tier A/B, ops, file map.
+- [../plan/06-milestones.md](../plan/06-milestones.md) — phase tracker.
+- [../plan/10-voice-quality-tier-b.md](../plan/10-voice-quality-tier-b.md) — voice bugs backlog.
 - [../plan/01-overview.md](../plan/01-overview.md) — what we're building + the current stack.
 - [../plan/02-architecture.md](../plan/02-architecture.md) — current architecture and call flow.
 - [../vps-config.md](../vps-config.md) — deployment, services, SIP IDs, env, ops.

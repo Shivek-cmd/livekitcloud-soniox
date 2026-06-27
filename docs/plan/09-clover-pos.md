@@ -1,6 +1,7 @@
 # Clover POS Integration — Plan
 
-> Status: **Planning** (no code yet).  
+> Status: **8a–8b implemented**; **8c–8f planned**.  
+> **Handoff / current state:** [`../HANDOFF.md`](../HANDOFF.md)  
 > Reference knowledge: [`../reference/clover-*.md`](../reference/README.md)  
 > Last updated: 2026-06-27
 

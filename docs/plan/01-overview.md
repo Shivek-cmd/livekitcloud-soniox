@@ -1,5 +1,7 @@
 # Project Overview
 
+> **Start here for session context:** [`../HANDOFF.md`](../HANDOFF.md) (current state, Tier A/B, ops).
+
 ## What We're Building
 
 A **Punjabi restaurant voice agent** named **Sierra** for **Bizbull Restaurant** that handles:

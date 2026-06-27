@@ -12,6 +12,27 @@
 4. **Audio pre-processing** — noise cancellation / AGC cleaning input before the above
 5. **Agent speech scheduling** — gap between the agent's own utterances
 
+> Captured 2026-06-26; **our config updated 2026-06-27 (PR 008).** See `restaurant/session_config.py`.
+
+## Our current production config (2026-06-27)
+
+Implemented in **`restaurant/session_config.py`** via `TurnHandlingOptions` (livekit-agents 1.6.x).
+
+| Channel | Turn detection | Endpointing | Preemptive | Interruptions |
+|---------|----------------|-------------|------------|---------------|
+| **Phone** | `TurnDetector(v1-mini)` + bundled Silero VAD | dynamic **0.2–0.8s** | LLM + TTS | adaptive, `min_words=1` |
+| **Web** | `TurnDetector()` | dynamic 0.25–2.0s | LLM + TTS | adaptive |
+
+Env overrides: `PHONE_ENDPOINTING_MAX`, etc. — see `docs/vps-config.md` and `docs/HANDOFF.md`.
+
+**History:**
+- PR 005 used slow phone config (`stt`, 1.0s endpointing, no preemptive, no barge-in) for echo stability.
+- PR 008 restored latency with TurnDetector + preemptive TTS while keeping `phone_echo.py` + Cloud Krisp.
+
+Per-turn metrics: `journalctl … | grep LATENCY` (`restaurant/turn_latency.py`).
+
+---
+
 ## Turn detection modes
 
 | Mode | When to use |
@@ -22,9 +43,7 @@
 | STT endpointing (`turn_detection="stt"`) | When STT has its own end-of-turn (AssemblyAI, Deepgram Flux). **"Less responsive to user interruptions." Docs say still provide a VAD plugin.** |
 | Manual (`turn_detection="manual"`) | Push-to-talk / explicit control. |
 
-> ⚠️ Our agent currently uses `turn_detection="stt"` with **no Silero VAD plugin**. Per docs,
-> STT-endpointing mode is the least interruption-responsive mode and a VAD plugin is recommended
-> alongside it. See `docs/diagnosis/phone-call-quality.md`.
+~~> ⚠️ Our agent currently uses `turn_detection="stt"`…~~ **Superseded by PR 008** — see "Our current production config" above.
 
 ## Endpointing options (how long to wait after speech before replying)
 
@@ -34,8 +53,7 @@
 | `endpointing.max_delay` | `3.0s` | Max wait before forcing the turn closed. |
 | `endpointing.mode` | `fixed` | `fixed` always uses the delays; `dynamic` adapts within range (Python). |
 
-> Our agent sets `min_endpointing_delay=0.2` (phone) / `0.07` (web) — far below the `0.5` default.
-> Very low values reduce latency but raise the risk of replying before the caller finishes.
+> ~~Our agent sets `min_endpointing_delay=0.2` (phone)…~~ **Superseded** — phone uses `TurnHandlingOptions` endpointing in `session_config.py` (default max **0.8s**).
 
 ## Interruption options — KEY to the echo/voice-breaking issue
 

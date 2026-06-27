@@ -58,7 +58,9 @@ server in this project anymore.
 - Python `livekit-agents` process running on the VPS as a systemd service.
 - Registers with LiveKit Cloud as `agent_name="restaurant-agent"` and waits for dispatch.
 - One worker handles both phone and web (transport abstracted by LiveKit).
-- Voice providers built in `restaurant/voice_stack.py`.
+- Voice providers: `restaurant/voice_stack.py`.
+- Session tuning (turn detection, endpointing, latency): `restaurant/session_config.py`.
+- Per-turn latency logs: `restaurant/turn_latency.py`.
 
 ### 4. Soniox STT — `stt-rt-v5`
 - Realtime streaming, `language_hints=["pa","en","hi"]`, automatic code-mix + language ID.

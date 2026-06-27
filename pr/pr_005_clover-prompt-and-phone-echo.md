@@ -1,5 +1,9 @@
 # PR 005 — Clover-aware prompt + phone echo fix
 
+> **Note (2026-06-27):** Phone `AgentSession` tuning from this PR (1s endpointing, no preemptive,
+> STT-only, no barge-in) was **superseded by PR 008** (`restaurant/session_config.py`).
+> Echo filter (`phone_echo.py`) and prompt menu-tool rules remain active.
+
 ## Branch
 `pr_005_clover-prompt-and-phone-echo`
 

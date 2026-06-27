@@ -25,11 +25,15 @@ round-trips per turn). **Fix:** replaced the whole India-hosted stack with **Son
 Soniox TTS** (US/EU/JP-hosted) and enabled `preemptive_generation`. Soniox `Maya` voice chosen for
 Punjabi. The old India-hosted provider was **fully removed** from code, docs, and the VPS.
 
-## Phase 6 — Quality Tuning (in progress)
+## Phase 6 — Quality Tuning
+
 | Task | Status |
 |---|---|
+| **Tier A — phone latency** (TurnDetector, preemptive TTS, 0.8s endpointing) | ✅ PR 008 — see `docs/HANDOFF.md` |
+| Per-turn latency logging (`LATENCY` lines) | ✅ `restaurant/turn_latency.py` |
+| Natural menu offers (no 1-2-3 lists) | ✅ search cap + prompt (partial — LLM can still slip) |
+| **Tier B — conversation bugs** (echo false positives, search gaps, order flow) | ⬜ See `docs/plan/10-voice-quality-tier-b.md` |
 | Punjabi voice quality pass (Soniox voices) | ⬜ |
-| Latency profiling — measure TTFA end-to-end | ⬜ |
 | STT accuracy across Punjabi accents | ⬜ |
 | Digit/phone-number read-back accuracy | ⬜ |
 | Inbound Twilio routing → Cloud SIP for real customer calls (verify prod) | ⬜ |
@@ -40,8 +44,8 @@ Voice orders flow into restaurant Clover POS. See **`09-clover-pos.md`** for ful
 | Sub-phase | Scope | Status |
 |---|---|---|
 | 8a | Sandbox probe — menu read + test atomic order | ✅ |
-| 8b | Menu cache + tenant store | 🔄 |
-| 8c | Agent order placement + kitchen print | ⬜ |
+| 8b | Menu cache + tenant store + voice labels + menu tools | ✅ |
+| 8c | Agent order placement + kitchen print | ⬜ **Next** |
 | 8d | Webhooks + availability | ⬜ |
 | 8e | Production pilot (one merchant, OAuth) | ⬜ |
 | 8f | Multi-tenant routing (SaaS) | ⬜ |
