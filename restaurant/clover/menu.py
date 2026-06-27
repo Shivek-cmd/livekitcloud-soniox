@@ -10,6 +10,7 @@ from pathlib import Path
 from restaurant.clover.client import CloverClient
 from restaurant.clover.models import CachedMenuItem, CachedModifier, CachedModifierGroup
 from restaurant.clover.seed_menu import CATEGORIES
+from restaurant.clover.speech_policy import resolve_speech_from_label
 from restaurant.tenants.store import Tenant, mark_menu_synced
 
 _CATEGORY_KEY_NAMES = {c.key: c.name for c in CATEGORIES}
@@ -37,6 +38,8 @@ def _voice_modifier_groups(voice_item: dict | None) -> list[CachedModifierGroup]
                 name=m["name"],
                 price_cents=m.get("price_cents") or 0,
                 speak_as=m.get("speak_as"),
+                voice_line=m.get("voice_line") or m["name"],
+                speech_mode=m.get("speech_mode") or "english",
                 aliases=list(m.get("aliases") or []),
             )
             for m in g.get("modifiers") or []
@@ -96,11 +99,14 @@ class MenuCache:
                 cat_name = "Other"
 
             price_cents = raw.get("price") or (voice.get("price_cents") if voice else 0) or 0
+            voice_line, speech_mode = resolve_speech_from_label(voice or {"name": raw.get("name", "")})
             cached.append(
                 CachedMenuItem(
                     clover_item_id=iid,
                     name=raw.get("name") or (voice.get("clover_name") if voice else "Unknown"),
                     speak_as=(voice.get("speak_as") if voice else None) or raw.get("name", ""),
+                    voice_line=voice_line,
+                    speech_mode=speech_mode,
                     price_cents=price_cents,
                     veg=bool(voice.get("veg")) if voice else True,
                     available=bool(raw.get("available", True)) and not bool(raw.get("hidden", False)),
@@ -130,6 +136,8 @@ class MenuCache:
                         name=m["name"],
                         price_cents=m.get("price_cents") or 0,
                         speak_as=m.get("speak_as"),
+                        voice_line=m.get("voice_line") or m["name"],
+                        speech_mode=m.get("speech_mode") or "english",
                         aliases=list(m.get("aliases") or []),
                     )
                     for m in g.get("modifiers") or []
@@ -143,11 +151,14 @@ class MenuCache:
                         modifiers=mods,
                     )
                 )
+            voice_line, speech_mode = resolve_speech_from_label(raw)
             items.append(
                 CachedMenuItem(
                     clover_item_id=raw["clover_item_id"],
                     name=raw["name"],
                     speak_as=raw["speak_as"],
+                    voice_line=raw.get("voice_line") or voice_line,
+                    speech_mode=raw.get("speech_mode") or speech_mode,
                     price_cents=raw["price_cents"],
                     veg=raw.get("veg", True),
                     available=raw.get("available", True),
@@ -174,6 +185,8 @@ class MenuCache:
                     "clover_item_id": i.clover_item_id,
                     "name": i.name,
                     "speak_as": i.speak_as,
+                    "voice_line": i.voice_line,
+                    "speech_mode": i.speech_mode,
                     "price_cents": i.price_cents,
                     "veg": i.veg,
                     "available": i.available,
@@ -192,6 +205,8 @@ class MenuCache:
                                     "name": m.name,
                                     "price_cents": m.price_cents,
                                     "speak_as": m.speak_as,
+                                    "voice_line": m.voice_line,
+                                    "speech_mode": m.speech_mode,
                                     "aliases": m.aliases,
                                 }
                                 for m in g.modifiers
@@ -211,11 +226,11 @@ class MenuCache:
             return None
 
         for item in self._items:
-            if _norm(item.name) == q or _norm(item.speak_as) == q:
+            if _norm(item.name) == q or _norm(item.speak_as) == q or _norm(item.voice_line) == q:
                 return item
 
         for item in self._items:
-            if q in _norm(item.name) or q in _norm(item.speak_as):
+            if q in _norm(item.name) or q in _norm(item.speak_as) or q in _norm(item.voice_line):
                 return item
             for alias in item.aliases:
                 if q in _norm(alias) or _norm(alias) in q:
@@ -225,7 +240,15 @@ class MenuCache:
         best: CachedMenuItem | None = None
         best_score = 0
         for item in self._items:
-            hay = _norm(item.name) + " " + _norm(item.speak_as) + " " + " ".join(item.aliases)
+            hay = (
+                _norm(item.name)
+                + " "
+                + _norm(item.speak_as)
+                + " "
+                + _norm(item.voice_line)
+                + " "
+                + " ".join(item.aliases)
+            )
             score = sum(1 for t in tokens if t in hay)
             if score > best_score:
                 best_score = score
@@ -240,7 +263,7 @@ class MenuCache:
         scored: list[tuple[int, CachedMenuItem]] = []
         for item in self._items:
             hay = " ".join(
-                [_norm(item.name), _norm(item.speak_as), _norm(item.category_name)]
+                [_norm(item.name), _norm(item.speak_as), _norm(item.voice_line), _norm(item.category_name)]
                 + [_norm(a) for a in item.aliases]
             )
             if q in hay:

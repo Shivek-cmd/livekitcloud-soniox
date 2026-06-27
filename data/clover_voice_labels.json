@@ -32,7 +32,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -43,7 +45,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -54,7 +58,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -65,7 +71,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -84,7 +92,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -95,7 +105,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -106,7 +118,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -117,7 +131,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -128,11 +144,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Samosa Chaat",
+      "speech_mode": "mixed"
     },
     {
       "key": "paneer_tikka",
@@ -163,7 +183,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -174,7 +196,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -185,7 +209,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -196,7 +222,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -215,7 +243,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -226,7 +256,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -237,7 +269,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -248,7 +282,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -259,11 +295,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Paneer Tikka",
+      "speech_mode": "mixed"
     },
     {
       "key": "chicken_tikka",
@@ -293,7 +333,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -304,7 +346,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -315,7 +359,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -326,7 +372,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -345,7 +393,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -356,7 +406,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -367,7 +419,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -378,7 +432,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -389,11 +445,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Chicken Tikka",
+      "speech_mode": "english"
     },
     {
       "key": "fish_pakora",
@@ -424,7 +484,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -435,7 +497,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -446,7 +510,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -457,11 +523,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Fish Pakora",
+      "speech_mode": "english"
     },
     {
       "key": "veg_spring_rolls",
@@ -492,7 +562,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -503,7 +575,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -514,7 +588,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -525,11 +601,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Veg Spring Rolls",
+      "speech_mode": "mixed"
     },
     {
       "key": "pakora_platter",
@@ -560,7 +640,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -571,7 +653,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -582,7 +666,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -593,7 +679,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -612,7 +700,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -623,7 +713,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -634,7 +726,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -645,7 +739,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -656,11 +752,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Mixed Pakora Platter",
+      "speech_mode": "mixed"
     },
     {
       "key": "honey_chilli_cauliflower",
@@ -691,7 +791,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -702,7 +804,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -713,7 +817,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -724,11 +830,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Honey Chilli Gobi",
+      "speech_mode": "mixed"
     },
     {
       "key": "tandoori_chicken_half",
@@ -759,7 +869,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -770,7 +882,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -781,7 +895,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -792,7 +908,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -811,7 +929,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -822,7 +942,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -833,7 +955,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -844,7 +968,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -855,11 +981,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Tandoori Chicken",
+      "speech_mode": "english"
     },
     {
       "key": "tandoori_chicken_full",
@@ -890,7 +1020,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -901,7 +1033,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -912,7 +1046,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -923,7 +1059,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -942,7 +1080,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -953,7 +1093,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -964,7 +1106,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -975,7 +1119,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -986,11 +1132,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Tandoori Chicken",
+      "speech_mode": "english"
     },
     {
       "key": "seekh_kebab",
@@ -1021,7 +1171,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -1032,7 +1184,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -1043,7 +1197,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -1054,11 +1210,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Seekh Kebab",
+      "speech_mode": "english"
     },
     {
       "key": "lamb_chops",
@@ -1089,7 +1249,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -1100,7 +1262,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -1111,7 +1275,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -1122,11 +1288,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Tandoori Lamb Chops",
+      "speech_mode": "english"
     },
     {
       "key": "tandoori_shrimp",
@@ -1157,7 +1327,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -1168,7 +1340,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -1179,7 +1353,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -1190,11 +1366,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Tandoori Shrimp",
+      "speech_mode": "english"
     },
     {
       "key": "dal_makhani",
@@ -1225,7 +1405,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -1236,7 +1418,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -1247,7 +1431,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -1258,7 +1444,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1277,7 +1465,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -1287,7 +1477,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -1297,7 +1489,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -1308,7 +1502,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1328,7 +1524,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -1338,7 +1536,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -1348,7 +1548,9 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1367,7 +1569,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -1378,7 +1582,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -1389,7 +1595,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -1400,7 +1608,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -1411,11 +1621,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Dal Makhani",
+      "speech_mode": "mixed"
     },
     {
       "key": "sarson_saag",
@@ -1446,7 +1660,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -1457,7 +1673,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -1468,7 +1686,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -1479,7 +1699,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1498,7 +1720,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -1508,7 +1732,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -1518,7 +1744,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -1529,7 +1757,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1548,7 +1778,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -1559,7 +1791,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -1570,7 +1804,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -1581,7 +1817,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -1592,11 +1830,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "ਸਰ੍ਹੋਂ ਦਾ ਸਾਗ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "palak_paneer",
@@ -1627,7 +1869,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -1638,7 +1882,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -1649,7 +1895,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -1660,7 +1908,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1679,7 +1929,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -1689,7 +1941,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -1699,7 +1953,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -1710,7 +1966,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1730,7 +1988,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -1740,7 +2000,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -1750,7 +2012,9 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1769,7 +2033,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -1780,7 +2046,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -1791,7 +2059,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -1802,7 +2072,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -1813,11 +2085,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Palak Paneer",
+      "speech_mode": "mixed"
     },
     {
       "key": "chole",
@@ -1848,7 +2124,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -1859,7 +2137,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -1870,7 +2150,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -1881,7 +2163,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1900,7 +2184,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -1910,7 +2196,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -1920,7 +2208,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -1931,7 +2221,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -1950,7 +2242,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -1961,7 +2255,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -1972,7 +2268,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -1983,7 +2281,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -1994,11 +2294,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Chole",
+      "speech_mode": "english"
     },
     {
       "key": "paneer_butter_masala",
@@ -2029,7 +2333,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -2040,7 +2346,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -2051,7 +2359,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -2062,7 +2372,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2081,7 +2393,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -2091,7 +2405,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -2101,7 +2417,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -2112,7 +2430,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2132,7 +2452,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -2142,7 +2464,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -2152,11 +2476,15 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Paneer Butter Masala",
+      "speech_mode": "mixed"
     },
     {
       "key": "malai_kofta",
@@ -2186,7 +2514,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -2197,7 +2527,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -2208,7 +2540,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -2219,7 +2553,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2238,7 +2574,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -2248,7 +2586,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -2258,7 +2598,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -2269,7 +2611,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2289,7 +2633,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -2299,7 +2645,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -2309,11 +2657,15 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Malai Kofta",
+      "speech_mode": "mixed"
     },
     {
       "key": "dal_tadka",
@@ -2344,7 +2696,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -2355,7 +2709,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -2366,7 +2722,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -2377,7 +2735,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2396,7 +2756,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -2406,7 +2768,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -2416,7 +2780,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -2427,7 +2793,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2447,7 +2815,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -2457,7 +2827,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -2467,11 +2839,15 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Dal Tadka",
+      "speech_mode": "mixed"
     },
     {
       "key": "mushroom_matar",
@@ -2501,7 +2877,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -2512,7 +2890,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -2523,7 +2903,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -2534,7 +2916,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2553,7 +2937,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -2563,7 +2949,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -2573,7 +2961,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -2584,7 +2974,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2604,7 +2996,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -2614,7 +3008,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -2624,11 +3020,15 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Mushroom Matar",
+      "speech_mode": "mixed"
     },
     {
       "key": "baigan_bharta",
@@ -2659,7 +3059,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -2670,7 +3072,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -2681,7 +3085,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -2692,7 +3098,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2711,7 +3119,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -2721,7 +3131,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -2731,7 +3143,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -2742,11 +3156,15 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Baigan Bharta",
+      "speech_mode": "mixed"
     },
     {
       "key": "butter_chicken",
@@ -2777,7 +3195,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -2788,7 +3208,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -2799,7 +3221,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -2810,7 +3234,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2829,7 +3255,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -2839,7 +3267,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -2849,7 +3279,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -2860,7 +3292,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2880,7 +3314,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -2890,7 +3326,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -2900,7 +3338,9 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2919,7 +3359,9 @@
               "speak_as": null,
               "aliases": [
                 "regular"
-              ]
+              ],
+              "voice_line": "Regular Portion",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -2930,7 +3372,9 @@
               "aliases": [
                 "large portion",
                 "extra meat"
-              ]
+              ],
+              "voice_line": "Large Portion",
+              "speech_mode": "english"
             }
           ]
         },
@@ -2949,7 +3393,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -2960,7 +3406,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -2971,7 +3419,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -2982,7 +3432,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -2993,11 +3445,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Butter Chicken",
+      "speech_mode": "english"
     },
     {
       "key": "chicken_tikka_masala",
@@ -3028,7 +3484,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -3039,7 +3497,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -3050,7 +3510,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -3061,7 +3523,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3080,7 +3544,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -3090,7 +3556,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -3100,7 +3568,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -3111,7 +3581,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3131,7 +3603,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -3141,7 +3615,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -3151,7 +3627,9 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3170,7 +3648,9 @@
               "speak_as": null,
               "aliases": [
                 "regular"
-              ]
+              ],
+              "voice_line": "Regular Portion",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -3181,11 +3661,15 @@
               "aliases": [
                 "large portion",
                 "extra meat"
-              ]
+              ],
+              "voice_line": "Large Portion",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Chicken Tikka Masala",
+      "speech_mode": "english"
     },
     {
       "key": "lamb_rogan_josh",
@@ -3216,7 +3700,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -3227,7 +3713,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -3238,7 +3726,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -3249,7 +3739,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3268,7 +3760,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -3278,7 +3772,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -3288,7 +3784,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -3299,7 +3797,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3319,7 +3819,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -3329,7 +3831,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -3339,7 +3843,9 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3358,7 +3864,9 @@
               "speak_as": null,
               "aliases": [
                 "regular"
-              ]
+              ],
+              "voice_line": "Regular Portion",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -3369,11 +3877,15 @@
               "aliases": [
                 "large portion",
                 "extra meat"
-              ]
+              ],
+              "voice_line": "Large Portion",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Lamb Rogan Josh",
+      "speech_mode": "english"
     },
     {
       "key": "goat_curry",
@@ -3404,7 +3916,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -3415,7 +3929,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -3426,7 +3942,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -3437,7 +3955,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3456,7 +3976,9 @@
               "speak_as": null,
               "aliases": [
                 "plain naan"
-              ]
+              ],
+              "voice_line": "Plain Naan",
+              "speech_mode": "english"
             },
             {
               "key": "butter_naan",
@@ -3466,7 +3988,9 @@
               "speak_as": null,
               "aliases": [
                 "butter naan"
-              ]
+              ],
+              "voice_line": "Butter Naan",
+              "speech_mode": "english"
             },
             {
               "key": "garlic_naan",
@@ -3476,7 +4000,9 @@
               "speak_as": null,
               "aliases": [
                 "garlic naan"
-              ]
+              ],
+              "voice_line": "Garlic Naan",
+              "speech_mode": "english"
             },
             {
               "key": "tandoori_roti",
@@ -3487,7 +4013,9 @@
               "aliases": [
                 "roti",
                 "tandoori roti"
-              ]
+              ],
+              "voice_line": "Tandoori Roti",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3507,7 +4035,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -3517,7 +4047,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -3527,7 +4059,9 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3546,7 +4080,9 @@
               "speak_as": null,
               "aliases": [
                 "regular"
-              ]
+              ],
+              "voice_line": "Regular Portion",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -3557,11 +4093,15 @@
               "aliases": [
                 "large portion",
                 "extra meat"
-              ]
+              ],
+              "voice_line": "Large Portion",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Goat Curry",
+      "speech_mode": "english"
     },
     {
       "key": "fish_curry",
@@ -3592,7 +4132,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -3603,7 +4145,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -3614,7 +4158,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -3625,7 +4171,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3645,7 +4193,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -3655,7 +4205,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -3665,11 +4217,15 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Punjabi Fish Curry",
+      "speech_mode": "english"
     },
     {
       "key": "chicken_biryani",
@@ -3700,7 +4256,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -3711,7 +4269,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -3722,7 +4282,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -3733,7 +4295,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3752,7 +4316,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -3763,7 +4329,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -3774,7 +4342,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -3785,7 +4355,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -3796,7 +4368,9 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3815,7 +4389,9 @@
               "speak_as": null,
               "aliases": [
                 "regular"
-              ]
+              ],
+              "voice_line": "Regular Portion",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -3826,11 +4402,15 @@
               "aliases": [
                 "large portion",
                 "extra meat"
-              ]
+              ],
+              "voice_line": "Large Portion",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Chicken Biryani",
+      "speech_mode": "english"
     },
     {
       "key": "lamb_biryani",
@@ -3860,7 +4440,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -3871,7 +4453,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -3882,7 +4466,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -3893,7 +4479,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -3912,7 +4500,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -3923,7 +4513,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -3934,7 +4526,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -3945,7 +4539,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -3956,11 +4552,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Lamb Biryani",
+      "speech_mode": "english"
     },
     {
       "key": "butter_prawn_masala",
@@ -3991,7 +4591,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -4002,7 +4604,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -4013,7 +4617,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -4024,7 +4630,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4044,7 +4652,9 @@
               "aliases": [
                 "plain rice",
                 "chawal"
-              ]
+              ],
+              "voice_line": "Plain Rice",
+              "speech_mode": "english"
             },
             {
               "key": "jeera_rice",
@@ -4054,7 +4664,9 @@
               "speak_as": null,
               "aliases": [
                 "jeera rice"
-              ]
+              ],
+              "voice_line": "Jeera Rice",
+              "speech_mode": "english"
             },
             {
               "key": "saffron_rice",
@@ -4064,11 +4676,15 @@
               "speak_as": null,
               "aliases": [
                 "saffron rice"
-              ]
+              ],
+              "voice_line": "Saffron Rice",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Butter Prawn Masala",
+      "speech_mode": "english"
     },
     {
       "key": "butter_naan",
@@ -4081,7 +4697,9 @@
       ],
       "veg": true,
       "category_key": "breads_rice",
-      "price_cents": 399
+      "price_cents": 399,
+      "voice_line": "Butter Naan",
+      "speech_mode": "english"
     },
     {
       "key": "garlic_naan",
@@ -4093,7 +4711,9 @@
       ],
       "veg": true,
       "category_key": "breads_rice",
-      "price_cents": 499
+      "price_cents": 499,
+      "voice_line": "Garlic Naan",
+      "speech_mode": "english"
     },
     {
       "key": "tandoori_roti",
@@ -4106,7 +4726,9 @@
       ],
       "veg": true,
       "category_key": "breads_rice",
-      "price_cents": 299
+      "price_cents": 299,
+      "voice_line": "Tandoori Roti",
+      "speech_mode": "english"
     },
     {
       "key": "aloo_paratha",
@@ -4137,7 +4759,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -4148,7 +4772,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -4159,7 +4785,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -4170,11 +4798,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Aloo Paratha",
+      "speech_mode": "english"
     },
     {
       "key": "bhatura_single",
@@ -4187,7 +4819,9 @@
       ],
       "veg": true,
       "category_key": "breads_rice",
-      "price_cents": 399
+      "price_cents": 399,
+      "voice_line": "Bhatura",
+      "speech_mode": "english"
     },
     {
       "key": "plain_rice",
@@ -4200,7 +4834,9 @@
       ],
       "veg": true,
       "category_key": "breads_rice",
-      "price_cents": 499
+      "price_cents": 499,
+      "voice_line": "Plain Rice",
+      "speech_mode": "english"
     },
     {
       "key": "jeera_rice",
@@ -4212,7 +4848,9 @@
       ],
       "veg": true,
       "category_key": "breads_rice",
-      "price_cents": 599
+      "price_cents": 599,
+      "voice_line": "Jeera Rice",
+      "speech_mode": "english"
     },
     {
       "key": "saffron_rice",
@@ -4224,7 +4862,9 @@
       ],
       "veg": true,
       "category_key": "breads_rice",
-      "price_cents": 699
+      "price_cents": 699,
+      "voice_line": "Saffron Rice",
+      "speech_mode": "english"
     },
     {
       "key": "chole_bhature_combo",
@@ -4256,7 +4896,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -4267,7 +4909,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -4278,7 +4922,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -4289,7 +4935,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4309,7 +4957,9 @@
               "aliases": [
                 "2 bhature",
                 "two bhature"
-              ]
+              ],
+              "voice_line": "2 Bhature (standard)",
+              "speech_mode": "english"
             },
             {
               "key": "three",
@@ -4320,7 +4970,9 @@
               "aliases": [
                 "3 bhature",
                 "extra bhatura"
-              ]
+              ],
+              "voice_line": "3 Bhature",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4339,7 +4991,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -4350,7 +5004,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -4361,7 +5017,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -4372,7 +5030,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -4383,11 +5043,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Chole Bhature Combo",
+      "speech_mode": "english"
     },
     {
       "key": "lunch_thali_combo",
@@ -4418,7 +5082,9 @@
               "speak_as": null,
               "aliases": [
                 "dal makhani"
-              ]
+              ],
+              "voice_line": "Dal Makhani",
+              "speech_mode": "english"
             },
             {
               "key": "palak_paneer",
@@ -4428,7 +5094,9 @@
               "speak_as": null,
               "aliases": [
                 "palak paneer"
-              ]
+              ],
+              "voice_line": "Palak Paneer",
+              "speech_mode": "english"
             },
             {
               "key": "chole",
@@ -4438,7 +5106,9 @@
               "speak_as": null,
               "aliases": [
                 "chole"
-              ]
+              ],
+              "voice_line": "Chole",
+              "speech_mode": "english"
             },
             {
               "key": "paneer_butter",
@@ -4448,7 +5118,9 @@
               "speak_as": null,
               "aliases": [
                 "paneer butter"
-              ]
+              ],
+              "voice_line": "Paneer Butter Masala",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4468,7 +5140,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -4479,7 +5153,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -4490,7 +5166,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -4501,7 +5179,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4521,7 +5201,9 @@
               "aliases": [
                 "sweet lassi",
                 "lassi"
-              ]
+              ],
+              "voice_line": "Sweet Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "salted_lassi",
@@ -4532,7 +5214,9 @@
               "aliases": [
                 "salted lassi",
                 "namkeen lassi"
-              ]
+              ],
+              "voice_line": "Salted Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "mango_lassi",
@@ -4542,7 +5226,9 @@
               "speak_as": null,
               "aliases": [
                 "mango lassi"
-              ]
+              ],
+              "voice_line": "Mango Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "masala_chai",
@@ -4553,7 +5239,9 @@
               "aliases": [
                 "chai",
                 "masala chai"
-              ]
+              ],
+              "voice_line": "Masala Chai",
+              "speech_mode": "english"
             },
             {
               "key": "soft_drink",
@@ -4565,7 +5253,9 @@
                 "pop",
                 "coke",
                 "pepsi"
-              ]
+              ],
+              "voice_line": "Soft Drink",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4584,7 +5274,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -4595,7 +5287,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -4606,7 +5300,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -4617,7 +5313,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -4628,11 +5326,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Veg Lunch Thali Combo",
+      "speech_mode": "english"
     },
     {
       "key": "nonveg_lunch_combo",
@@ -4662,7 +5364,9 @@
               "speak_as": null,
               "aliases": [
                 "butter chicken"
-              ]
+              ],
+              "voice_line": "Butter Chicken",
+              "speech_mode": "english"
             },
             {
               "key": "chicken_tikka_masala",
@@ -4672,7 +5376,9 @@
               "speak_as": null,
               "aliases": [
                 "tikka masala"
-              ]
+              ],
+              "voice_line": "Chicken Tikka Masala",
+              "speech_mode": "english"
             },
             {
               "key": "lamb_rogan",
@@ -4683,7 +5389,9 @@
               "aliases": [
                 "rogan josh",
                 "lamb"
-              ]
+              ],
+              "voice_line": "Lamb Rogan Josh",
+              "speech_mode": "english"
             },
             {
               "key": "goat_curry",
@@ -4694,7 +5402,9 @@
               "aliases": [
                 "goat curry",
                 "mutton"
-              ]
+              ],
+              "voice_line": "Goat Curry",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4714,7 +5424,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -4725,7 +5437,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -4736,7 +5450,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -4747,7 +5463,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4767,7 +5485,9 @@
               "aliases": [
                 "sweet lassi",
                 "lassi"
-              ]
+              ],
+              "voice_line": "Sweet Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "salted_lassi",
@@ -4778,7 +5498,9 @@
               "aliases": [
                 "salted lassi",
                 "namkeen lassi"
-              ]
+              ],
+              "voice_line": "Salted Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "mango_lassi",
@@ -4788,7 +5510,9 @@
               "speak_as": null,
               "aliases": [
                 "mango lassi"
-              ]
+              ],
+              "voice_line": "Mango Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "masala_chai",
@@ -4799,7 +5523,9 @@
               "aliases": [
                 "chai",
                 "masala chai"
-              ]
+              ],
+              "voice_line": "Masala Chai",
+              "speech_mode": "english"
             },
             {
               "key": "soft_drink",
@@ -4811,11 +5537,15 @@
                 "pop",
                 "coke",
                 "pepsi"
-              ]
+              ],
+              "voice_line": "Soft Drink",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Non-Veg Lunch Combo",
+      "speech_mode": "english"
     },
     {
       "key": "student_combo",
@@ -4845,7 +5575,9 @@
               "speak_as": null,
               "aliases": [
                 "dal makhani"
-              ]
+              ],
+              "voice_line": "Dal Makhani",
+              "speech_mode": "english"
             },
             {
               "key": "palak_paneer",
@@ -4855,7 +5587,9 @@
               "speak_as": null,
               "aliases": [
                 "palak paneer"
-              ]
+              ],
+              "voice_line": "Palak Paneer",
+              "speech_mode": "english"
             },
             {
               "key": "chole",
@@ -4865,7 +5599,9 @@
               "speak_as": null,
               "aliases": [
                 "chole"
-              ]
+              ],
+              "voice_line": "Chole",
+              "speech_mode": "english"
             },
             {
               "key": "paneer_butter",
@@ -4875,7 +5611,9 @@
               "speak_as": null,
               "aliases": [
                 "paneer butter"
-              ]
+              ],
+              "voice_line": "Paneer Butter Masala",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4895,7 +5633,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -4906,7 +5646,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -4917,7 +5659,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -4928,7 +5672,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -4948,7 +5694,9 @@
               "aliases": [
                 "sweet lassi",
                 "lassi"
-              ]
+              ],
+              "voice_line": "Sweet Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "salted_lassi",
@@ -4959,7 +5707,9 @@
               "aliases": [
                 "salted lassi",
                 "namkeen lassi"
-              ]
+              ],
+              "voice_line": "Salted Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "mango_lassi",
@@ -4969,7 +5719,9 @@
               "speak_as": null,
               "aliases": [
                 "mango lassi"
-              ]
+              ],
+              "voice_line": "Mango Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "masala_chai",
@@ -4980,7 +5732,9 @@
               "aliases": [
                 "chai",
                 "masala chai"
-              ]
+              ],
+              "voice_line": "Masala Chai",
+              "speech_mode": "english"
             },
             {
               "key": "soft_drink",
@@ -4992,11 +5746,15 @@
                 "pop",
                 "coke",
                 "pepsi"
-              ]
+              ],
+              "voice_line": "Soft Drink",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Student Combo",
+      "speech_mode": "english"
     },
     {
       "key": "couple_combo",
@@ -5026,7 +5784,9 @@
               "speak_as": null,
               "aliases": [
                 "butter chicken"
-              ]
+              ],
+              "voice_line": "Butter Chicken",
+              "speech_mode": "english"
             },
             {
               "key": "chicken_tikka_masala",
@@ -5036,7 +5796,9 @@
               "speak_as": null,
               "aliases": [
                 "tikka masala"
-              ]
+              ],
+              "voice_line": "Chicken Tikka Masala",
+              "speech_mode": "english"
             },
             {
               "key": "lamb_rogan",
@@ -5047,7 +5809,9 @@
               "aliases": [
                 "rogan josh",
                 "lamb"
-              ]
+              ],
+              "voice_line": "Lamb Rogan Josh",
+              "speech_mode": "english"
             },
             {
               "key": "goat_curry",
@@ -5058,7 +5822,9 @@
               "aliases": [
                 "goat curry",
                 "mutton"
-              ]
+              ],
+              "voice_line": "Goat Curry",
+              "speech_mode": "english"
             }
           ]
         },
@@ -5078,7 +5844,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -5089,7 +5857,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -5100,7 +5870,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -5111,7 +5883,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -5131,7 +5905,9 @@
               "aliases": [
                 "sweet lassi",
                 "lassi"
-              ]
+              ],
+              "voice_line": "Sweet Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "salted_lassi",
@@ -5142,7 +5918,9 @@
               "aliases": [
                 "salted lassi",
                 "namkeen lassi"
-              ]
+              ],
+              "voice_line": "Salted Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "mango_lassi",
@@ -5152,7 +5930,9 @@
               "speak_as": null,
               "aliases": [
                 "mango lassi"
-              ]
+              ],
+              "voice_line": "Mango Lassi",
+              "speech_mode": "english"
             },
             {
               "key": "masala_chai",
@@ -5163,7 +5943,9 @@
               "aliases": [
                 "chai",
                 "masala chai"
-              ]
+              ],
+              "voice_line": "Masala Chai",
+              "speech_mode": "english"
             },
             {
               "key": "soft_drink",
@@ -5175,7 +5957,9 @@
                 "pop",
                 "coke",
                 "pepsi"
-              ]
+              ],
+              "voice_line": "Soft Drink",
+              "speech_mode": "english"
             }
           ]
         },
@@ -5194,7 +5978,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -5205,7 +5991,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -5216,7 +6004,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -5227,7 +6017,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -5238,11 +6030,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Couple Combo",
+      "speech_mode": "english"
     },
     {
       "key": "family_veg_platter",
@@ -5273,7 +6069,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -5284,7 +6082,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -5295,7 +6095,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -5306,7 +6108,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -5325,7 +6129,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -5336,7 +6142,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -5347,7 +6155,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -5358,7 +6168,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -5369,11 +6181,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Family Veg Platter",
+      "speech_mode": "english"
     },
     {
       "key": "nonveg_deluxe_platter",
@@ -5404,7 +6220,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -5415,7 +6233,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -5426,7 +6246,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -5437,7 +6259,9 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         },
@@ -5456,7 +6280,9 @@
               "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
               "aliases": [
                 "extra raita"
-              ]
+              ],
+              "voice_line": "Extra Raita",
+              "speech_mode": "english"
             },
             {
               "key": "extra_pickle",
@@ -5467,7 +6293,9 @@
               "aliases": [
                 "extra pickle",
                 "achar"
-              ]
+              ],
+              "voice_line": "Extra Pickle",
+              "speech_mode": "english"
             },
             {
               "key": "extra_papad",
@@ -5478,7 +6306,9 @@
               "aliases": [
                 "extra papad",
                 "papad"
-              ]
+              ],
+              "voice_line": "Extra Papad",
+              "speech_mode": "english"
             },
             {
               "key": "green_chutney",
@@ -5489,7 +6319,9 @@
               "aliases": [
                 "green chutney",
                 "hari chutney"
-              ]
+              ],
+              "voice_line": "Green Chutney",
+              "speech_mode": "english"
             },
             {
               "key": "extra_gravy",
@@ -5500,11 +6332,15 @@
               "aliases": [
                 "extra gravy",
                 "extra sauce"
-              ]
+              ],
+              "voice_line": "Extra Gravy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Non-Veg Deluxe Platter",
+      "speech_mode": "english"
     },
     {
       "key": "office_party_tray",
@@ -5536,7 +6372,9 @@
               "aliases": [
                 "mild",
                 "kam spicy"
-              ]
+              ],
+              "voice_line": "Mild",
+              "speech_mode": "english"
             },
             {
               "key": "medium",
@@ -5547,7 +6385,9 @@
               "aliases": [
                 "medium",
                 "medium spicy"
-              ]
+              ],
+              "voice_line": "Medium",
+              "speech_mode": "english"
             },
             {
               "key": "spicy",
@@ -5558,7 +6398,9 @@
               "aliases": [
                 "spicy",
                 "teekha"
-              ]
+              ],
+              "voice_line": "Spicy",
+              "speech_mode": "english"
             },
             {
               "key": "extra_spicy",
@@ -5569,11 +6411,15 @@
               "aliases": [
                 "extra spicy",
                 "bahut teekha"
-              ]
+              ],
+              "voice_line": "Extra Spicy",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Office Party Tray",
+      "speech_mode": "english"
     },
     {
       "key": "sweet_lassi",
@@ -5604,7 +6450,9 @@
               "aliases": [
                 "regular",
                 "small"
-              ]
+              ],
+              "voice_line": "Regular",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -5615,11 +6463,15 @@
               "aliases": [
                 "large",
                 "bada"
-              ]
+              ],
+              "voice_line": "Large",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Sweet Lassi",
+      "speech_mode": "mixed"
     },
     {
       "key": "salted_lassi",
@@ -5649,7 +6501,9 @@
               "aliases": [
                 "regular",
                 "small"
-              ]
+              ],
+              "voice_line": "Regular",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -5660,11 +6514,15 @@
               "aliases": [
                 "large",
                 "bada"
-              ]
+              ],
+              "voice_line": "Large",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Salted Lassi",
+      "speech_mode": "mixed"
     },
     {
       "key": "mango_lassi",
@@ -5694,7 +6552,9 @@
               "aliases": [
                 "regular",
                 "small"
-              ]
+              ],
+              "voice_line": "Regular",
+              "speech_mode": "english"
             },
             {
               "key": "large",
@@ -5705,11 +6565,15 @@
               "aliases": [
                 "large",
                 "bada"
-              ]
+              ],
+              "voice_line": "Large",
+              "speech_mode": "english"
             }
           ]
         }
-      ]
+      ],
+      "voice_line": "Mango Lassi",
+      "speech_mode": "mixed"
     },
     {
       "key": "masala_chai",
@@ -5722,7 +6586,9 @@
       ],
       "veg": true,
       "category_key": "drinks",
-      "price_cents": 399
+      "price_cents": 399,
+      "voice_line": "Masala Chai",
+      "speech_mode": "mixed"
     },
     {
       "key": "mango_shake",
@@ -5734,7 +6600,9 @@
       ],
       "veg": true,
       "category_key": "drinks",
-      "price_cents": 649
+      "price_cents": 649,
+      "voice_line": "Mango Shake",
+      "speech_mode": "mixed"
     },
     {
       "key": "soft_drink",
@@ -5748,7 +6616,9 @@
       ],
       "veg": true,
       "category_key": "drinks",
-      "price_cents": 249
+      "price_cents": 249,
+      "voice_line": "Soft Drink",
+      "speech_mode": "mixed"
     },
     {
       "key": "nimbu_pani",
@@ -5761,7 +6631,9 @@
       ],
       "veg": true,
       "category_key": "drinks",
-      "price_cents": 449
+      "price_cents": 449,
+      "voice_line": "Nimbu Pani",
+      "speech_mode": "mixed"
     },
     {
       "key": "gulab_jamun",
@@ -5773,7 +6645,9 @@
       ],
       "veg": true,
       "category_key": "desserts",
-      "price_cents": 599
+      "price_cents": 599,
+      "voice_line": "ਗੁਲਾਬ ਜਾਮੁਨ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "kheer",
@@ -5786,7 +6660,9 @@
       ],
       "veg": true,
       "category_key": "desserts",
-      "price_cents": 599
+      "price_cents": 599,
+      "voice_line": "ਖੀਰ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "gajar_halwa",
@@ -5799,7 +6675,9 @@
       ],
       "veg": true,
       "category_key": "desserts",
-      "price_cents": 799
+      "price_cents": 799,
+      "voice_line": "ਗਾਜਰ ਦਾ ਹਲਵਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "rasmalai",
@@ -5811,7 +6689,9 @@
       ],
       "veg": true,
       "category_key": "desserts",
-      "price_cents": 699
+      "price_cents": 699,
+      "voice_line": "ਰਸਮਲਾਈ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "kulfi",
@@ -5824,7 +6704,9 @@
       ],
       "veg": true,
       "category_key": "desserts",
-      "price_cents": 549
+      "price_cents": 549,
+      "voice_line": "ਅੰਬ ਕੁਲਫੀ",
+      "speech_mode": "mixed"
     },
     {
       "key": "raita",
@@ -5836,7 +6718,9 @@
       ],
       "veg": true,
       "category_key": "extras",
-      "price_cents": 399
+      "price_cents": 399,
+      "voice_line": "Raita",
+      "speech_mode": "english"
     },
     {
       "key": "mixed_pickle",
@@ -5849,7 +6733,9 @@
       ],
       "veg": true,
       "category_key": "extras",
-      "price_cents": 299
+      "price_cents": 299,
+      "voice_line": "Mixed Pickle",
+      "speech_mode": "english"
     },
     {
       "key": "papad",
@@ -5862,7 +6748,9 @@
       ],
       "veg": true,
       "category_key": "extras",
-      "price_cents": 249
+      "price_cents": 249,
+      "voice_line": "Papad",
+      "speech_mode": "english"
     },
     {
       "key": "extra_gravy_side",
@@ -5874,7 +6762,10 @@
       ],
       "veg": true,
       "category_key": "extras",
-      "price_cents": 299
+      "price_cents": 299,
+      "voice_line": "Extra Gravy",
+      "speech_mode": "english"
     }
-  ]
+  ],
+  "speech_policy_version": 1
 }

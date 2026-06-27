@@ -23,9 +23,9 @@ from restaurant.clover.seed_menu import (
     MENU_ITEMS,
     MODIFIER_GROUPS,
     RESTAURANT_LABEL,
-    dollars_to_cents,
     modifier_group_by_key,
 )
+from restaurant.clover.voice_labels import build_all_voice_label_items
 
 VOICE_LABELS_PATH = Path("data/clover_voice_labels.json")
 
@@ -165,45 +165,7 @@ def write_voice_labels(
     group_ids: dict[str, str],
     mod_ids: dict[str, dict[str, str]],
 ) -> None:
-    mod_spec = modifier_group_by_key()
-    items_out: list[dict] = []
-
-    for spec in MENU_ITEMS:
-        entry: dict = {
-            "key": spec.key,
-            "clover_item_id": item_ids[spec.key],
-            "clover_name": spec.name,
-            "speak_as": spec.speak_as,
-            "aliases": list(spec.aliases),
-            "veg": spec.veg,
-            "category_key": spec.category_key,
-            "price_cents": dollars_to_cents(spec.price),
-        }
-        if spec.modifier_group_keys:
-            entry["modifier_groups"] = []
-            for gkey in spec.modifier_group_keys:
-                gspec = mod_spec[gkey]
-                gentry = {
-                    "key": gkey,
-                    "clover_modifier_group_id": group_ids[gkey],
-                    "name": gspec.name,
-                    "min_required": gspec.min_required,
-                    "max_allowed": gspec.max_allowed,
-                    "modifiers": [],
-                }
-                for m in gspec.modifiers:
-                    gentry["modifiers"].append(
-                        {
-                            "key": m.key,
-                            "clover_modifier_id": mod_ids[gkey][m.key],
-                            "name": m.name,
-                            "price_cents": dollars_to_cents(m.price),
-                            "speak_as": m.speak_as,
-                            "aliases": list(m.aliases),
-                        }
-                    )
-                entry["modifier_groups"].append(gentry)
-        items_out.append(entry)
+    items_out = build_all_voice_label_items(item_ids, group_ids, mod_ids)
 
     payload = {
         "restaurant": RESTAURANT_LABEL,

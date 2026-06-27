@@ -11,6 +11,8 @@ class CachedModifier:
     name: str
     price_cents: int
     speak_as: str | None = None
+    voice_line: str | None = None
+    speech_mode: str = "english"
     aliases: list[str] = field(default_factory=list)
 
 
@@ -28,6 +30,8 @@ class CachedMenuItem:
     clover_item_id: str
     name: str
     speak_as: str
+    voice_line: str
+    speech_mode: str
     price_cents: int
     veg: bool
     available: bool
@@ -41,10 +45,13 @@ class CachedMenuItem:
         return self.price_cents / 100.0
 
     def to_cart_dict(self) -> dict:
-        """Shape compatible with OrderCart (speak_as → punjabi field)."""
+        """Shape compatible with OrderCart."""
         return {
             "name": self.name,
-            "punjabi": self.speak_as,
+            "voice_line": self.voice_line,
+            "speech_mode": self.speech_mode,
+            "speak_as": self.speak_as,
+            "punjabi": self.voice_line,
             "price": self.price_dollars,
             "price_cents": self.price_cents,
             "veg": self.veg,
@@ -60,5 +67,6 @@ class CachedMenuItem:
             group_names = ", ".join(g.name for g in self.modifier_groups)
             mods = f" Options: {group_names}."
         return (
-            f"{self.name} (speak_as: {self.speak_as}) — ${self.price_dollars:.2f} — {veg}{avail}.{mods}"
+            f'{self.name} — say aloud: "{self.voice_line}" (speech_mode: {self.speech_mode})'
+            f" — ${self.price_dollars:.2f} — {veg}{avail}.{mods}"
         )

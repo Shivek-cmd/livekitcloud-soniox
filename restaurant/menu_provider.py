@@ -84,11 +84,12 @@ def search_menu(query: str, *, limit: int = 8) -> str:
         tag = "V" if item.veg else "NV"
         avail = "" if item.available else " [unavailable]"
         lines.append(
-            f"  - {item.name} (speak_as: {item.speak_as}) — ${item.price_dollars:.2f} ({tag}){avail}"
+            f'  - {item.name} (say aloud: "{item.voice_line}", {item.speech_mode})'
+            f" — ${item.price_dollars:.2f} ({tag}){avail}"
         )
         if item.modifier_groups:
             lines.append(f"    Options: {', '.join(g.name for g in item.modifier_groups)}")
-    lines.append("Use speak_as when saying dish names aloud to the customer.")
+    lines.append("Use voice_line exactly when saying dish names aloud — natural Punjabi/English code-mix.")
     return "\n".join(lines)
 
 

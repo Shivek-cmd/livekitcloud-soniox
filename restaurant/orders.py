@@ -13,11 +13,12 @@ def _money(amount: float) -> str:
 @dataclass
 class CartItem:
     name: str
-    punjabi: str
+    voice_line: str
     price: float
     quantity: int
     note: str = ""
     clover_item_id: str | None = None
+    speech_mode: str = "mixed"
 
 
 @dataclass
@@ -54,11 +55,12 @@ class OrderCart:
 
         self.items.append(CartItem(
             name=item["name"],
-            punjabi=item.get("punjabi") or item.get("speak_as") or item["name"],
+            voice_line=item.get("voice_line") or item.get("punjabi") or item.get("speak_as") or item["name"],
             price=float(item.get("price") or (item.get("price_cents", 0) / 100)),
             quantity=quantity,
             note=note,
             clover_item_id=item.get("clover_item_id"),
+            speech_mode=item.get("speech_mode") or "mixed",
         ))
         return f"Added {quantity}x {item['name']} ({_money(float(item.get('price') or item.get('price_cents', 0) / 100))} each). Total: {_money(self.total)}"
 
@@ -75,7 +77,7 @@ class OrderCart:
         lines = ["Current order:"]
         for item in self.items:
             line_total = item.price * item.quantity
-            lines.append(f"  {item.quantity}x {item.punjabi} ({item.name}) — {_money(line_total)}")
+            lines.append(f'  {item.quantity}x {item.voice_line} ({item.name}) — {_money(line_total)}')
             if item.note:
                 lines.append(f"     Note: {item.note}")
         lines.append(f"Subtotal: {_money(self.subtotal)}")
