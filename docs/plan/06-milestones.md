@@ -39,8 +39,8 @@ Voice orders flow into restaurant Clover POS. See **`09-clover-pos.md`** for ful
 
 | Sub-phase | Scope | Status |
 |---|---|---|
-| 8a | Sandbox probe — menu read + test atomic order | ⬜ |
-| 8b | Menu cache + tenant store | ⬜ |
+| 8a | Sandbox probe — menu read + test atomic order | ✅ |
+| 8b | Menu cache + tenant store | 🔄 |
 | 8c | Agent order placement + kitchen print | ⬜ |
 | 8d | Webhooks + availability | ⬜ |
 | 8e | Production pilot (one merchant, OAuth) | ⬜ |
