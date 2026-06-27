@@ -20,8 +20,8 @@ from restaurant.menu import (
     OPENING_HOURS,
     RESTAURANT_NAME,
     RESTAURANT_NAME_EN,
-    find_item,
 )
+from restaurant import menu_provider
 from restaurant.orders import OrderCart
 from restaurant import reservations as res_store
 
@@ -215,6 +215,8 @@ NEVER DO
 - Never speak more than two sentences in one turn.
 - Never mention the price of a dish unless the customer explicitly asks.
 - Never invent menu items, ingredients, prices, or availability.
+- When search_menu_items or check_menu_item returns speak_as, use that Gurmukhi name when saying the dish aloud.
+- For broad menu questions ("what paneer items?", "any combos?"), call search_menu_items before answering.
 - Never refuse or delay when a caller asks for a human.
 - Never ask for payment card details.
 - Never write Punjabi or Hindi in Roman/English letters — always use Gurmukhi or Devanagari script.
@@ -225,6 +227,8 @@ class RestaurantAgent(Agent):
     def __init__(self):
         super().__init__(instructions=SYSTEM_PROMPT)
         self.cart = OrderCart()
+        self.menu_source = menu_provider.menu_source_label()
+        logger.info(f"Menu source: {self.menu_source}")
 
     # ── ORDER TOOLS ──────────────────────────────────────────────────────────
 
@@ -236,9 +240,9 @@ class RestaurantAgent(Agent):
         note: Annotated[str, "Special instructions e.g. 'extra spicy', 'no onion'"] = "",
     ) -> str:
         """Add an item to the customer's order."""
-        item = find_item(item_name)
+        item = menu_provider.find_item(item_name)
         if not item:
-            return f"'{item_name}' is not on our menu. Ask the customer to clarify."
+            return f"'{item_name}' is not on our menu. Ask the customer to clarify or call search_menu_items."
         return self.cart.add_item(item, quantity, note)
 
     @function_tool
@@ -324,11 +328,15 @@ class RestaurantAgent(Agent):
         item_name: Annotated[str, "Item name to look up"],
     ) -> str:
         """Check if an item is on the menu and get its price and details."""
-        item = find_item(item_name)
-        if not item:
-            return f"'{item_name}' is not on our menu."
-        veg = "Vegetarian" if item["veg"] else "Non-vegetarian"
-        return f"{item['name']} ({item['punjabi']}) — ${item['price']} — {veg}"
+        return menu_provider.check_item(item_name)
+
+    @function_tool
+    async def search_menu_items(
+        self,
+        query: Annotated[str, "Search term e.g. 'paneer', 'combo', 'biryani', 'vegetarian starters'"],
+    ) -> str:
+        """Search the menu by keyword or category. Use for 'what X dishes do you have?' questions."""
+        return menu_provider.search_menu(query)
 
     # ── TRANSFER ─────────────────────────────────────────────────────────────
 

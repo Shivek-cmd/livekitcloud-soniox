@@ -1,0 +1,272 @@
+"""Clover menu sync, local cache, and voice-friendly lookup."""
+
+from __future__ import annotations
+
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+from restaurant.clover.client import CloverClient
+from restaurant.clover.models import CachedMenuItem, CachedModifier, CachedModifierGroup
+from restaurant.clover.seed_menu import CATEGORIES
+from restaurant.tenants.store import Tenant, mark_menu_synced
+
+_CATEGORY_KEY_NAMES = {c.key: c.name for c in CATEGORIES}
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"\s+", " ", text.lower().strip())
+
+
+def _load_voice_labels(path: Path) -> dict[str, dict]:
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {item["clover_item_id"]: item for item in data.get("items", [])}
+
+
+def _voice_modifier_groups(voice_item: dict | None) -> list[CachedModifierGroup]:
+    if not voice_item:
+        return []
+    groups: list[CachedModifierGroup] = []
+    for g in voice_item.get("modifier_groups") or []:
+        mods = [
+            CachedModifier(
+                clover_modifier_id=m["clover_modifier_id"],
+                name=m["name"],
+                price_cents=m.get("price_cents") or 0,
+                speak_as=m.get("speak_as"),
+                aliases=list(m.get("aliases") or []),
+            )
+            for m in g.get("modifiers") or []
+        ]
+        groups.append(
+            CachedModifierGroup(
+                clover_modifier_group_id=g["clover_modifier_group_id"],
+                name=g["name"],
+                min_required=g.get("min_required") or 0,
+                max_allowed=g.get("max_allowed") or 1,
+                modifiers=mods,
+            )
+        )
+    return groups
+
+
+class MenuCache:
+    def __init__(self, items: list[CachedMenuItem], *, tenant_id: str, synced_at: str):
+        self.tenant_id = tenant_id
+        self.synced_at = synced_at
+        self._items = items
+        self._by_id = {i.clover_item_id: i for i in items}
+
+    @property
+    def item_count(self) -> int:
+        return len(self._items)
+
+    @classmethod
+    def sync_from_clover(cls, tenant: Tenant) -> "MenuCache":
+        client = CloverClient(
+            base_url=tenant.clover_base_url,
+            merchant_id=tenant.clover_merchant_id,
+            token=tenant.clover_api_token,
+        )
+
+        categories = {c["id"]: c for c in client.fetch_all("categories")}
+        item_category: dict[str, tuple[str, str]] = {}
+        for cat in categories.values():
+            try:
+                for raw_item in client.fetch_all(f"categories/{cat['id']}/items"):
+                    iid = raw_item.get("id")
+                    if iid:
+                        item_category[iid] = (cat["id"], cat.get("name") or "Other")
+            except Exception:
+                continue
+
+        voice_by_id = _load_voice_labels(Path(tenant.voice_labels_path))
+        cached: list[CachedMenuItem] = []
+
+        for raw in client.fetch_all("items"):
+            iid = raw["id"]
+            voice = voice_by_id.get(iid)
+            cat_id, cat_name = item_category.get(iid, ("", ""))
+            if not cat_name and voice:
+                cat_name = _CATEGORY_KEY_NAMES.get(voice.get("category_key", ""), "Other")
+            elif not cat_name:
+                cat_name = "Other"
+
+            price_cents = raw.get("price") or (voice.get("price_cents") if voice else 0) or 0
+            cached.append(
+                CachedMenuItem(
+                    clover_item_id=iid,
+                    name=raw.get("name") or (voice.get("clover_name") if voice else "Unknown"),
+                    speak_as=(voice.get("speak_as") if voice else None) or raw.get("name", ""),
+                    price_cents=price_cents,
+                    veg=bool(voice.get("veg")) if voice else True,
+                    available=bool(raw.get("available", True)) and not bool(raw.get("hidden", False)),
+                    category_id=cat_id,
+                    category_name=cat_name,
+                    aliases=list(voice.get("aliases") or []) if voice else [],
+                    modifier_groups=_voice_modifier_groups(voice),
+                )
+            )
+
+        synced_at = datetime.now(timezone.utc).isoformat()
+        cache = cls(cached, tenant_id=tenant.tenant_id, synced_at=synced_at)
+        cache.save(tenant.cache_path())
+        mark_menu_synced(tenant.tenant_id)
+        return cache
+
+    @classmethod
+    def load(cls, path: Path) -> "MenuCache":
+        data = json.loads(path.read_text(encoding="utf-8"))
+        items = []
+        for raw in data.get("items", []):
+            mod_groups = []
+            for g in raw.get("modifier_groups") or []:
+                mods = [
+                    CachedModifier(
+                        clover_modifier_id=m["clover_modifier_id"],
+                        name=m["name"],
+                        price_cents=m.get("price_cents") or 0,
+                        speak_as=m.get("speak_as"),
+                        aliases=list(m.get("aliases") or []),
+                    )
+                    for m in g.get("modifiers") or []
+                ]
+                mod_groups.append(
+                    CachedModifierGroup(
+                        clover_modifier_group_id=g["clover_modifier_group_id"],
+                        name=g["name"],
+                        min_required=g.get("min_required") or 0,
+                        max_allowed=g.get("max_allowed") or 1,
+                        modifiers=mods,
+                    )
+                )
+            items.append(
+                CachedMenuItem(
+                    clover_item_id=raw["clover_item_id"],
+                    name=raw["name"],
+                    speak_as=raw["speak_as"],
+                    price_cents=raw["price_cents"],
+                    veg=raw.get("veg", True),
+                    available=raw.get("available", True),
+                    category_id=raw.get("category_id", ""),
+                    category_name=raw.get("category_name", ""),
+                    aliases=list(raw.get("aliases") or []),
+                    modifier_groups=mod_groups,
+                )
+            )
+        return cls(
+            items,
+            tenant_id=data.get("tenant_id", ""),
+            synced_at=data.get("synced_at", ""),
+        )
+
+    def save(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "tenant_id": self.tenant_id,
+            "synced_at": self.synced_at,
+            "item_count": len(self._items),
+            "items": [
+                {
+                    "clover_item_id": i.clover_item_id,
+                    "name": i.name,
+                    "speak_as": i.speak_as,
+                    "price_cents": i.price_cents,
+                    "veg": i.veg,
+                    "available": i.available,
+                    "category_id": i.category_id,
+                    "category_name": i.category_name,
+                    "aliases": i.aliases,
+                    "modifier_groups": [
+                        {
+                            "clover_modifier_group_id": g.clover_modifier_group_id,
+                            "name": g.name,
+                            "min_required": g.min_required,
+                            "max_allowed": g.max_allowed,
+                            "modifiers": [
+                                {
+                                    "clover_modifier_id": m.clover_modifier_id,
+                                    "name": m.name,
+                                    "price_cents": m.price_cents,
+                                    "speak_as": m.speak_as,
+                                    "aliases": m.aliases,
+                                }
+                                for m in g.modifiers
+                            ],
+                        }
+                        for g in i.modifier_groups
+                    ],
+                }
+                for i in self._items
+            ],
+        }
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def find_item(self, query: str) -> CachedMenuItem | None:
+        q = _norm(query)
+        if not q:
+            return None
+
+        for item in self._items:
+            if _norm(item.name) == q or _norm(item.speak_as) == q:
+                return item
+
+        for item in self._items:
+            if q in _norm(item.name) or q in _norm(item.speak_as):
+                return item
+            for alias in item.aliases:
+                if q in _norm(alias) or _norm(alias) in q:
+                    return item
+
+        tokens = q.split()
+        best: CachedMenuItem | None = None
+        best_score = 0
+        for item in self._items:
+            hay = _norm(item.name) + " " + _norm(item.speak_as) + " " + " ".join(item.aliases)
+            score = sum(1 for t in tokens if t in hay)
+            if score > best_score:
+                best_score = score
+                best = item
+        return best if best_score > 0 else None
+
+    def search(self, query: str, *, limit: int = 8) -> list[CachedMenuItem]:
+        q = _norm(query)
+        if not q:
+            return []
+
+        scored: list[tuple[int, CachedMenuItem]] = []
+        for item in self._items:
+            hay = " ".join(
+                [_norm(item.name), _norm(item.speak_as), _norm(item.category_name)]
+                + [_norm(a) for a in item.aliases]
+            )
+            if q in hay:
+                scored.append((100, item))
+                continue
+            tokens = [t for t in q.split() if len(t) > 2]
+            score = sum(2 for t in tokens if t in hay)
+            if score:
+                scored.append((score, item))
+
+        scored.sort(key=lambda x: (-x[0], x[1].name))
+        seen: set[str] = set()
+        out: list[CachedMenuItem] = []
+        for _, item in scored:
+            if item.clover_item_id in seen:
+                continue
+            seen.add(item.clover_item_id)
+            out.append(item)
+            if len(out) >= limit:
+                break
+        return out
+
+    def list_by_category(self, category_query: str, *, limit: int = 10) -> list[CachedMenuItem]:
+        q = _norm(category_query)
+        out = [
+            i for i in self._items
+            if q in _norm(i.category_name) or q in _norm(i.category_name).replace("&", "and")
+        ]
+        return out[:limit]
