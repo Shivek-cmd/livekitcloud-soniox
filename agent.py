@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from typing import Annotated
 
 from dotenv import load_dotenv
@@ -250,6 +251,7 @@ class RestaurantAgent(Agent):
         self.cart = OrderCart()
         self.is_phone = is_phone
         self._recent_agent_lines: list[str] = []
+        self._phone_ignore_until: float = 0.0
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
@@ -260,10 +262,21 @@ class RestaurantAgent(Agent):
         self._recent_agent_lines.append(line)
         self._recent_agent_lines = self._recent_agent_lines[-6:]
 
+    def begin_phone_greeting(self) -> None:
+        """Mute STT turns while greeting TTS plays and tail echo fades (outbound/mobile)."""
+        self._phone_ignore_until = time.monotonic() + 14.0
+
+    def end_phone_greeting(self) -> None:
+        """Short tail buffer after greeting audio finishes."""
+        self._phone_ignore_until = time.monotonic() + 2.5
+
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         if not self.is_phone:
             return
         user_text = (new_message.text_content or "").strip()
+        if time.monotonic() < self._phone_ignore_until:
+            logger.info("Ignoring turn during post-greeting cooldown: %s", user_text)
+            raise StopResponse()
         if is_likely_phone_echo(user_text, self._recent_agent_lines):
             logger.info("Ignoring phone echo turn: %s", user_text)
             raise StopResponse()
@@ -488,14 +501,18 @@ async def entrypoint(ctx: JobContext):
                 agent.note_agent_speech(text)
                 logger.info(f"SIERRA: {text}")
 
+    if is_phone:
+        agent.begin_phone_greeting()
+
     await session.say(
         "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! Welcome to Bizbull Restaurant, I'm Sierra. How can I help you today?",
         allow_interruptions=False,
     )
 
-    # Outbound / mobile calls: brief pause so STT does not pick up greeting echo.
+    # Outbound / mobile: wait for line echo to fade before listening for the caller.
     if is_phone:
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(3.0)
+        agent.end_phone_greeting()
 
 
 if __name__ == "__main__":

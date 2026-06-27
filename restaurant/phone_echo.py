@@ -36,7 +36,10 @@ def is_likely_phone_echo(user_text: str, recent_agent_lines: Sequence[str]) -> b
             continue
 
         overlap = sum(1 for t in u_tokens if t in a_tokens)
-        if len(u_tokens) >= 3 and overlap >= max(2, int(0.5 * len(u_tokens))):
+        # Require stronger overlap — avoid dropping real short replies near greeting tail.
+        if len(u_tokens) >= 4 and overlap >= max(3, int(0.6 * len(u_tokens))):
+            return True
+        if len(u_tokens) == 3 and overlap == 3:
             return True
         if len(u_tokens) == 2 and overlap == 2 and u_tokens == a_tokens[:2]:
             return True
