@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import time
 from typing import Annotated
 
 from dotenv import load_dotenv
@@ -26,7 +25,7 @@ from restaurant.menu import (
 )
 from restaurant import menu_provider
 from restaurant.orders import OrderCart
-from restaurant.phone_echo import is_likely_phone_echo
+from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
 from restaurant import reservations as res_store
 
 load_dotenv()
@@ -272,9 +271,15 @@ class RestaurantAgent(Agent):
         self.cart = OrderCart()
         self.is_phone = is_phone
         self._recent_agent_lines: list[str] = []
-        self._phone_ignore_until: float = 0.0
+        self._phone_session = None
+        self._echo_reprompt_done = False
+        self._greeting_echo_pending_reprompt = False
+        self._real_user_turns = 0
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
+
+    def bind_phone_session(self, session) -> None:
+        self._phone_session = session
 
     def note_agent_speech(self, text: str) -> None:
         line = text.strip()
@@ -283,24 +288,37 @@ class RestaurantAgent(Agent):
         self._recent_agent_lines.append(line)
         self._recent_agent_lines = self._recent_agent_lines[-6:]
 
-    def begin_phone_greeting(self) -> None:
-        """Mute STT turns while greeting TTS plays and tail echo fades (outbound/mobile)."""
-        self._phone_ignore_until = time.monotonic() + 14.0
+    def _schedule_echo_reprompt(self) -> None:
+        if not self.is_phone or self._echo_reprompt_done or not self._phone_session:
+            return
+        self._echo_reprompt_done = True
+        asyncio.create_task(self._echo_reprompt())
 
-    def end_phone_greeting(self) -> None:
-        """Short tail buffer after greeting audio finishes."""
-        self._phone_ignore_until = time.monotonic() + 2.5
+    async def _echo_reprompt(self) -> None:
+        """After greeting echo, invite the caller to speak — avoids dead air on mobile."""
+        await asyncio.sleep(1.8)
+        if self._real_user_turns > 0 or not self._phone_session:
+            return
+        try:
+            await self._phone_session.say(
+                "ਹਾਂ ਜੀ — go ahead, I'm listening.",
+                allow_interruptions=True,
+            )
+        except Exception:
+            logger.exception("Echo reprompt failed")
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         if not self.is_phone:
             return
         user_text = (new_message.text_content or "").strip()
-        if time.monotonic() < self._phone_ignore_until:
-            logger.info("Ignoring turn during post-greeting cooldown: %s", user_text)
-            raise StopResponse()
         if is_likely_phone_echo(user_text, self._recent_agent_lines):
             logger.info("Ignoring phone echo turn: %s", user_text)
+            if is_greeting_tail_echo(user_text):
+                self._greeting_echo_pending_reprompt = True
+                self._schedule_echo_reprompt()
             raise StopResponse()
+        self._real_user_turns += 1
+        self._greeting_echo_pending_reprompt = False
 
     # ── ORDER TOOLS ──────────────────────────────────────────────────────────
 
@@ -483,12 +501,15 @@ async def entrypoint(ctx: JobContext):
             llm=build_llm(),
             tts=build_tts(True),
             turn_detection="stt",
-            min_endpointing_delay=0.75,
-            max_endpointing_delay=3.0,
+            min_endpointing_delay=1.0,
+            max_endpointing_delay=4.0,
             preemptive_generation=False,
             allow_interruptions=False,
             discard_audio_if_uninterruptible=True,
-            aec_warmup_duration=2.0,
+            aec_warmup_duration=2.5,
+            min_interruption_words=2,
+            resume_false_interruption=True,
+            agent_false_interruption_timeout=2.0,
         )
     else:
         session = AgentSession(
@@ -501,6 +522,8 @@ async def entrypoint(ctx: JobContext):
         )
 
     agent = RestaurantAgent(is_phone=is_phone)
+    if is_phone:
+        agent.bind_phone_session(session)
 
     await session.start(
         room=ctx.room,
@@ -522,18 +545,20 @@ async def entrypoint(ctx: JobContext):
                 agent.note_agent_speech(text)
                 logger.info(f"SIERRA: {text}")
 
-    if is_phone:
-        agent.begin_phone_greeting()
-
     await session.say(
         "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! Welcome to Bizbull Restaurant, I'm Sierra. How can I help you today?",
         allow_interruptions=False,
     )
 
-    # Outbound / mobile: wait for line echo to fade before listening for the caller.
+    # Let greeting echo fade on mobile/outbound before listening for the caller.
     if is_phone:
-        await asyncio.sleep(3.0)
-        agent.end_phone_greeting()
+        await asyncio.sleep(4.0)
+        if agent._greeting_echo_pending_reprompt and agent._real_user_turns == 0:
+            agent._echo_reprompt_done = True
+            await session.say(
+                "ਹਾਂ ਜੀ — go ahead, I'm listening.",
+                allow_interruptions=True,
+            )
 
 
 if __name__ == "__main__":

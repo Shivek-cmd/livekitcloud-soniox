@@ -5,6 +5,19 @@ from __future__ import annotations
 import re
 from typing import Sequence
 
+# Fragments commonly transcribed from the opening greeting on mobile/outbound echo.
+_GREETING_TAIL_PHRASES: tuple[str, ...] = (
+    "help you today",
+    "how can i help you",
+    "how can i help",
+    "i m sierra",
+    "im sierra",
+    "i am sierra",
+    "welcome to bizbull",
+    "bizbull restaurant",
+    "sat sri akal",
+)
+
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
@@ -15,10 +28,21 @@ def _tokens(text: str) -> list[str]:
     return [t for t in cleaned.split() if len(t) > 1]
 
 
+def is_greeting_tail_echo(user_text: str) -> bool:
+    """Known echo fragments from Sierra's opening greeting."""
+    u = _normalize(user_text)
+    if not u:
+        return True
+    return any(phrase in u for phrase in _GREETING_TAIL_PHRASES)
+
+
 def is_likely_phone_echo(user_text: str, recent_agent_lines: Sequence[str]) -> bool:
     """Return True if user_text is probably acoustic echo of recent agent speech."""
     user = user_text.strip()
     if not user:
+        return True
+
+    if is_greeting_tail_echo(user):
         return True
 
     u_norm = _normalize(user)
@@ -36,7 +60,6 @@ def is_likely_phone_echo(user_text: str, recent_agent_lines: Sequence[str]) -> b
             continue
 
         overlap = sum(1 for t in u_tokens if t in a_tokens)
-        # Require stronger overlap — avoid dropping real short replies near greeting tail.
         if len(u_tokens) >= 4 and overlap >= max(3, int(0.6 * len(u_tokens))):
             return True
         if len(u_tokens) == 3 and overlap == 3:
