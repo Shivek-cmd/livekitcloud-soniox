@@ -1,0 +1,5880 @@
+{
+  "restaurant": "Bizbull Restaurant",
+  "source": "restaurant/clover/seed_menu.py",
+  "item_count": 61,
+  "items": [
+    {
+      "key": "samosa_chaat",
+      "clover_item_id": "AFT4EABCRZBEW",
+      "clover_name": "Samosa Chaat (2 pcs)",
+      "speak_as": "ਸਮੋਸਾ ਚਾਟ",
+      "aliases": [
+        "samosa chaat",
+        "samosa"
+      ],
+      "veg": true,
+      "category_key": "starters",
+      "price_cents": 899,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "paneer_tikka",
+      "clover_item_id": "M76YYRKJ33MGJ",
+      "clover_name": "Paneer Tikka",
+      "speak_as": "ਪਨੀਰ ਟਿੱਕਾ",
+      "aliases": [
+        "paneer tikka",
+        "tikka paneer"
+      ],
+      "veg": true,
+      "category_key": "starters",
+      "price_cents": 1699,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "chicken_tikka",
+      "clover_item_id": "W12YP7JFWCNZ0",
+      "clover_name": "Chicken Tikka",
+      "speak_as": "ਚਿਕਨ ਟਿੱਕਾ",
+      "aliases": [
+        "chicken tikka"
+      ],
+      "veg": false,
+      "category_key": "starters",
+      "price_cents": 1899,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "fish_pakora",
+      "clover_item_id": "8BGZA0MVS825P",
+      "clover_name": "Amritsari Fish Pakora",
+      "speak_as": "ਅੰਮ੍ਰਿਤਸਰੀ ਮੱਛੀ ਪਕੋੜਾ",
+      "aliases": [
+        "fish pakora",
+        "amritsari fish"
+      ],
+      "veg": false,
+      "category_key": "starters",
+      "price_cents": 1499,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "veg_spring_rolls",
+      "clover_item_id": "QY38EXV399C4P",
+      "clover_name": "Veg Spring Rolls (6 pcs)",
+      "speak_as": "ਵੈਜ ਸਪ੍ਰਿੰਗ ਰੋਲ",
+      "aliases": [
+        "spring rolls",
+        "veg rolls"
+      ],
+      "veg": true,
+      "category_key": "starters",
+      "price_cents": 999,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "pakora_platter",
+      "clover_item_id": "6YE95JW50VCY2",
+      "clover_name": "Mixed Pakora Platter",
+      "speak_as": "ਮਿਸ਼ਰਿਤ ਪਕੋੜਾ ਪਲੇਟਰ",
+      "aliases": [
+        "pakora platter",
+        "pakora"
+      ],
+      "veg": true,
+      "category_key": "starters",
+      "price_cents": 1299,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "honey_chilli_cauliflower",
+      "clover_item_id": "025ZXK5CTSDRA",
+      "clover_name": "Honey Chilli Gobi",
+      "speak_as": "ਹਨੀ ਚਿਲੀ ਗੋਭੀ",
+      "aliases": [
+        "honey chilli gobi",
+        "gobi manchurian"
+      ],
+      "veg": true,
+      "category_key": "starters",
+      "price_cents": 1399,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "tandoori_chicken_half",
+      "clover_item_id": "K2EE8T8KZWSST",
+      "clover_name": "Tandoori Chicken (Half)",
+      "speak_as": "ਤੰਦੂਰੀ ਚਿਕਨ (ਅੱਧਾ)",
+      "aliases": [
+        "tandoori chicken half",
+        "half chicken"
+      ],
+      "veg": false,
+      "category_key": "tandoor",
+      "price_cents": 1999,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "tandoori_chicken_full",
+      "clover_item_id": "VRPP74GQMQJ1R",
+      "clover_name": "Tandoori Chicken (Full)",
+      "speak_as": "ਤੰਦੂਰੀ ਚਿਕਨ (ਪੂਰਾ)",
+      "aliases": [
+        "tandoori chicken full",
+        "full chicken"
+      ],
+      "veg": false,
+      "category_key": "tandoor",
+      "price_cents": 3299,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "seekh_kebab",
+      "clover_item_id": "HPECSDBGSVM4E",
+      "clover_name": "Seekh Kebab (4 pcs)",
+      "speak_as": "ਸੀਖ ਕਬਾਬ",
+      "aliases": [
+        "seekh kebab",
+        "sheek kebab"
+      ],
+      "veg": false,
+      "category_key": "tandoor",
+      "price_cents": 1799,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "lamb_chops",
+      "clover_item_id": "ERAEWBGBX9362",
+      "clover_name": "Tandoori Lamb Chops",
+      "speak_as": "ਤੰਦੂਰੀ ਲੈਮ ਚਾਪ",
+      "aliases": [
+        "lamb chops",
+        "chops"
+      ],
+      "veg": false,
+      "category_key": "tandoor",
+      "price_cents": 2899,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "tandoori_shrimp",
+      "clover_item_id": "A87BR17KS5RCT",
+      "clover_name": "Tandoori Shrimp",
+      "speak_as": "ਤੰਦੂਰੀ ਝੀਂਗਾ",
+      "aliases": [
+        "tandoori shrimp",
+        "jhinga"
+      ],
+      "veg": false,
+      "category_key": "tandoor",
+      "price_cents": 2199,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "dal_makhani",
+      "clover_item_id": "NXGWYTWSNNHCG",
+      "clover_name": "Dal Makhani",
+      "speak_as": "ਦਾਲ ਮੱਖਣੀ",
+      "aliases": [
+        "dal makhani",
+        "black dal"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1599,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "sarson_saag",
+      "clover_item_id": "VBT1WQGK665WG",
+      "clover_name": "Sarson da Saag",
+      "speak_as": "ਸਰ੍ਹੋਂ ਦਾ ਸਾਗ",
+      "aliases": [
+        "sarson saag",
+        "saag"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1699,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "palak_paneer",
+      "clover_item_id": "PHT7EBKZB265A",
+      "clover_name": "Palak Paneer",
+      "speak_as": "ਪਾਲਕ ਪਨੀਰ",
+      "aliases": [
+        "palak paneer",
+        "saag paneer"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1699,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "chole",
+      "clover_item_id": "E438VDPA9B42W",
+      "clover_name": "Chole (Chickpea Curry)",
+      "speak_as": "ਛੋਲੇ",
+      "aliases": [
+        "chole",
+        "chana masala"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1399,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "paneer_butter_masala",
+      "clover_item_id": "B8TYZFDDK2WMC",
+      "clover_name": "Paneer Butter Masala",
+      "speak_as": "ਪਨੀਰ ਬਟਰ ਮਸਾਲਾ",
+      "aliases": [
+        "paneer butter",
+        "paneer butter masala"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1799,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "malai_kofta",
+      "clover_item_id": "3K988VDXHVS7R",
+      "clover_name": "Malai Kofta",
+      "speak_as": "ਮਲਾਈ ਕੋਫ਼ਤਾ",
+      "aliases": [
+        "malai kofta"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1699,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "dal_tadka",
+      "clover_item_id": "7CBWJCKFAMSPA",
+      "clover_name": "Dal Tadka",
+      "speak_as": "ਦਾਲ ਤੜਕਾ",
+      "aliases": [
+        "dal tadka",
+        "yellow dal"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1399,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "mushroom_matar",
+      "clover_item_id": "7CVD56B16RG4T",
+      "clover_name": "Mushroom Matar",
+      "speak_as": "ਮਸ਼ਰੂਮ ਮਟਰ",
+      "aliases": [
+        "mushroom matar"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1599,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "baigan_bharta",
+      "clover_item_id": "G482SB71Y7QQE",
+      "clover_name": "Baigan Bharta",
+      "speak_as": "ਬੈਂਗਣ ਭਰਤਾ",
+      "aliases": [
+        "baigan bharta",
+        "eggplant bharta"
+      ],
+      "veg": true,
+      "category_key": "veg_mains",
+      "price_cents": 1549,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "butter_chicken",
+      "clover_item_id": "DB4GJPSG6EZ0R",
+      "clover_name": "Butter Chicken",
+      "speak_as": "ਬਟਰ ਚਿਕਨ",
+      "aliases": [
+        "butter chicken",
+        "murgh makhani"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 1999,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "protein_size",
+          "clover_modifier_group_id": "0YMR76A33G7GC",
+          "name": "Protein Size",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "1G3X3YMPSBC4E",
+              "name": "Regular Portion",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "9D5S3CDQ6DJYE",
+              "name": "Large Portion",
+              "price_cents": 400,
+              "speak_as": null,
+              "aliases": [
+                "large portion",
+                "extra meat"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "chicken_tikka_masala",
+      "clover_item_id": "1HB3P408ZG92R",
+      "clover_name": "Chicken Tikka Masala",
+      "speak_as": "ਚਿਕਨ ਟਿੱਕਾ ਮਸਾਲਾ",
+      "aliases": [
+        "chicken tikka masala",
+        "tikka masala"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 1999,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "protein_size",
+          "clover_modifier_group_id": "0YMR76A33G7GC",
+          "name": "Protein Size",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "1G3X3YMPSBC4E",
+              "name": "Regular Portion",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "9D5S3CDQ6DJYE",
+              "name": "Large Portion",
+              "price_cents": 400,
+              "speak_as": null,
+              "aliases": [
+                "large portion",
+                "extra meat"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "lamb_rogan_josh",
+      "clover_item_id": "NPTXBBW2RY3TT",
+      "clover_name": "Lamb Rogan Josh",
+      "speak_as": "ਲੈਮ ਰੋਗਨ ਜੋਸ਼",
+      "aliases": [
+        "lamb rogan josh",
+        "rogan josh"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 2499,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "protein_size",
+          "clover_modifier_group_id": "0YMR76A33G7GC",
+          "name": "Protein Size",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "1G3X3YMPSBC4E",
+              "name": "Regular Portion",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "9D5S3CDQ6DJYE",
+              "name": "Large Portion",
+              "price_cents": 400,
+              "speak_as": null,
+              "aliases": [
+                "large portion",
+                "extra meat"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "goat_curry",
+      "clover_item_id": "EWCEW0KKGYAJA",
+      "clover_name": "Goat Curry",
+      "speak_as": "ਬਕਰੇ ਦਾ ਮਸਾਲਾ",
+      "aliases": [
+        "goat curry",
+        "mutton curry"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 2599,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bread_choice",
+          "clover_modifier_group_id": "EBRFBCWQYPQKM",
+          "name": "Bread Choice",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_naan",
+              "clover_modifier_id": "YH3NXXVX63RQR",
+              "name": "Plain Naan",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain naan"
+              ]
+            },
+            {
+              "key": "butter_naan",
+              "clover_modifier_id": "NMM0SPSPPH61A",
+              "name": "Butter Naan",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "butter naan"
+              ]
+            },
+            {
+              "key": "garlic_naan",
+              "clover_modifier_id": "PFV0NBD240X3W",
+              "name": "Garlic Naan",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "garlic naan"
+              ]
+            },
+            {
+              "key": "tandoori_roti",
+              "clover_modifier_id": "Y0N46SZJJVAAA",
+              "name": "Tandoori Roti",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "roti",
+                "tandoori roti"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "protein_size",
+          "clover_modifier_group_id": "0YMR76A33G7GC",
+          "name": "Protein Size",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "1G3X3YMPSBC4E",
+              "name": "Regular Portion",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "9D5S3CDQ6DJYE",
+              "name": "Large Portion",
+              "price_cents": 400,
+              "speak_as": null,
+              "aliases": [
+                "large portion",
+                "extra meat"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "fish_curry",
+      "clover_item_id": "HYX9N0HMRWYYT",
+      "clover_name": "Punjabi Fish Curry",
+      "speak_as": "ਪੰਜਾਬੀ ਮੱਛੀ ਕਰੀ",
+      "aliases": [
+        "fish curry",
+        "machhi curry"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 2199,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "chicken_biryani",
+      "clover_item_id": "YC25B4WD7BG6C",
+      "clover_name": "Chicken Biryani",
+      "speak_as": "ਚਿਕਨ ਬਿਰਿਆਨੀ",
+      "aliases": [
+        "chicken biryani",
+        "biryani"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 1899,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "protein_size",
+          "clover_modifier_group_id": "0YMR76A33G7GC",
+          "name": "Protein Size",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "1G3X3YMPSBC4E",
+              "name": "Regular Portion",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "9D5S3CDQ6DJYE",
+              "name": "Large Portion",
+              "price_cents": 400,
+              "speak_as": null,
+              "aliases": [
+                "large portion",
+                "extra meat"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "lamb_biryani",
+      "clover_item_id": "7RCE6RW3WKK18",
+      "clover_name": "Lamb Biryani",
+      "speak_as": "ਲੈਮ ਬਿਰਿਆਨੀ",
+      "aliases": [
+        "lamb biryani"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 2299,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "butter_prawn_masala",
+      "clover_item_id": "53CJQGN1P2VRR",
+      "clover_name": "Butter Prawn Masala",
+      "speak_as": "ਬਟਰ ਪ੍ਰੌਨ ਮਸਾਲਾ",
+      "aliases": [
+        "butter prawn",
+        "prawn masala"
+      ],
+      "veg": false,
+      "category_key": "nonveg_mains",
+      "price_cents": 2399,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "rice_side",
+          "clover_modifier_group_id": "595Q0MMH6YMTT",
+          "name": "Rice Side",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "plain_rice",
+              "clover_modifier_id": "K0FWXDQ8GZPSE",
+              "name": "Plain Rice",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "plain rice",
+                "chawal"
+              ]
+            },
+            {
+              "key": "jeera_rice",
+              "clover_modifier_id": "SXY7RFMH0RV20",
+              "name": "Jeera Rice",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "jeera rice"
+              ]
+            },
+            {
+              "key": "saffron_rice",
+              "clover_modifier_id": "GJF836JP966MW",
+              "name": "Saffron Rice",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "saffron rice"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "butter_naan",
+      "clover_item_id": "8BQQ63MMZDSMG",
+      "clover_name": "Butter Naan",
+      "speak_as": "ਬਟਰ ਨਾਨ",
+      "aliases": [
+        "butter naan",
+        "naan"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 399
+    },
+    {
+      "key": "garlic_naan",
+      "clover_item_id": "T61J8SX6W8JF2",
+      "clover_name": "Garlic Naan",
+      "speak_as": "ਗਾਰਲਿਕ ਨਾਨ",
+      "aliases": [
+        "garlic naan"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 499
+    },
+    {
+      "key": "tandoori_roti",
+      "clover_item_id": "GST02K5B2F4YE",
+      "clover_name": "Tandoori Roti",
+      "speak_as": "ਤੰਦੂਰੀ ਰੋਟੀ",
+      "aliases": [
+        "tandoori roti",
+        "roti"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 299
+    },
+    {
+      "key": "aloo_paratha",
+      "clover_item_id": "J19A395H90P4J",
+      "clover_name": "Aloo Paratha",
+      "speak_as": "ਆਲੂ ਪਰਾਠਾ",
+      "aliases": [
+        "aloo paratha",
+        "paratha"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 599,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "bhatura_single",
+      "clover_item_id": "55KG17VRVA6X0",
+      "clover_name": "Bhatura (single)",
+      "speak_as": "ਭਟੂਰਾ",
+      "aliases": [
+        "bhatura",
+        "bhature"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 399
+    },
+    {
+      "key": "plain_rice",
+      "clover_item_id": "56DJ5GSERRFZA",
+      "clover_name": "Plain Rice",
+      "speak_as": "ਸਾਦਾ ਚਾਵਲ",
+      "aliases": [
+        "plain rice",
+        "rice"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 499
+    },
+    {
+      "key": "jeera_rice",
+      "clover_item_id": "BQ0N3X9QGK5C2",
+      "clover_name": "Jeera Rice",
+      "speak_as": "ਜੀਰਾ ਚਾਵਲ",
+      "aliases": [
+        "jeera rice"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 599
+    },
+    {
+      "key": "saffron_rice",
+      "clover_item_id": "W2PQM9A5EPJXT",
+      "clover_name": "Saffron Rice",
+      "speak_as": "ਕੇਸਰ ਚਾਵਲ",
+      "aliases": [
+        "saffron rice"
+      ],
+      "veg": true,
+      "category_key": "breads_rice",
+      "price_cents": 699
+    },
+    {
+      "key": "chole_bhature_combo",
+      "clover_item_id": "DFFP3Z9HWEHS2",
+      "clover_name": "Chole Bhature Combo",
+      "speak_as": "ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ",
+      "aliases": [
+        "chole bhature combo",
+        "chole bhature",
+        "bhatura combo"
+      ],
+      "veg": true,
+      "category_key": "combos",
+      "price_cents": 1599,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "bhatura_count",
+          "clover_modifier_group_id": "EC47E7S02DH7C",
+          "name": "Bhatura Count",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "two",
+              "clover_modifier_id": "NPKY1FXK9EJ96",
+              "name": "2 Bhature (standard)",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "2 bhature",
+                "two bhature"
+              ]
+            },
+            {
+              "key": "three",
+              "clover_modifier_id": "3F881ZQB4BVGA",
+              "name": "3 Bhature",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "3 bhature",
+                "extra bhatura"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "lunch_thali_combo",
+      "clover_item_id": "A0R9M6N03551P",
+      "clover_name": "Veg Lunch Thali Combo",
+      "speak_as": "ਵੈਜ ਲੰਚ ਥਾਲੀ",
+      "aliases": [
+        "lunch thali",
+        "veg thali",
+        "thali combo"
+      ],
+      "veg": true,
+      "category_key": "combos",
+      "price_cents": 1899,
+      "modifier_groups": [
+        {
+          "key": "combo_curry_pick",
+          "clover_modifier_group_id": "7R4XPB2GQTVX4",
+          "name": "Choose Curry",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "dal_makhani",
+              "clover_modifier_id": "PA48XSXY216V4",
+              "name": "Dal Makhani",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "dal makhani"
+              ]
+            },
+            {
+              "key": "palak_paneer",
+              "clover_modifier_id": "NR6YMYMEV8DRJ",
+              "name": "Palak Paneer",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "palak paneer"
+              ]
+            },
+            {
+              "key": "chole",
+              "clover_modifier_id": "KFG4P35S7GWX0",
+              "name": "Chole",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "chole"
+              ]
+            },
+            {
+              "key": "paneer_butter",
+              "clover_modifier_id": "N5MKCD783Q0D4",
+              "name": "Paneer Butter Masala",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "paneer butter"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "combo_drink",
+          "clover_modifier_group_id": "3XXGS9F20FA7J",
+          "name": "Combo Drink",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "sweet_lassi",
+              "clover_modifier_id": "13E1ZTTM9ZESM",
+              "name": "Sweet Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "sweet lassi",
+                "lassi"
+              ]
+            },
+            {
+              "key": "salted_lassi",
+              "clover_modifier_id": "S39ZW83V6FW7M",
+              "name": "Salted Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "salted lassi",
+                "namkeen lassi"
+              ]
+            },
+            {
+              "key": "mango_lassi",
+              "clover_modifier_id": "NRPGAEVTTY8BY",
+              "name": "Mango Lassi",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "mango lassi"
+              ]
+            },
+            {
+              "key": "masala_chai",
+              "clover_modifier_id": "2QPSR6TGW6A5R",
+              "name": "Masala Chai",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "chai",
+                "masala chai"
+              ]
+            },
+            {
+              "key": "soft_drink",
+              "clover_modifier_id": "CX09JWWFNSGKM",
+              "name": "Soft Drink",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "pop",
+                "coke",
+                "pepsi"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "nonveg_lunch_combo",
+      "clover_item_id": "4Y4QHVNT43HM8",
+      "clover_name": "Non-Veg Lunch Combo",
+      "speak_as": "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੰਬੋ",
+      "aliases": [
+        "non veg lunch",
+        "lunch combo"
+      ],
+      "veg": false,
+      "category_key": "combos",
+      "price_cents": 2199,
+      "modifier_groups": [
+        {
+          "key": "combo_nonveg_curry",
+          "clover_modifier_group_id": "D556C4GY14VWR",
+          "name": "Choose Non-Veg Curry",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "butter_chicken",
+              "clover_modifier_id": "GGA338PP76FGP",
+              "name": "Butter Chicken",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "butter chicken"
+              ]
+            },
+            {
+              "key": "chicken_tikka_masala",
+              "clover_modifier_id": "7KZSFZ68JXJSA",
+              "name": "Chicken Tikka Masala",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "tikka masala"
+              ]
+            },
+            {
+              "key": "lamb_rogan",
+              "clover_modifier_id": "RFE0CF5MSE2T4",
+              "name": "Lamb Rogan Josh",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "rogan josh",
+                "lamb"
+              ]
+            },
+            {
+              "key": "goat_curry",
+              "clover_modifier_id": "S0GZF835EN0CY",
+              "name": "Goat Curry",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "goat curry",
+                "mutton"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "combo_drink",
+          "clover_modifier_group_id": "3XXGS9F20FA7J",
+          "name": "Combo Drink",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "sweet_lassi",
+              "clover_modifier_id": "13E1ZTTM9ZESM",
+              "name": "Sweet Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "sweet lassi",
+                "lassi"
+              ]
+            },
+            {
+              "key": "salted_lassi",
+              "clover_modifier_id": "S39ZW83V6FW7M",
+              "name": "Salted Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "salted lassi",
+                "namkeen lassi"
+              ]
+            },
+            {
+              "key": "mango_lassi",
+              "clover_modifier_id": "NRPGAEVTTY8BY",
+              "name": "Mango Lassi",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "mango lassi"
+              ]
+            },
+            {
+              "key": "masala_chai",
+              "clover_modifier_id": "2QPSR6TGW6A5R",
+              "name": "Masala Chai",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "chai",
+                "masala chai"
+              ]
+            },
+            {
+              "key": "soft_drink",
+              "clover_modifier_id": "CX09JWWFNSGKM",
+              "name": "Soft Drink",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "pop",
+                "coke",
+                "pepsi"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "student_combo",
+      "clover_item_id": "D9NJ6Z2QMCCP0",
+      "clover_name": "Student Combo",
+      "speak_as": "ਸਟੂਡੈਂਟ ਕੰਬੋ",
+      "aliases": [
+        "student combo",
+        "cheap combo"
+      ],
+      "veg": true,
+      "category_key": "combos",
+      "price_cents": 1399,
+      "modifier_groups": [
+        {
+          "key": "combo_curry_pick",
+          "clover_modifier_group_id": "7R4XPB2GQTVX4",
+          "name": "Choose Curry",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "dal_makhani",
+              "clover_modifier_id": "PA48XSXY216V4",
+              "name": "Dal Makhani",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "dal makhani"
+              ]
+            },
+            {
+              "key": "palak_paneer",
+              "clover_modifier_id": "NR6YMYMEV8DRJ",
+              "name": "Palak Paneer",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "palak paneer"
+              ]
+            },
+            {
+              "key": "chole",
+              "clover_modifier_id": "KFG4P35S7GWX0",
+              "name": "Chole",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "chole"
+              ]
+            },
+            {
+              "key": "paneer_butter",
+              "clover_modifier_id": "N5MKCD783Q0D4",
+              "name": "Paneer Butter Masala",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "paneer butter"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "combo_drink",
+          "clover_modifier_group_id": "3XXGS9F20FA7J",
+          "name": "Combo Drink",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "sweet_lassi",
+              "clover_modifier_id": "13E1ZTTM9ZESM",
+              "name": "Sweet Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "sweet lassi",
+                "lassi"
+              ]
+            },
+            {
+              "key": "salted_lassi",
+              "clover_modifier_id": "S39ZW83V6FW7M",
+              "name": "Salted Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "salted lassi",
+                "namkeen lassi"
+              ]
+            },
+            {
+              "key": "mango_lassi",
+              "clover_modifier_id": "NRPGAEVTTY8BY",
+              "name": "Mango Lassi",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "mango lassi"
+              ]
+            },
+            {
+              "key": "masala_chai",
+              "clover_modifier_id": "2QPSR6TGW6A5R",
+              "name": "Masala Chai",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "chai",
+                "masala chai"
+              ]
+            },
+            {
+              "key": "soft_drink",
+              "clover_modifier_id": "CX09JWWFNSGKM",
+              "name": "Soft Drink",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "pop",
+                "coke",
+                "pepsi"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "couple_combo",
+      "clover_item_id": "ZBEDKEPRP4MYG",
+      "clover_name": "Couple Combo (for 2)",
+      "speak_as": "ਕਪਲ ਕੰਬੋ",
+      "aliases": [
+        "couple combo",
+        "combo for two"
+      ],
+      "veg": false,
+      "category_key": "combos",
+      "price_cents": 3999,
+      "modifier_groups": [
+        {
+          "key": "combo_nonveg_curry",
+          "clover_modifier_group_id": "D556C4GY14VWR",
+          "name": "Choose Non-Veg Curry",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "butter_chicken",
+              "clover_modifier_id": "GGA338PP76FGP",
+              "name": "Butter Chicken",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "butter chicken"
+              ]
+            },
+            {
+              "key": "chicken_tikka_masala",
+              "clover_modifier_id": "7KZSFZ68JXJSA",
+              "name": "Chicken Tikka Masala",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "tikka masala"
+              ]
+            },
+            {
+              "key": "lamb_rogan",
+              "clover_modifier_id": "RFE0CF5MSE2T4",
+              "name": "Lamb Rogan Josh",
+              "price_cents": 200,
+              "speak_as": null,
+              "aliases": [
+                "rogan josh",
+                "lamb"
+              ]
+            },
+            {
+              "key": "goat_curry",
+              "clover_modifier_id": "S0GZF835EN0CY",
+              "name": "Goat Curry",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "goat curry",
+                "mutton"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "combo_drink",
+          "clover_modifier_group_id": "3XXGS9F20FA7J",
+          "name": "Combo Drink",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "sweet_lassi",
+              "clover_modifier_id": "13E1ZTTM9ZESM",
+              "name": "Sweet Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "sweet lassi",
+                "lassi"
+              ]
+            },
+            {
+              "key": "salted_lassi",
+              "clover_modifier_id": "S39ZW83V6FW7M",
+              "name": "Salted Lassi",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "salted lassi",
+                "namkeen lassi"
+              ]
+            },
+            {
+              "key": "mango_lassi",
+              "clover_modifier_id": "NRPGAEVTTY8BY",
+              "name": "Mango Lassi",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "mango lassi"
+              ]
+            },
+            {
+              "key": "masala_chai",
+              "clover_modifier_id": "2QPSR6TGW6A5R",
+              "name": "Masala Chai",
+              "price_cents": 50,
+              "speak_as": null,
+              "aliases": [
+                "chai",
+                "masala chai"
+              ]
+            },
+            {
+              "key": "soft_drink",
+              "clover_modifier_id": "CX09JWWFNSGKM",
+              "name": "Soft Drink",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "pop",
+                "coke",
+                "pepsi"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "family_veg_platter",
+      "clover_item_id": "F4MAMEP9KXGA4",
+      "clover_name": "Family Veg Platter (serves 4)",
+      "speak_as": "ਫੈਮਿਲੀ ਵੈਜ ਪਲੇਟਰ",
+      "aliases": [
+        "family veg platter",
+        "veg platter"
+      ],
+      "veg": true,
+      "category_key": "combos",
+      "price_cents": 5499,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "nonveg_deluxe_platter",
+      "clover_item_id": "BJ0SE6VQVF1DP",
+      "clover_name": "Non-Veg Deluxe Platter (serves 4)",
+      "speak_as": "ਨਾਨ-ਵੈਜ ਡੀਲਕਸ ਪਲੇਟਰ",
+      "aliases": [
+        "non veg platter",
+        "deluxe platter"
+      ],
+      "veg": false,
+      "category_key": "combos",
+      "price_cents": 6499,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        },
+        {
+          "key": "add_extras",
+          "clover_modifier_group_id": "3GC4ZASZ5P5JY",
+          "name": "Add Extras",
+          "min_required": 0,
+          "max_allowed": 4,
+          "modifiers": [
+            {
+              "key": "extra_raita",
+              "clover_modifier_id": "EQR3N9T18BRSE",
+              "name": "Extra Raita",
+              "price_cents": 200,
+              "speak_as": "ਐਕਸਟਰਾ ਰਾਇਤਾ",
+              "aliases": [
+                "extra raita"
+              ]
+            },
+            {
+              "key": "extra_pickle",
+              "clover_modifier_id": "5JE3Q01VD1TB4",
+              "name": "Extra Pickle",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "extra pickle",
+                "achar"
+              ]
+            },
+            {
+              "key": "extra_papad",
+              "clover_modifier_id": "RJ9H1P9VRQGH8",
+              "name": "Extra Papad",
+              "price_cents": 150,
+              "speak_as": null,
+              "aliases": [
+                "extra papad",
+                "papad"
+              ]
+            },
+            {
+              "key": "green_chutney",
+              "clover_modifier_id": "DZV3JHY5T6V1G",
+              "name": "Green Chutney",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "green chutney",
+                "hari chutney"
+              ]
+            },
+            {
+              "key": "extra_gravy",
+              "clover_modifier_id": "F5AHY8VCNDVX4",
+              "name": "Extra Gravy",
+              "price_cents": 250,
+              "speak_as": null,
+              "aliases": [
+                "extra gravy",
+                "extra sauce"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "office_party_tray",
+      "clover_item_id": "AP00KZXBM3YHP",
+      "clover_name": "Office Party Tray (serves 8)",
+      "speak_as": "ਆਫਿਸ ਪਾਰਟੀ ਟਰੇ",
+      "aliases": [
+        "party tray",
+        "office tray",
+        "catering tray"
+      ],
+      "veg": false,
+      "category_key": "combos",
+      "price_cents": 11999,
+      "modifier_groups": [
+        {
+          "key": "spice_level",
+          "clover_modifier_group_id": "BCV2MABFZMQWR",
+          "name": "Spice Level",
+          "min_required": 0,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "mild",
+              "clover_modifier_id": "A0MC7XMDZQ2MW",
+              "name": "Mild",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "mild",
+                "kam spicy"
+              ]
+            },
+            {
+              "key": "medium",
+              "clover_modifier_id": "N42ZX0JQZ5734",
+              "name": "Medium",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "medium",
+                "medium spicy"
+              ]
+            },
+            {
+              "key": "spicy",
+              "clover_modifier_id": "1J6H96QB0YJ98",
+              "name": "Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "spicy",
+                "teekha"
+              ]
+            },
+            {
+              "key": "extra_spicy",
+              "clover_modifier_id": "KGK18MENENVDT",
+              "name": "Extra Spicy",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "extra spicy",
+                "bahut teekha"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "sweet_lassi",
+      "clover_item_id": "FTA94N2784KR0",
+      "clover_name": "Sweet Lassi",
+      "speak_as": "ਮਿੱਠੀ ਲੱਸੀ",
+      "aliases": [
+        "sweet lassi",
+        "lassi"
+      ],
+      "veg": true,
+      "category_key": "drinks",
+      "price_cents": 599,
+      "modifier_groups": [
+        {
+          "key": "lassi_size",
+          "clover_modifier_group_id": "44MY8KXMJF714",
+          "name": "Lassi Size",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "MMYQTVG380WBW",
+              "name": "Regular",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular",
+                "small"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "4ADVZSB3FTTSR",
+              "name": "Large",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "large",
+                "bada"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "salted_lassi",
+      "clover_item_id": "MR4R19W84CK74",
+      "clover_name": "Salted Lassi",
+      "speak_as": "ਨਮਕੀਨ ਲੱਸੀ",
+      "aliases": [
+        "salted lassi"
+      ],
+      "veg": true,
+      "category_key": "drinks",
+      "price_cents": 549,
+      "modifier_groups": [
+        {
+          "key": "lassi_size",
+          "clover_modifier_group_id": "44MY8KXMJF714",
+          "name": "Lassi Size",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "MMYQTVG380WBW",
+              "name": "Regular",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular",
+                "small"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "4ADVZSB3FTTSR",
+              "name": "Large",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "large",
+                "bada"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "mango_lassi",
+      "clover_item_id": "2AY7X27V600Q4",
+      "clover_name": "Mango Lassi",
+      "speak_as": "ਅੰਬ ਲੱਸੀ",
+      "aliases": [
+        "mango lassi"
+      ],
+      "veg": true,
+      "category_key": "drinks",
+      "price_cents": 699,
+      "modifier_groups": [
+        {
+          "key": "lassi_size",
+          "clover_modifier_group_id": "44MY8KXMJF714",
+          "name": "Lassi Size",
+          "min_required": 1,
+          "max_allowed": 1,
+          "modifiers": [
+            {
+              "key": "regular",
+              "clover_modifier_id": "MMYQTVG380WBW",
+              "name": "Regular",
+              "price_cents": 0,
+              "speak_as": null,
+              "aliases": [
+                "regular",
+                "small"
+              ]
+            },
+            {
+              "key": "large",
+              "clover_modifier_id": "4ADVZSB3FTTSR",
+              "name": "Large",
+              "price_cents": 100,
+              "speak_as": null,
+              "aliases": [
+                "large",
+                "bada"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "masala_chai",
+      "clover_item_id": "6BK8Y7FMPFMHM",
+      "clover_name": "Masala Chai",
+      "speak_as": "ਮਸਾਲਾ ਚਾਹ",
+      "aliases": [
+        "masala chai",
+        "chai"
+      ],
+      "veg": true,
+      "category_key": "drinks",
+      "price_cents": 399
+    },
+    {
+      "key": "mango_shake",
+      "clover_item_id": "287FS415AGFGW",
+      "clover_name": "Mango Shake",
+      "speak_as": "ਅੰਬ ਸ਼ੇਕ",
+      "aliases": [
+        "mango shake"
+      ],
+      "veg": true,
+      "category_key": "drinks",
+      "price_cents": 649
+    },
+    {
+      "key": "soft_drink",
+      "clover_item_id": "TWGHW8EG2FDFE",
+      "clover_name": "Soft Drink (can)",
+      "speak_as": "ਸੋਫਟ ਪੀਅ",
+      "aliases": [
+        "soft drink",
+        "pop",
+        "coke"
+      ],
+      "veg": true,
+      "category_key": "drinks",
+      "price_cents": 249
+    },
+    {
+      "key": "nimbu_pani",
+      "clover_item_id": "CZT15PZ485NFY",
+      "clover_name": "Nimbu Pani",
+      "speak_as": "ਨਿੰਬੂ ਪਾਣੀ",
+      "aliases": [
+        "nimbu pani",
+        "lemonade"
+      ],
+      "veg": true,
+      "category_key": "drinks",
+      "price_cents": 449
+    },
+    {
+      "key": "gulab_jamun",
+      "clover_item_id": "XYCGVQJC48GTT",
+      "clover_name": "Gulab Jamun (2 pcs)",
+      "speak_as": "ਗੁਲਾਬ ਜਾਮੁਨ",
+      "aliases": [
+        "gulab jamun"
+      ],
+      "veg": true,
+      "category_key": "desserts",
+      "price_cents": 599
+    },
+    {
+      "key": "kheer",
+      "clover_item_id": "5SKG2N87K4DNR",
+      "clover_name": "Kheer",
+      "speak_as": "ਖੀਰ",
+      "aliases": [
+        "kheer",
+        "rice pudding"
+      ],
+      "veg": true,
+      "category_key": "desserts",
+      "price_cents": 599
+    },
+    {
+      "key": "gajar_halwa",
+      "clover_item_id": "RVG8GKWQV6BY0",
+      "clover_name": "Gajar Halwa",
+      "speak_as": "ਗਾਜਰ ਦਾ ਹਲਵਾ",
+      "aliases": [
+        "gajar halwa",
+        "carrot halwa"
+      ],
+      "veg": true,
+      "category_key": "desserts",
+      "price_cents": 799
+    },
+    {
+      "key": "rasmalai",
+      "clover_item_id": "HC8GX0MZ9JF08",
+      "clover_name": "Rasmalai (2 pcs)",
+      "speak_as": "ਰਸਮਲਾਈ",
+      "aliases": [
+        "rasmalai"
+      ],
+      "veg": true,
+      "category_key": "desserts",
+      "price_cents": 699
+    },
+    {
+      "key": "kulfi",
+      "clover_item_id": "9H7AN7VSWR5TW",
+      "clover_name": "Mango Kulfi",
+      "speak_as": "ਅੰਬ ਕੁਲਫੀ",
+      "aliases": [
+        "kulfi",
+        "mango kulfi"
+      ],
+      "veg": true,
+      "category_key": "desserts",
+      "price_cents": 549
+    },
+    {
+      "key": "raita",
+      "clover_item_id": "P8YTRNK57VQX8",
+      "clover_name": "Raita",
+      "speak_as": "ਰਾਇਤਾ",
+      "aliases": [
+        "raita"
+      ],
+      "veg": true,
+      "category_key": "extras",
+      "price_cents": 399
+    },
+    {
+      "key": "mixed_pickle",
+      "clover_item_id": "36CR8V2ZYDCD8",
+      "clover_name": "Mixed Pickle",
+      "speak_as": "ਮਿਸ਼ਰਿਤ ਅਚਾਰ",
+      "aliases": [
+        "pickle",
+        "achar"
+      ],
+      "veg": true,
+      "category_key": "extras",
+      "price_cents": 299
+    },
+    {
+      "key": "papad",
+      "clover_item_id": "1MDM161YN6V5G",
+      "clover_name": "Papad (2 pcs)",
+      "speak_as": "ਪਪੜ",
+      "aliases": [
+        "papad",
+        "papadum"
+      ],
+      "veg": true,
+      "category_key": "extras",
+      "price_cents": 249
+    },
+    {
+      "key": "extra_gravy_side",
+      "clover_item_id": "WN2QRWWBVYX1J",
+      "clover_name": "Extra Gravy (side)",
+      "speak_as": "ਐਕਸਟਰਾ ਗ੍ਰੇਵੀ",
+      "aliases": [
+        "extra gravy"
+      ],
+      "veg": true,
+      "category_key": "extras",
+      "price_cents": 299
+    }
+  ]
+}
