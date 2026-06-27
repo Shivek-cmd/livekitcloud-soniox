@@ -69,7 +69,10 @@ def check_item(name: str) -> str:
     if not item:
         return f"'{name}' is not on our menu."
     veg = "Vegetarian" if item["veg"] else "Non-vegetarian"
-    return f"{item['name']} ({item['punjabi']}) — ${item['price']} — {veg}"
+    return (
+        f"{item['name']} ({item['punjabi']}) — {veg}\n"
+        f"Price (INTERNAL — do NOT say unless customer asks): ${item['price']}"
+    )
 
 
 def search_menu(query: str, *, limit: int = 8) -> str:
@@ -84,12 +87,13 @@ def search_menu(query: str, *, limit: int = 8) -> str:
         tag = "V" if item.veg else "NV"
         avail = "" if item.available else " [unavailable]"
         lines.append(
-            f'  - {item.name} (say aloud: "{item.voice_line}", {item.speech_mode})'
-            f" — ${item.price_dollars:.2f} ({tag}){avail}"
+            f'  - {item.name} (say aloud: "{item.voice_line}", {item.speech_mode}) ({tag}){avail}'
         )
         if item.modifier_groups:
             lines.append(f"    Options: {', '.join(g.name for g in item.modifier_groups)}")
-    lines.append("Use voice_line exactly when saying dish names aloud — natural Punjabi/English code-mix.")
+    lines.append(
+        "Use voice_line for dish names. Do NOT mention prices unless the customer asks."
+    )
     return "\n".join(lines)
 
 

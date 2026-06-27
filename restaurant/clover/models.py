@@ -64,9 +64,19 @@ class CachedMenuItem:
         avail = "" if self.available else " — currently unavailable"
         mods = ""
         if self.modifier_groups:
-            group_names = ", ".join(g.name for g in self.modifier_groups)
-            mods = f" Options: {group_names}."
+            mod_parts: list[str] = []
+            for g in self.modifier_groups:
+                if g.name == "Spice Level":
+                    mod_parts.append(
+                        'Spice Level — ask in English ONLY: "Mild, medium, or spicy?" '
+                        "(never Punjabi/Hindi spice words)"
+                    )
+                else:
+                    mod_parts.append(g.name)
+            mods = f" Options: {'; '.join(mod_parts)}."
         return (
             f'{self.name} — say aloud: "{self.voice_line}" (speech_mode: {self.speech_mode})'
-            f" — ${self.price_dollars:.2f} — {veg}{avail}.{mods}"
+            f" — {veg}{avail}.{mods}\n"
+            f"Price (INTERNAL — do NOT say unless customer asks how much/price/kina/cost): "
+            f"${self.price_dollars:.2f}"
         )

@@ -51,7 +51,7 @@ class OrderCart:
                 existing.quantity += quantity
                 if note:
                     existing.note = note
-                return f"Updated: {existing.quantity}x {item['name']} in cart. Total: {_money(self.total)}"
+                return f"Updated: {existing.quantity}x {item['name']} in cart."
 
         self.items.append(CartItem(
             name=item["name"],
@@ -62,7 +62,7 @@ class OrderCart:
             clover_item_id=item.get("clover_item_id"),
             speech_mode=item.get("speech_mode") or "mixed",
         ))
-        return f"Added {quantity}x {item['name']} ({_money(float(item.get('price') or item.get('price_cents', 0) / 100))} each). Total: {_money(self.total)}"
+        return f"Added {quantity}x {item['name']} to cart."
 
     def remove_item(self, name: str) -> str:
         for i, item in enumerate(self.items):

@@ -84,6 +84,24 @@ people actually use them. Not a textbook translation.
   - Keep replies short and warm — one question at a time, like a busy counter person.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRICES — when to mention them
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- NEVER say price when confirming an item exists, describing a dish, asking quantity, or asking modifiers.
+- ONLY say price if the customer explicitly asks: "how much", "price", "kina", "cost", "kithe da".
+  Then give ONE short answer in English: "That's about six dollars ji."
+- The ONLY other time for money is Step E final confirmation (total/subtotal).
+- Tool responses mark price as INTERNAL — never read that line aloud unless the customer asked.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SPICE LEVEL — how to ask (Canadian restaurant style)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Ask spice ONLY if check_menu_item lists "Spice Level" in Options. Otherwise skip it.
+- ALWAYS ask in English — exact words: mild, medium, or spicy.
+- Good: "Mild, medium, or spicy?" or "ਹਾਂ ਜੀ — mild, medium, or spicy?"
+- BAD (never use): mirchi kithe tak, ਕਿੱਥੇ ਤਕ ਮਿਰਚੀ, teekha/kam spicy in Punjabi, Gurmukhi for mild/medium/spicy.
+- Do NOT combine price + spice + quantity in one turn — one question only.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GREETING
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Your opening greeting has already been played. Do not repeat it.
@@ -142,12 +160,13 @@ STEP A — COLLECT ITEMS (repeat until customer says done)
       If quantity was not stated, ask: "How many?"
 
   A2. Read modifier groups from check_menu_item response. Ask only what applies:
-      - Spice Level → ask mild, medium, or spicy (if listed).
+      - Spice Level → ONLY if listed in Options. Ask in English: "Mild, medium, or spicy?"
       - Choose Curry / Choose Non-Veg Curry / Combo Drink / Lassi Size → REQUIRED if listed;
         ask before add_to_order.
       - Bread Choice, Rice Side, Add Extras, Bhatura Count → ask if customer wants them;
         one question at a time.
       - No options listed → skip to A3.
+      - Never mention price in this step.
 
   A3. Call add_to_order(item_name, quantity, note=...).
       Put spice level and all modifier choices in note. Wait for tool return before confirming.
@@ -231,6 +250,8 @@ Say one line before calling the tool:
 NEVER DO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Never quote a dish, price, or option without calling a menu tool first in this call.
+- Never say a price unless the customer asked for it, or you are at Step E final confirmation.
+- Never ask spice level in Punjabi/Hindi — always "Mild, medium, or spicy?" in English.
 - Never assume spice rules by category — read Options from check_menu_item.
 - Never confirm an item before add_to_order() returns successfully.
 - Never call place_order() before calling get_order_summary() first.
@@ -378,7 +399,7 @@ class RestaurantAgent(Agent):
         self,
         item_name: Annotated[str, "Item name to look up"],
     ) -> str:
-        """Look up one menu item — price, veg/non-veg, modifier options, voice_line, availability."""
+        """Look up one menu item — veg/non-veg, modifier options, voice_line, availability. Price is internal."""
         return menu_provider.check_item(item_name)
 
     @function_tool
