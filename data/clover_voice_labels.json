@@ -151,8 +151,8 @@
           ]
         }
       ],
-      "voice_line": "Samosa Chaat",
-      "speech_mode": "mixed"
+      "voice_line": "ਸਮੋਸਾ ਚਾਟ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "paneer_tikka",
@@ -303,7 +303,7 @@
         }
       ],
       "voice_line": "Paneer Tikka",
-      "speech_mode": "mixed"
+      "speech_mode": "english"
     },
     {
       "key": "chicken_tikka",
@@ -608,8 +608,8 @@
           ]
         }
       ],
-      "voice_line": "Veg Spring Rolls",
-      "speech_mode": "mixed"
+      "voice_line": "ਵੈਜ ਸਪ੍ਰਿੰਗ ਰੋਲ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "pakora_platter",
@@ -759,8 +759,8 @@
           ]
         }
       ],
-      "voice_line": "Mixed Pakora Platter",
-      "speech_mode": "mixed"
+      "voice_line": "ਮਿਸ਼ਰਿਤ ਪਕੋੜਾ ਪਲੇਟਰ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "honey_chilli_cauliflower",
@@ -837,8 +837,8 @@
           ]
         }
       ],
-      "voice_line": "Honey Chilli Gobi",
-      "speech_mode": "mixed"
+      "voice_line": "ਹਨੀ ਚਿਲੀ ਗੋਭੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "tandoori_chicken_half",
@@ -1628,8 +1628,8 @@
           ]
         }
       ],
-      "voice_line": "Dal Makhani",
-      "speech_mode": "mixed"
+      "voice_line": "ਦਾਲ ਮੱਖਣੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "sarson_saag",
@@ -2092,8 +2092,8 @@
           ]
         }
       ],
-      "voice_line": "Palak Paneer",
-      "speech_mode": "mixed"
+      "voice_line": "ਪਾਲਕ ਪਨੀਰ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "chole",
@@ -2483,8 +2483,8 @@
           ]
         }
       ],
-      "voice_line": "Paneer Butter Masala",
-      "speech_mode": "mixed"
+      "voice_line": "ਪਨੀਰ ਬਟਰ ਮਸਾਲਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "malai_kofta",
@@ -2664,8 +2664,8 @@
           ]
         }
       ],
-      "voice_line": "Malai Kofta",
-      "speech_mode": "mixed"
+      "voice_line": "ਮਲਾਈ ਕੋਫ਼ਤਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "dal_tadka",
@@ -2846,8 +2846,8 @@
           ]
         }
       ],
-      "voice_line": "Dal Tadka",
-      "speech_mode": "mixed"
+      "voice_line": "ਦਾਲ ਤੜਕਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "mushroom_matar",
@@ -3027,8 +3027,8 @@
           ]
         }
       ],
-      "voice_line": "Mushroom Matar",
-      "speech_mode": "mixed"
+      "voice_line": "ਮਸ਼ਰੂਮ ਮਟਰ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "baigan_bharta",
@@ -3163,8 +3163,8 @@
           ]
         }
       ],
-      "voice_line": "Baigan Bharta",
-      "speech_mode": "mixed"
+      "voice_line": "ਬੈਂਗਣ ਭਰਤਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "butter_chicken",
@@ -3668,8 +3668,8 @@
           ]
         }
       ],
-      "voice_line": "Chicken Tikka Masala",
-      "speech_mode": "english"
+      "voice_line": "ਚਿਕਨ ਟਿੱਕਾ ਮਸਾਲਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "lamb_rogan_josh",
@@ -3884,8 +3884,8 @@
           ]
         }
       ],
-      "voice_line": "Lamb Rogan Josh",
-      "speech_mode": "english"
+      "voice_line": "ਲੈਮ ਰੋਗਨ ਜੋਸ਼",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "goat_curry",
@@ -4100,8 +4100,8 @@
           ]
         }
       ],
-      "voice_line": "Goat Curry",
-      "speech_mode": "english"
+      "voice_line": "ਬਕਰੇ ਦਾ ਮਸਾਲਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "fish_curry",
@@ -4224,8 +4224,8 @@
           ]
         }
       ],
-      "voice_line": "Punjabi Fish Curry",
-      "speech_mode": "english"
+      "voice_line": "ਪੰਜਾਬੀ ਮੱਛੀ ਕਰੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "chicken_biryani",
@@ -4409,8 +4409,8 @@
           ]
         }
       ],
-      "voice_line": "Chicken Biryani",
-      "speech_mode": "english"
+      "voice_line": "ਚਿਕਨ ਬਿਰਿਆਨੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "lamb_biryani",
@@ -4559,8 +4559,8 @@
           ]
         }
       ],
-      "voice_line": "Lamb Biryani",
-      "speech_mode": "english"
+      "voice_line": "ਲੈਮ ਬਿਰਿਆਨੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "butter_prawn_masala",
@@ -4698,8 +4698,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 399,
-      "voice_line": "Butter Naan",
-      "speech_mode": "english"
+      "voice_line": "ਬਟਰ ਨਾਨ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "garlic_naan",
@@ -4712,8 +4712,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 499,
-      "voice_line": "Garlic Naan",
-      "speech_mode": "english"
+      "voice_line": "ਗਾਰਲਿਕ ਨਾਨ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "tandoori_roti",
@@ -4727,8 +4727,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 299,
-      "voice_line": "Tandoori Roti",
-      "speech_mode": "english"
+      "voice_line": "ਤੰਦੂਰੀ ਰੋਟੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "aloo_paratha",
@@ -4805,8 +4805,8 @@
           ]
         }
       ],
-      "voice_line": "Aloo Paratha",
-      "speech_mode": "english"
+      "voice_line": "ਆਲੂ ਪਰਾਠਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "bhatura_single",
@@ -4835,8 +4835,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 499,
-      "voice_line": "Plain Rice",
-      "speech_mode": "english"
+      "voice_line": "ਸਾਦਾ ਚਾਵਲ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "jeera_rice",
@@ -4849,8 +4849,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 599,
-      "voice_line": "Jeera Rice",
-      "speech_mode": "english"
+      "voice_line": "ਜੀਰਾ ਚਾਵਲ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "saffron_rice",
@@ -4863,8 +4863,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 699,
-      "voice_line": "Saffron Rice",
-      "speech_mode": "english"
+      "voice_line": "ਕੇਸਰ ਚਾਵਲ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "chole_bhature_combo",
@@ -5333,8 +5333,8 @@
           ]
         }
       ],
-      "voice_line": "Veg Lunch Thali Combo",
-      "speech_mode": "english"
+      "voice_line": "ਵੈਜ ਲੰਚ ਥਾਲੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "nonveg_lunch_combo",
@@ -5544,8 +5544,8 @@
           ]
         }
       ],
-      "voice_line": "Non-Veg Lunch Combo",
-      "speech_mode": "english"
+      "voice_line": "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੰਬੋ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "student_combo",
@@ -5753,8 +5753,8 @@
           ]
         }
       ],
-      "voice_line": "Student Combo",
-      "speech_mode": "english"
+      "voice_line": "ਸਟੂਡੈਂਟ ਕੰਬੋ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "couple_combo",
@@ -6037,8 +6037,8 @@
           ]
         }
       ],
-      "voice_line": "Couple Combo",
-      "speech_mode": "english"
+      "voice_line": "ਕਪਲ ਕੰਬੋ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "family_veg_platter",
@@ -6188,8 +6188,8 @@
           ]
         }
       ],
-      "voice_line": "Family Veg Platter",
-      "speech_mode": "english"
+      "voice_line": "ਫੈਮਿਲੀ ਵੈਜ ਪਲੇਟਰ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "nonveg_deluxe_platter",
@@ -6339,8 +6339,8 @@
           ]
         }
       ],
-      "voice_line": "Non-Veg Deluxe Platter",
-      "speech_mode": "english"
+      "voice_line": "ਨਾਨ-ਵੈਜ ਡੀਲਕਸ ਪਲੇਟਰ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "office_party_tray",
@@ -6418,8 +6418,8 @@
           ]
         }
       ],
-      "voice_line": "Office Party Tray",
-      "speech_mode": "english"
+      "voice_line": "ਆਫਿਸ ਪਾਰਟੀ ਟਰੇ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "sweet_lassi",
@@ -6470,8 +6470,8 @@
           ]
         }
       ],
-      "voice_line": "Sweet Lassi",
-      "speech_mode": "mixed"
+      "voice_line": "ਮਿੱਠੀ ਲੱਸੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "salted_lassi",
@@ -6521,8 +6521,8 @@
           ]
         }
       ],
-      "voice_line": "Salted Lassi",
-      "speech_mode": "mixed"
+      "voice_line": "ਨਮਕੀਨ ਲੱਸੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "mango_lassi",
@@ -6572,8 +6572,8 @@
           ]
         }
       ],
-      "voice_line": "Mango Lassi",
-      "speech_mode": "mixed"
+      "voice_line": "ਅੰਬ ਲੱਸੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "masala_chai",
@@ -6587,8 +6587,8 @@
       "veg": true,
       "category_key": "drinks",
       "price_cents": 399,
-      "voice_line": "Masala Chai",
-      "speech_mode": "mixed"
+      "voice_line": "ਮਸਾਲਾ ਚਾਹ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "mango_shake",
@@ -6601,8 +6601,8 @@
       "veg": true,
       "category_key": "drinks",
       "price_cents": 649,
-      "voice_line": "Mango Shake",
-      "speech_mode": "mixed"
+      "voice_line": "ਅੰਬ ਸ਼ੇਕ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "soft_drink",
@@ -6617,8 +6617,8 @@
       "veg": true,
       "category_key": "drinks",
       "price_cents": 249,
-      "voice_line": "Soft Drink",
-      "speech_mode": "mixed"
+      "voice_line": "ਸੋਫਟ ਪੀਅ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "nimbu_pani",
@@ -6632,8 +6632,8 @@
       "veg": true,
       "category_key": "drinks",
       "price_cents": 449,
-      "voice_line": "Nimbu Pani",
-      "speech_mode": "mixed"
+      "voice_line": "ਨਿੰਬੂ ਪਾਣੀ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "gulab_jamun",
@@ -6706,7 +6706,7 @@
       "category_key": "desserts",
       "price_cents": 549,
       "voice_line": "ਅੰਬ ਕੁਲਫੀ",
-      "speech_mode": "mixed"
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "raita",
@@ -6719,8 +6719,8 @@
       "veg": true,
       "category_key": "extras",
       "price_cents": 399,
-      "voice_line": "Raita",
-      "speech_mode": "english"
+      "voice_line": "ਰਾਇਤਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "mixed_pickle",
@@ -6734,8 +6734,8 @@
       "veg": true,
       "category_key": "extras",
       "price_cents": 299,
-      "voice_line": "Mixed Pickle",
-      "speech_mode": "english"
+      "voice_line": "ਮਿਸ਼ਰਿਤ ਅਚਾਰ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "papad",
@@ -6749,8 +6749,8 @@
       "veg": true,
       "category_key": "extras",
       "price_cents": 249,
-      "voice_line": "Papad",
-      "speech_mode": "english"
+      "voice_line": "ਪਪੜ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "extra_gravy_side",
@@ -6763,8 +6763,8 @@
       "veg": true,
       "category_key": "extras",
       "price_cents": 299,
-      "voice_line": "Extra Gravy",
-      "speech_mode": "english"
+      "voice_line": "ਐਕਸਟਰਾ ਗ੍ਰੇਵੀ",
+      "speech_mode": "gurmukhi"
     }
   ],
   "speech_policy_version": 1

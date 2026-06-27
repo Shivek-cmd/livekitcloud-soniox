@@ -51,18 +51,19 @@ class OrderCart:
                 existing.quantity += quantity
                 if note:
                     existing.note = note
-                return f"Updated: {existing.quantity}x {item['name']} in cart."
+                return f"Updated: {existing.quantity} of {item['name']} in cart (say: {item.get('voice_line', item['name'])})."
 
+        voice = item.get("voice_line") or item.get("speak_as") or item["name"]
         self.items.append(CartItem(
             name=item["name"],
-            voice_line=item.get("voice_line") or item.get("punjabi") or item.get("speak_as") or item["name"],
+            voice_line=voice,
             price=float(item.get("price") or (item.get("price_cents", 0) / 100)),
             quantity=quantity,
             note=note,
             clover_item_id=item.get("clover_item_id"),
             speech_mode=item.get("speech_mode") or "mixed",
         ))
-        return f"Added {quantity}x {item['name']} to cart."
+        return f"Added {quantity} of {item['name']} to cart (say dish as: {voice})."
 
     def remove_item(self, name: str) -> str:
         for i, item in enumerate(self.items):
@@ -74,10 +75,11 @@ class OrderCart:
     def summary(self) -> str:
         if self.is_empty:
             return "Your order is empty."
-        lines = ["Current order:"]
+        lines = ["Current order (say quantities in words, never 2x/3x; use voice_line for dish names):"]
         for item in self.items:
             line_total = item.price * item.quantity
-            lines.append(f'  {item.quantity}x {item.voice_line} ({item.name}) — {_money(line_total)}')
+            qty_note = f"qty {item.quantity}, say: {item.voice_line}"
+            lines.append(f"  {qty_note} ({item.name}) — {_money(line_total)}")
             if item.note:
                 lines.append(f"     Note: {item.note}")
         lines.append(f"Subtotal: {_money(self.subtotal)}")

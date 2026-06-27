@@ -77,6 +77,7 @@ class CachedMenuItem:
         return (
             f'{self.name} — say aloud: "{self.voice_line}" (speech_mode: {self.speech_mode})'
             f" — {veg}{avail}.{mods}\n"
-            f"Price (INTERNAL — do NOT say unless customer asks how much/price/kina/cost): "
-            f"${self.price_dollars:.2f}"
+            f"Use voice_line exactly for TTS (Gurmukhi for Soniox). "
+            f"Quantity: say in words (ik/do/tin, never 2x). "
+            f"Price (INTERNAL — do NOT say unless customer asks): ${self.price_dollars:.2f}"
         )

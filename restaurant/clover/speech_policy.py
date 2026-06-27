@@ -1,8 +1,11 @@
 """
-Production speech policy — how Sierra says dish names on Canadian Punjabi restaurant calls.
+Production speech policy — what Sierra says aloud (Soniox TTS input).
 
-Real staff code-mix: Punjabi/Hindi sentences + English menu names + English numbers/spice.
-Not every dish should be spoken in full Gurmukhi (e.g. Fish Pakora, not machhi/ਮੱਛੀ).
+Soniox TTS with language=pa pronounces Gurmukhi well but misreads Roman menu text
+("Aloo Paratha", "2x") — playground tests confirm script matters, not the model.
+
+Default: voice_line = speak_as (Gurmukhi) when available.
+English voice_line ONLY for explicit overrides (Fish Pakora, Chole Bhature Combo, etc.).
 """
 
 from __future__ import annotations
@@ -14,7 +17,25 @@ from restaurant.clover.seed_menu import MenuItemSpec
 
 SpeechMode = Literal["english", "mixed", "gurmukhi"]
 
-# Items where voice_line is explicitly set (overrides category rules).
+# English TTS — staff/customers say these in English; Gurmukhi sounds wrong or awkward.
+ENGLISH_VOICE_KEYS: frozenset[str] = frozenset(
+    {
+        "fish_pakora",
+        "tandoori_shrimp",
+        "butter_prawn_masala",
+        "chole_bhature_combo",
+        "chole",
+        "bhatura_single",
+        "butter_chicken",
+        "chicken_tikka",
+        "seekh_kebab",
+        "lamb_chops",
+        "tandoori_chicken_half",
+        "tandoori_chicken_full",
+        "paneer_tikka",
+    }
+)
+
 VOICE_LINE_OVERRIDES: dict[str, str] = {
     "fish_pakora": "Fish Pakora",
     "tandoori_shrimp": "Tandoori Shrimp",
@@ -24,97 +45,35 @@ VOICE_LINE_OVERRIDES: dict[str, str] = {
     "bhatura_single": "Bhatura",
 }
 
-# Traditional / strongly Punjabi — full Gurmukhi voice_line when speak_as is set.
-GURMUKHI_ITEM_KEYS: frozenset[str] = frozenset(
-    {
-        "sarson_saag",
-        "gajar_halwa",
-        "kheer",
-        "gulab_jamun",
-        "rasmalai",
-    }
-)
-
-# Categories that default to English menu names on calls.
-ENGLISH_CATEGORY_KEYS: frozenset[str] = frozenset(
-    {
-        "combos",
-        "tandoor",
-        "nonveg_mains",
-    }
-)
-
-# Starters with meat/fish — English name on calls.
-_ENGLISH_STARTER_KEYS: frozenset[str] = frozenset(
-    {
-        "chicken_tikka",
-        "fish_pakora",
-        "seekh_kebab",
-        "lamb_chops",
-        "tandoori_shrimp",
-    }
-)
-
 
 def _strip_parens(name: str) -> str:
-    """Shorten Clover name for speech: drop (2 pcs), (serves 4), etc."""
     return re.sub(r"\s*\([^)]*\)\s*", " ", name).strip()
 
 
 def resolve_item_speech(spec: MenuItemSpec) -> tuple[str, SpeechMode]:
     """
-    Return (voice_line, speech_mode) for TTS output.
-
-    voice_line — exact text Sierra should say for the dish name.
-    speech_mode — hints for sentence wrapping (english | mixed | gurmukhi).
+    Return (voice_line, speech_mode) — exact text Soniox TTS should speak for the dish name.
     """
-    if spec.key in VOICE_LINE_OVERRIDES:
-        return VOICE_LINE_OVERRIDES[spec.key], "english"
+    if spec.key in ENGLISH_VOICE_KEYS:
+        line = VOICE_LINE_OVERRIDES.get(spec.key) or _strip_parens(spec.name)
+        return line, "english"
 
-    if spec.key in GURMUKHI_ITEM_KEYS and spec.speak_as:
+    if spec.speak_as:
         return spec.speak_as, "gurmukhi"
 
-    if spec.category_key in ENGLISH_CATEGORY_KEYS:
-        return _strip_parens(spec.name), "english"
-
-    if spec.category_key == "starters" and spec.key in _ENGLISH_STARTER_KEYS:
-        return _strip_parens(spec.name), "english"
-
-    if spec.category_key == "starters" and not spec.veg:
-        return _strip_parens(spec.name), "english"
-
-    if spec.category_key in ("breads_rice", "extras"):
-        return _strip_parens(spec.name), "english"
-
-    if spec.category_key == "drinks":
-        return _strip_parens(spec.name), "mixed"
-
-    if spec.category_key == "desserts":
-        return spec.speak_as or _strip_parens(spec.name), "mixed"
-
-    if spec.category_key == "veg_mains":
-        return _strip_parens(spec.name), "mixed"
-
-    if spec.category_key == "starters":
-        return _strip_parens(spec.name), "mixed"
-
-    return _strip_parens(spec.name), "mixed"
+    return _strip_parens(spec.name), "english"
 
 
 def resolve_modifier_speech(name: str) -> tuple[str, SpeechMode]:
-    """Modifiers and spice levels — always English on Canadian calls."""
+    """Spice/modifiers — English words Soniox handles fine."""
     return name, "english"
 
 
 def resolve_speech_from_label(item: dict) -> tuple[str, SpeechMode]:
-    """Resolve speech for a voice-label or cache dict (with optional pre-set fields)."""
     if item.get("voice_line") and item.get("speech_mode"):
         return item["voice_line"], item["speech_mode"]
 
     key = item.get("key", "")
-    if key in VOICE_LINE_OVERRIDES:
-        return VOICE_LINE_OVERRIDES[key], "english"
-
     name = item.get("clover_name") or item.get("name") or ""
     speak_as = item.get("speak_as") or name
     category_key = item.get("category_key", "")
