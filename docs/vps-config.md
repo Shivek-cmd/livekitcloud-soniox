@@ -100,10 +100,26 @@ LIVEKIT_SIP_URI='sip:+15878175156@5qg9858y0ak.sip.livekit.cloud' \
 
 ## Deploy after code changes
 
+Git remote on VPS uses **SSH** (`git@github.com:Shivek-cmd/livekitcloud-soniox.git`). First-time setup:
+
+```bash
+bash scripts/setup_vps_git.sh   # prints deploy key if needed; tests fetch
+```
+
+Deploy latest `main`:
+
+```bash
+bash scripts/vps_deploy.sh
+```
+
+Manual equivalent:
+
 ```bash
 cd /opt/livekit-sarvam
-git pull origin main
-/root/.local/bin/uv sync          # picks up dependency changes (soniox/openai)
+git fetch origin main && git reset --hard origin/main
+/root/.local/bin/uv sync
+PYTHONPATH=/opt/livekit-sarvam /root/.local/bin/uv run python scripts/rebuild_voice_labels.py
+PYTHONPATH=/opt/livekit-sarvam /root/.local/bin/uv run python scripts/clover_sync_menu.py
 systemctl restart restaurant-agent restaurant-token
 ```
 

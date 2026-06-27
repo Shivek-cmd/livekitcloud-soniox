@@ -7,7 +7,6 @@ from typing import Annotated
 from dotenv import load_dotenv
 from livekit.agents import (
     Agent,
-    AgentSession,
     JobContext,
     RoomInputOptions,
     WorkerOptions,
@@ -15,7 +14,8 @@ from livekit.agents import (
     function_tool,
 )
 from livekit.agents.llm import StopResponse
-from restaurant.voice_stack import build_llm, build_stt, build_tts
+from restaurant.session_config import build_agent_session, phone_greeting_settle_seconds
+from restaurant.turn_latency import TurnLatencyTracker
 from restaurant.menu import (
     DELIVERY_CHARGE,
     MIN_ORDER_DELIVERY,
@@ -510,31 +510,9 @@ async def entrypoint(ctx: JobContext):
         f"participant={participant.identity}"
     )
 
-    if is_phone:
-        session = AgentSession(
-            stt=build_stt(True),
-            llm=build_llm(),
-            tts=build_tts(True),
-            turn_detection="stt",
-            min_endpointing_delay=1.0,
-            max_endpointing_delay=4.0,
-            preemptive_generation=False,
-            allow_interruptions=False,
-            discard_audio_if_uninterruptible=True,
-            aec_warmup_duration=2.5,
-            min_interruption_words=2,
-            resume_false_interruption=True,
-            agent_false_interruption_timeout=2.0,
-        )
-    else:
-        session = AgentSession(
-            stt=build_stt(False),
-            llm=build_llm(),
-            tts=build_tts(False),
-            turn_detection="stt",
-            min_endpointing_delay=0.07,
-            preemptive_generation=True,
-        )
+    session = build_agent_session(is_phone=is_phone)
+    channel = "phone" if is_phone else "web"
+    TurnLatencyTracker(channel=channel).attach(session)
 
     agent = RestaurantAgent(is_phone=is_phone)
     if is_phone:
@@ -567,7 +545,7 @@ async def entrypoint(ctx: JobContext):
 
     # Let greeting echo fade on mobile/outbound before listening for the caller.
     if is_phone:
-        await asyncio.sleep(4.0)
+        await asyncio.sleep(phone_greeting_settle_seconds())
         if agent._greeting_echo_pending_reprompt and agent._real_user_turns == 0:
             agent._echo_reprompt_done = True
             await session.say(
