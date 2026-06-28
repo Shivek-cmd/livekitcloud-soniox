@@ -22,6 +22,7 @@ from restaurant.conversation import (
     UserIntent,
     detect_intent,
     echo_recovery_phrase,
+    is_confirm_yes,
     sanitize_assistant_speech,
 )
 from restaurant.order_flow import OrderFlowController
@@ -122,11 +123,13 @@ class RestaurantAgent(Agent):
                 user_text, self._recent_agent_lines, intent=intent
             ):
                 logger.info("Ignoring phone echo turn: %s", user_text)
-                if is_greeting_tail_echo(user_text):
+                # Only one post-greeting reprompt — never speak again on echo (avoids loop).
+                if (
+                    is_greeting_tail_echo(user_text)
+                    and not self._echo_reprompt_done
+                ):
                     self._greeting_echo_pending_reprompt = True
                     self._schedule_echo_reprompt(greeting_only=True)
-                else:
-                    self._schedule_echo_reprompt(greeting_only=False)
                 raise StopResponse()
 
         if intent == UserIntent.PICKUP and not self.cart.order_type:

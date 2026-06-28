@@ -8,6 +8,20 @@ from typing import TYPE_CHECKING, Sequence
 if TYPE_CHECKING:
     from restaurant.conversation import UserIntent
 
+# Echo of Sierra reprompt / recovery lines — drop silently, never reprompt again.
+_RECOVERY_ECHO_PHRASES: tuple[str, ...] = (
+    "go ahead",
+    "i m listening",
+    "im listening",
+    "listening",
+    "sun rahi",
+    "what would you like to know",
+    "from the menu",
+    "sorry ji",
+    "ਮੈਂ ਸੁਣ ਰਹੀ",
+    "ਸੁਣ ਰਹੀ",
+)
+
 # Fragments commonly transcribed from the opening greeting on mobile/outbound echo.
 _GREETING_TAIL_PHRASES: tuple[str, ...] = (
     "help you today",
@@ -62,6 +76,14 @@ def _tokens(text: str) -> list[str]:
     return [t for t in cleaned.split() if len(t) > 1]
 
 
+def is_recovery_phrase_echo(user_text: str) -> bool:
+    """Echo of Sierra's go-ahead / listening reprompts."""
+    u = _normalize(user_text)
+    if not u:
+        return False
+    return any(phrase in u for phrase in _RECOVERY_ECHO_PHRASES)
+
+
 def is_greeting_tail_echo(user_text: str) -> bool:
     """Known echo fragments from Sierra's opening greeting."""
     u = _normalize(user_text)
@@ -97,9 +119,18 @@ def is_likely_phone_echo(
     if is_greeting_tail_echo(user):
         return True
 
+    if is_recovery_phrase_echo(user):
+        return True
+
     u_norm = _normalize(user)
     for agent in recent_agent_lines:
-        if agent and u_norm == _normalize(agent):
+        if not agent:
+            continue
+        a_norm = _normalize(agent)
+        # Truncated STT echo of Sierra's last line (e.g. ends with "—").
+        if len(u_norm) >= 8 and a_norm.startswith(u_norm.rstrip("-— ")):
+            return True
+        if agent and u_norm == a_norm:
             return True
 
     if should_bypass_phone_echo_filter(user_text, intent):

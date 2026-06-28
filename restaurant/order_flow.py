@@ -15,6 +15,7 @@ from restaurant.conversation import (
     format_price_reply,
     is_add_intent,
     is_allergies_step_answer,
+    is_confirm_yes,
     is_want_to_order_only,
 )
 from restaurant import menu_provider
@@ -126,7 +127,9 @@ class OrderFlowController:
             elif intent == UserIntent.CONFIRM_NO:
                 self.mark_special_instructions_done()
 
-        if self.state.phase == OrderPhase.CONFIRMING and intent == UserIntent.CONFIRM_YES:
+        if self.state.phase == OrderPhase.CONFIRMING and (
+            intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
+        ):
             self.mark_readback_confirmed()
 
     def build_turn_plan(
@@ -182,8 +185,13 @@ class OrderFlowController:
             )
         elif intent == UserIntent.HUMAN:
             lines.append("Call transfer_to_human immediately after one short line.")
-        elif intent == UserIntent.CONFIRM_YES and self.state.phase == OrderPhase.CONFIRMING:
-            lines.append("Customer confirmed read-back. Call place_order() now.")
+        elif self.state.phase == OrderPhase.CONFIRMING and (
+            intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
+        ):
+            lines.append(
+                "Customer confirmed read-back. Do NOT repeat the order. "
+                'Ask: "Can I get a name for the order?"'
+            )
 
         lines.extend(self._phase_guidance(cart, intent))
 
@@ -265,13 +273,18 @@ class OrderFlowController:
                 "Call set_customer_info only after name AND phone confirmed.",
             ]
         if p == OrderPhase.CONFIRMING:
+            if self.state.readback_confirmed:
+                return [
+                    "Read-back already confirmed — do NOT repeat the order.",
+                    'Ask: "Can I get a name for the order?"',
+                ]
             readback = format_order_readback(cart)
             out = [
                 "FINAL CONFIRMATION — call get_order_summary() first.",
-                "Do NOT ask if you may read the order — read it now.",
+                "Read back in ENGLISH using the template below — English one/two, dollars, All good?",
+                "Do NOT use Punjabi quantities (ਇੱਕ/ਦੋ) or rupees on this step.",
                 f'SAY EXACTLY (adjust name if needed): "{readback}"',
-                f'Close with "{CONFIRM_CLOSE}" — never "ਕਿਉਂਕਿ" or permission questions.',
-                "Do NOT use Roman ik/do — English one/two only.",
+                f'Close with "{CONFIRM_CLOSE}" only — not ਸਾਰਾ ਠੀਕ or permission questions.',
             ]
             if (
                 self.state.readback_confirmed
