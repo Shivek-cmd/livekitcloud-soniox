@@ -14,8 +14,114 @@ PICKUP_DELIVERY_QUESTION = "Will that be pickup or delivery?"
 QUANTITY_QUESTION = "How many — one or two?"
 CONFIRM_CLOSE = "All good?"
 
+OPENING_GREETING = (
+    "Hello! I'm Sierra from Bizbull Restaurant. "
+    "I can help you in English, Hindi, or Punjabi — how may I help you today?"
+)
 
-# ── Intent ────────────────────────────────────────────────────────────────────
+# ── Customer language (script detection + turn guidance) ────────────────────
+
+
+class CustomerLanguage(str, Enum):
+    ENGLISH = "en"
+    HINDI = "hi"
+    PUNJABI = "pa"
+    MIXED = "mixed"
+
+
+_GURMUKHI_CHARS = re.compile(r"[\u0A00-\u0A7F]")
+_DEVANAGARI_CHARS = re.compile(r"[\u0900-\u097F]")
+_LATIN_CHARS = re.compile(r"[A-Za-z]")
+
+
+def detect_customer_language(text: str) -> CustomerLanguage | None:
+    """Infer language from script in the user's utterance."""
+    t = (text or "").strip()
+    if len(t) < 2:
+        return None
+
+    g = len(_GURMUKHI_CHARS.findall(t))
+    d = len(_DEVANAGARI_CHARS.findall(t))
+    latin = len(_LATIN_CHARS.findall(t))
+
+    if g >= 2 and g >= d:
+        return CustomerLanguage.PUNJABI
+    if d >= 2 and d > g:
+        return CustomerLanguage.HINDI
+    if g >= 1 and d >= 1:
+        return CustomerLanguage.MIXED
+    if g == 1 and d == 0:
+        return CustomerLanguage.PUNJABI
+    if d == 1 and g == 0:
+        return CustomerLanguage.HINDI
+    if latin >= 2:
+        return CustomerLanguage.ENGLISH
+    return None
+
+
+def update_preferred_language(
+    current: CustomerLanguage | None,
+    user_text: str,
+) -> CustomerLanguage:
+    """Sticky session language — updates when caller clearly uses another script."""
+    detected = detect_customer_language(user_text)
+    if detected is None:
+        return current or CustomerLanguage.ENGLISH
+    if current is None:
+        return detected
+    if detected == CustomerLanguage.MIXED:
+        return current
+    return detected
+
+
+def language_turn_guidance(lang: CustomerLanguage) -> str:
+    """Per-turn LLM hint: conversational language vs fixed English order steps."""
+    fixed = "Fixed SAY EXACTLY order steps (allergies, pickup, quantity, read-back) stay English."
+    guides = {
+        CustomerLanguage.PUNJABI: (
+            "Customer language: Punjabi — conversational reply in natural Gurmukhi code-mix. "
+            "Use English only for voice_line dish names, prices, digits. "
+        ),
+        CustomerLanguage.HINDI: (
+            "Customer language: Hindi — conversational reply in Devanagari code-mix. "
+            "Use English only for voice_line dish names, prices, digits. "
+        ),
+        CustomerLanguage.ENGLISH: (
+            "Customer language: English — conversational reply in English. "
+        ),
+        CustomerLanguage.MIXED: (
+            "Customer language: code-mix — match their Punjabi/Hindi/English mix naturally. "
+        ),
+    }
+    return guides.get(lang, guides[CustomerLanguage.ENGLISH]) + fixed
+
+
+def phrase_anything_else(lang: CustomerLanguage) -> str:
+    return {
+        CustomerLanguage.ENGLISH: "Anything else?",
+        CustomerLanguage.PUNJABI: "ਹੋਰ ਕੁਝ?",
+        CustomerLanguage.HINDI: "और कुछ?",
+        CustomerLanguage.MIXED: "Anything else?",
+    }.get(lang, "Anything else?")
+
+
+def phrase_name_for_order(lang: CustomerLanguage) -> str:
+    return {
+        CustomerLanguage.ENGLISH: "Can I get a name for the order?",
+        CustomerLanguage.PUNJABI: "ਆਰਡਰ ਲਈ ਨਾਮ ਦੱਸੋ ਜੀ?",
+        CustomerLanguage.HINDI: "ऑर्डर के लिए नाम बता सकते हैं?",
+        CustomerLanguage.MIXED: "Can I get a name for the order?",
+    }.get(lang, "Can I get a name for the order?")
+
+
+def phrase_repeat_request(lang: CustomerLanguage) -> str:
+    return {
+        CustomerLanguage.ENGLISH: "Sorry, could you say that again?",
+        CustomerLanguage.PUNJABI: "ਮਾਫ ਕਰਨਾ ਜੀ — ਦੁਬਾਰਾ ਦੱਸੋ?",
+        CustomerLanguage.HINDI: "Sorry ji — phir se bol sakte hain?",
+        CustomerLanguage.MIXED: "Sorry, could you say that again?",
+    }.get(lang, "Sorry, could you say that again?")
+
 
 
 class UserIntent(str, Enum):
@@ -135,7 +241,8 @@ _HUMAN_RE = re.compile(
 )
 
 _GREETING_RE = re.compile(
-    r"(sat\s*sri\s*akal|ਸਤ\s*ਸ੍ਰੀ\s*ਅਕਾਲ|welcome to bizbull|how can i help you today)",
+    r"(sat\s*sri\s*akal|ਸਤ\s*ਸ੍ਰੀ\s*ਅਕਾਲ|welcome to bizbull|how may i help you today|"
+    r"i.?m sierra from bizbull|english,?\s*hindi,?\s*or punjabi)",
     re.I,
 )
 

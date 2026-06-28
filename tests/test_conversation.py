@@ -124,7 +124,7 @@ def test_confirming_readback_template():
     plan = flow.build_turn_plan("yes", UserIntent.CONFIRM_YES, cart)
     assert flow.state.readback_confirmed is True
     assert flow.state.phase == OrderPhase.CUSTOMER_NAME
-    assert "name for the order" in plan.guidance.lower()
+    assert "name for the order" in plan.guidance.lower() or "ਆਰਡਰ ਲਈ" in plan.guidance
 
 
 def test_want_to_order_asks_pickup_delivery():

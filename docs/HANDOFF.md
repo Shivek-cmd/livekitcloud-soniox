@@ -1,7 +1,7 @@
 # Sierra — Session Handoff (start here)
 
 > **Primary doc for new conversations.** Read this first, then drill into linked files.
-> Last updated: **2026-06-29** (PR 015 merged; PR 016–017 open on GitHub).
+> Last updated: **2026-06-29** (PR 015 merged; PR 016–018 open on GitHub).
 > **VPS:** `89.117.18.192` — `/opt/livekit-sarvam/` — deploy **`main`** after PRs merge.
 
 ---
@@ -31,9 +31,10 @@
 |--------|--------|--------|-------|
 | `main` | — | ✅ through **PR 015** | Last merge: `e341262` conversation layer |
 | `pr_016_order-flow-phrases` | `pr/pr_016_order-flow-phrases.md` | ⬜ **Open** | Phrases, phase fixes, Bizbull rename |
-| `pr_017_echo-and-flow-hardening` | `pr/pr_017_echo-and-flow-hardening.md` | ⬜ **Open** | Stacked on 016 — echo + intent + read-back |
+| `pr_017_echo-and-flow-hardening` | `pr/pr_017_echo-and-flow-hardening.md` | ⬜ **Open** | Echo + intent + read-back |
+| `pr_018_customer-language` | `pr/pr_018_customer-language.md` | ⬜ **Open** | Greeting + language state + web parity |
 
-**To ship phone fixes:** merge **016** then **017** (or merge 017 into `main` if it includes 016 commits) → `bash scripts/vps_deploy.sh`.
+**To ship:** merge **016 → 017 → 018** → `bash scripts/vps_deploy.sh`.
 
 PR workflow: **`pr/pr_rules.md`** — doc first, branch name = doc name, merge via GitHub.
 
@@ -75,7 +76,12 @@ Refactored from monolithic `agent.py` prompt into code-driven flow:
 | **`agent.py`** | Wires modules, phone echo hook, tools, web_sync |
 | **`tests/test_conversation.py`** | Intent + flow unit tests |
 
-Log grep for debugging: `USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY`
+### PR 018 — Customer language + greeting (stacked on 017)
+- **Greeting:** `OPENING_GREETING` — trilingual hello (phone + web)
+- **`preferred_language`** — script detect (pa/hi/en) → injected every `[TURN GUIDANCE]`
+- **Web:** UI English ≠ reply language; localized "anything else?" / name ask
+- **Fixed order steps** still English only (allergies, read-back, etc.)
+Log grep: `USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY` (TURN_GUIDANCE includes `lang=pa|hi|en`).
 
 ---
 
@@ -227,6 +233,7 @@ Restart after `.env` change: `systemctl restart restaurant-agent`.
 | 015 | Conversation layer + W6 web prompt | ✅ `e341262` |
 | 016 | Order flow phrases + Bizbull branding | ⬜ Open |
 | 017 | Echo filter + intent/flow hardening | ⬜ Open (stacked on 016) |
+| 018 | Trilingual greeting + customer language | ⬜ Open (stacked on 017) |
 
 Full index: **`pr/README.md`**.
 
@@ -245,7 +252,7 @@ Full index: **`pr/README.md`**.
 
 ## Recommended next session priorities
 
-1. **Merge PR 016 + 017** → deploy VPS → run phone checklist in `pr/pr_017_echo-and-flow-hardening.md`
+1. **Merge PR 016 + 017 + 018** → deploy VPS → test phone + web language
 2. **Tier B-2** — menu search aliases (`sweet`, `mithai`, `dessert`)
 3. **Web W3** — menu highlight, modifier picker
 4. **Phase 8c** — Clover order submit from `place_order()`
@@ -258,7 +265,7 @@ Full index: **`pr/README.md`**.
 |-----|--------------|
 | **This file** | Every new conversation |
 | `pr/pr_016_order-flow-phrases.md` | Phrase/phase fixes (open) |
-| `pr/pr_017_echo-and-flow-hardening.md` | Echo + confirm fixes (open) |
+| `pr/pr_018_customer-language.md` | Greeting + language (open) |
 | `docs/plan/10-voice-quality-tier-b.md` | Voice bug backlog + status |
 | `docs/plan/11-web-order-with-sierra.md` | Web W3–W6 |
 | `docs/plan/09-clover-pos.md` | Clover 8c+ |
