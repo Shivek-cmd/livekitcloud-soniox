@@ -1,5 +1,8 @@
 # Web App Plan
 
+> **Superseded in part by [`11-web-order-with-sierra.md`](11-web-order-with-sierra.md)** (2026-06-28).
+> Live app: **`https://voice.bizbull.ai`** — Order with Sierra tab, W1–W2 shipped (PR 011–012).
+
 ## Stack
 
 | Layer | Choice | Reason |
