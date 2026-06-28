@@ -31,9 +31,10 @@
 |--------|--------|--------|-------|
 | `main` | — | ✅ through **PR 015** | Last merge: `e341262` conversation layer |
 | `pr_016_order-flow-phrases` | `pr/pr_016_order-flow-phrases.md` | ⬜ **Open** | Phrases, phase fixes, Bizbull rename |
-| `pr_017_echo-and-flow-hardening` | `pr/pr_017_echo-and-flow-hardening.md` | ⬜ **Open** | Stacked on 016 — echo + intent + read-back |
+| `pr_017_echo-and-flow-hardening` | `pr/pr_017_echo-and-flow-hardening.md` | ⬜ **Open** | Echo + intent + read-back |
+| `pr_018_customer-language` | `pr/pr_018_customer-language.md` | ⬜ **Open** | Greeting + language state + web parity |
 
-**To ship phone fixes:** merge **016** then **017** (or merge 017 into `main` if it includes 016 commits) → `bash scripts/vps_deploy.sh`.
+**To ship:** merge **016 → 017 → 018** → `bash scripts/vps_deploy.sh`.
 
 PR workflow: **`pr/pr_rules.md`** — doc first, branch name = doc name, merge via GitHub.
 
@@ -75,7 +76,12 @@ Refactored from monolithic `agent.py` prompt into code-driven flow:
 | **`agent.py`** | Wires modules, phone echo hook, tools, web_sync |
 | **`tests/test_conversation.py`** | Intent + flow unit tests |
 
-Log grep for debugging: `USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY`
+### PR 018 — Customer language + greeting (stacked on 017)
+- **Greeting:** `OPENING_GREETING` — trilingual hello (phone + web)
+- **`preferred_language`** — script detect (pa/hi/en) → injected every `[TURN GUIDANCE]`
+- **Web:** UI English ≠ reply language; localized "anything else?" / name ask
+- **Fixed order steps** still English only (allergies, read-back, etc.)
+Log grep: `USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY` (TURN_GUIDANCE includes `lang=pa|hi|en`).
 
 ---
 

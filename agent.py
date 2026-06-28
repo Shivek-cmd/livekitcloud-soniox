@@ -19,6 +19,7 @@ from restaurant.turn_latency import TurnLatencyTracker
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant import menu_provider
 from restaurant.conversation import (
+    OPENING_GREETING,
     UserIntent,
     detect_intent,
     echo_recovery_phrase,
@@ -112,7 +113,12 @@ class RestaurantAgent(Agent):
         intent = detect_intent(user_text)
         plan = self._flow.build_turn_plan(user_text, intent, self.cart)
         turn_ctx.add_message(role="system", content=plan.guidance)
-        logger.info("TURN_GUIDANCE intent=%s phase=%s", intent.value, self._flow.state.phase.value)
+        logger.info(
+            "TURN_GUIDANCE intent=%s phase=%s lang=%s",
+            intent.value,
+            self._flow.state.phase.value,
+            self._flow.state.preferred_language.value,
+        )
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         user_text = (new_message.text_content or "").strip()
@@ -389,7 +395,7 @@ async def entrypoint(ctx: JobContext):
                 logger.info(f"SIERRA: {text}")
 
     await session.say(
-        "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! Welcome to Bizbull Restaurant, I'm Sierra. How can I help you today?",
+        OPENING_GREETING,
         allow_interruptions=False,
     )
 

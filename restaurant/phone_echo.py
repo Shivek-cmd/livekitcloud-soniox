@@ -24,6 +24,11 @@ _RECOVERY_ECHO_PHRASES: tuple[str, ...] = (
 
 # Fragments commonly transcribed from the opening greeting on mobile/outbound echo.
 _GREETING_TAIL_PHRASES: tuple[str, ...] = (
+    "how may i help you",
+    "how may i help you today",
+    "english hindi or punjabi",
+    "i can help you in english",
+    "sierra from bizbull",
     "help you today",
     "how can i help you",
     "how can i help",

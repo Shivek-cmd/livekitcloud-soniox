@@ -21,6 +21,7 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 015 | `pr_015_conversation-production` | Tier B conversation layer + W6 web prompt | ✅ |
 | 016 | `pr_016_order-flow-phrases` | Fixed phrases, phase advance, Bizbull branding | ⬜ **Open** |
 | 017 | `pr_017_echo-and-flow-hardening` | Echo filter + intent + read-back hardening | ⬜ **Open** (stacked on 016) |
+| 018 | `pr_018_customer-language` | Trilingual greeting + language detection + web parity | ⬜ **Open** (stacked on 017) |
 
 ---
 
@@ -28,16 +29,8 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 
 **`main`** ends at PR **015** (`e341262`).
 
-**Open work:** merge **016** → **017** → deploy VPS → phone test checklist in `pr_017_echo-and-flow-hardening.md`.
+**Open work:** merge **016 → 017 → 018** → deploy VPS.
 
-**New AI session:** read **`docs/HANDOFF.md`** first — full architecture, file map, ops commands, known bugs.
+**New AI session:** read **`docs/HANDOFF.md`** first.
 
----
-
-## PR 016 + 017 merge order
-
-1. Merge `pr_016_order-flow-phrases` into `main`
-2. Merge `pr_017_echo-and-flow-hardening` into `main` (or merge 017 directly if GitHub shows 016 commits included)
-3. On VPS: `bash /opt/livekit-sarvam/scripts/vps_deploy.sh`
-
-Branch `pr_017_echo-and-flow-hardening` contains all 016 commits plus 017 fixes.
+Branch `pr_018_customer-language` contains 016 + 017 + 018 commits.

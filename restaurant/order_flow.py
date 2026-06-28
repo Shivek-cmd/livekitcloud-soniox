@@ -8,6 +8,7 @@ from enum import Enum
 from restaurant.conversation import (
     ALLERGIES_QUESTION,
     CONFIRM_CLOSE,
+    CustomerLanguage,
     PICKUP_DELIVERY_QUESTION,
     QUANTITY_QUESTION,
     UserIntent,
@@ -17,6 +18,11 @@ from restaurant.conversation import (
     is_allergies_step_answer,
     is_confirm_yes,
     is_want_to_order_only,
+    language_turn_guidance,
+    phrase_anything_else,
+    phrase_name_for_order,
+    phrase_repeat_request,
+    update_preferred_language,
 )
 from restaurant import menu_provider
 from restaurant.orders import OrderCart
@@ -42,6 +48,7 @@ class OrderFlowState:
     special_instructions_done: bool = False
     allergies_asked: bool = False
     readback_confirmed: bool = False
+    preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
     last_discussed_item: str | None = None
     last_discussed_price: float | None = None
     quantity_allowed: bool = False
@@ -132,19 +139,32 @@ class OrderFlowController:
         ):
             self.mark_readback_confirmed()
 
+    def note_customer_language(self, user_text: str) -> None:
+        self.state.preferred_language = update_preferred_language(
+            self.state.preferred_language,
+            user_text,
+        )
+
     def build_turn_plan(
         self,
         user_text: str,
         intent: UserIntent,
         cart: OrderCart,
     ) -> TurnPlan:
+        self.note_customer_language(user_text)
         self._advance_from_user_turn(user_text, intent, cart)
         self.sync_from_cart(cart)
 
+        lang = self.state.preferred_language
+        lines: list[str] = [
+            f"[TURN GUIDANCE] phase={self.state.phase.value} intent={intent.value} "
+            f"lang={lang.value}",
+            language_turn_guidance(lang),
+            f'If unclear audio, prefer: "{phrase_repeat_request(lang)}"',
+        ]
+
         if is_add_intent(user_text) or intent == UserIntent.ADD_ITEM:
             self.state.quantity_allowed = True
-
-        lines: list[str] = [f"[TURN GUIDANCE] phase={self.state.phase.value} intent={intent.value}"]
 
         if intent == UserIntent.ASK_PRICE:
             lines.extend(self._price_guidance(user_text))
@@ -188,9 +208,10 @@ class OrderFlowController:
         elif self.state.phase == OrderPhase.CONFIRMING and (
             intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
         ):
+            q = phrase_name_for_order(self.state.preferred_language)
             lines.append(
                 "Customer confirmed read-back. Do NOT repeat the order. "
-                'Ask: "Can I get a name for the order?"'
+                f'Ask: "{q}"'
             )
 
         lines.extend(self._phase_guidance(cart, intent))
@@ -244,7 +265,8 @@ class OrderFlowController:
     def _phase_guidance(self, cart: OrderCart, intent: UserIntent) -> list[str]:
         p = self.state.phase
         if p == OrderPhase.AWAITING_MORE:
-            return ['After confirming an add, ask: "Anything else?"']
+            q = phrase_anything_else(self.state.preferred_language)
+            return [f'After confirming an add, ask: "{q}"']
         if p == OrderPhase.SPECIAL_INSTRUCTIONS:
             if not self.state.allergies_asked:
                 return [
@@ -263,8 +285,9 @@ class OrderFlowController:
         if p == OrderPhase.DELIVERY_ADDRESS:
             return ["Ask for full delivery address, then call set_delivery_address."]
         if p == OrderPhase.CUSTOMER_NAME:
+            q = phrase_name_for_order(self.state.preferred_language)
             return [
-                'Ask: "Can I get a name for the order?"',
+                f'Ask: "{q}"',
                 "Only ask name AFTER customer confirmed the read-back (All good? → yes).",
             ]
         if p == OrderPhase.CUSTOMER_PHONE:
@@ -274,9 +297,10 @@ class OrderFlowController:
             ]
         if p == OrderPhase.CONFIRMING:
             if self.state.readback_confirmed:
+                q = phrase_name_for_order(self.state.preferred_language)
                 return [
                     "Read-back already confirmed — do NOT repeat the order.",
-                    'Ask: "Can I get a name for the order?"',
+                    f'Ask: "{q}"',
                 ]
             readback = format_order_readback(cart)
             out = [
