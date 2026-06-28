@@ -3,52 +3,80 @@
 ## Branch
 `pr_017_echo-and-flow-hardening`
 
+## Status
+⬜ **Open** — not merged to `main` as of 2026-06-29. Latest commit on branch: includes PR 016 + 017.
+
 ## What This PR Does
 
-Fixes live phone call failures from sessions `AJ_au2zatxEoKfG` and `AJ_WdBBeaBJx2zN` (2026-06-28): echo filter dropping real speech, echo reprompt loop, `ਹਾਂ ਜੀ` not advancing read-back, weak add-item intent, and name/phone before cart confirm.
+Fixes live phone failures from test sessions **2026-06-28**:
+
+| Session | Symptoms |
+|---------|----------|
+| `AJ_au2zatxEoKfG` | Echo dropped pickup + full order; garbled pickup question; pickup asked twice |
+| `AJ_rQKPc8CZWSTL` / `AJ_WdBBeaBJx2zN` | Echo reprompt loop; `ਹਾਂ ਜੀ` repeat read-back; Punjabi read-back not English template |
 
 ### `restaurant/phone_echo.py` (B-1)
-- Bypass echo filter for meaningful intents (pickup, delivery, add_item, price, etc.) and order/price signals.
-- Stricter token-overlap thresholds; require near-exact repeat for long utterances.
-- Treat user turns with 2+ unique tokens vs agent line as real speech.
-- Recovery-phrase echo (`go ahead`, `ਮੈਂ ਸੁਣ ਰਹੀ`) and truncated agent-line prefix → drop silently.
+- Bypass echo filter for meaningful intents (pickup, delivery, add_item, price, confirm_yes, etc.).
+- Stricter token-overlap; 2+ unique user words vs agent line → real speech.
+- Recovery-phrase echo (`go ahead`, `ਮੈਂ ਸੁਣ ਰਹੀ`) + truncated agent-line prefix → drop silently.
+- Exact agent repeat still filtered.
 
 ### `restaurant/conversation.py`
-- Detect quantity+dish orders (`one paneer`, `1 paneer`, `ਕਿਹਾ`, `ਕਰ ਦ`).
-- Detect allergies denial (`not at all`, `not not`, mixed English/Punjabi no).
-- `is_confirm_yes()` — `ਹਾਂ ਜੀ`, `haan ji`, `All good` at read-back.
-- `is_want_to_order_only()` → fixed pickup/delivery template instead of LLM improvisation.
+- `is_confirm_yes()` — `ਹਾਂ ਜੀ`, `haan ji`, `All good`, lone `ਜੀ`.
+- Quantity+dish orders → `add_item`; allergies denial patterns.
+- `is_want_to_order_only()` → fixed pickup/delivery line.
 
 ### `restaurant/order_flow.py`
-- `readback_confirmed` gate — name/phone only after “All good?” read-back.
-- On confirm yes → ask name, **never** repeat read-back.
+- `readback_confirmed` gate — name/phone only after `"All good?"` yes.
+- Confirm yes → ask name, **never** repeat read-back.
 - English-only read-back guidance at confirming step.
 
 ### `agent.py`
-- Pass intent into echo filter; auto-set `cart.order_type` on pickup/delivery intent.
-- **One** post-greeting echo reprompt only — no recovery reprompt loop.
-- `set_order_type` tool text no longer skips to name before read-back.
+- Pass intent into echo filter; auto-set `cart.order_type` on pickup/delivery.
+- **One** post-greeting echo reprompt only — no recovery reprompt spiral.
+- `set_order_type` tool text: read-back before name/phone.
 
-### `tests/test_phone_echo.py`, `tests/test_conversation.py`
-- Regression tests from live call log strings.
+### Tests
+- `tests/test_phone_echo.py` — live log regressions
+- `tests/test_conversation.py` — extended (24 tests total on branch)
+
+## Files Modified
+
+- `restaurant/phone_echo.py`
+- `restaurant/conversation.py`
+- `restaurant/order_flow.py`
+- `agent.py`
+- `tests/test_phone_echo.py`
+- `tests/test_conversation.py`
+- Plus all PR 016 files (stacked branch)
+
+## Depends on
+
+PR **016** (phrases + branding) — same branch stack.
 
 ## Post-Merge: VPS
 
 ```bash
 bash /opt/livekit-sarvam/scripts/vps_deploy.sh
+journalctl -u restaurant-agent -f | grep -E 'USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started'
 ```
 
 ## Verification checklist
 
-- [ ] “Yeah, I'm looking for pickup” → **not** ignored as echo; pickup saved
-- [ ] “ਹਾਂ ਜੀ” after read-back → asks for name once, **does not** repeat order
-- [ ] Greeting echo → at most one “go ahead” reprompt, no loop
-- [ ] Full dish order after Sierra lists paneer items → processed, not “go ahead ji”
-- [ ] “I want to order” → exact “Will that be pickup or delivery?”
-- [ ] “One paneer tikka and two mango shake” → add_item intent
-- [ ] “not not at all” after allergies → advances to pickup (if unset) or read-back
-- [ ] Name/phone only after read-back + “All good?” yes
+- [ ] "Yeah, I'm looking for pickup" → **not** `Ignoring phone echo turn`
+- [ ] Full dish order after Sierra lists paneer → processed, not "go ahead ji"
+- [ ] "I want to order" → "Will that be pickup or delivery?"
+- [ ] Allergies → `"Any allergies or special instructions?"`
+- [ ] "not not at all" after allergies → advances flow
+- [ ] Read-back uses English one/two + "All good?" (monitor — LLM may still slip to Punjabi)
+- [ ] **"ਹਾਂ ਜੀ"** after read-back → asks name **once**, does **not** repeat order
+- [ ] Greeting echo → at most one "go ahead" reprompt, **no** 30s loop
+- [ ] Name/phone only after read-back confirmed
 
-## Depends on
+## Still open after this PR
 
-PR 016 (`pr_016_order-flow-phrases`) — merge 016 first or merge 017 as stacked PR.
+- **B-2** menu search (`sweet`, `mithai`)
+- LLM Punjabi read-back drift (B-5)
+- Phase **8c** Clover submit
+
+See `docs/HANDOFF.md` and `docs/plan/10-voice-quality-tier-b.md`.

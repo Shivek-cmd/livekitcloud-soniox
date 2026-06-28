@@ -1,8 +1,8 @@
 # Sierra — Session Handoff (start here)
 
 > **Primary doc for new conversations.** Read this first, then drill into linked files.
-> Last updated: **2026-06-28** (web W1–W2 shipped, domain migration, shared latency).
-> **VPS / main:** commit `0666017` on `89.117.18.192`.
+> Last updated: **2026-06-29** (PR 015 merged; PR 016–017 open on GitHub).
+> **VPS:** `89.117.18.192` — `/opt/livekit-sarvam/` — deploy **`main`** after PRs merge.
 
 ---
 
@@ -17,93 +17,149 @@
 
 **Stack:** LiveKit Cloud + Soniox STT/TTS (`Maya`, `language=pa`) + GPT-4o-mini + Clover menu cache (61 items).
 
-**Repo:** `git@github.com:Shivek-cmd/livekitcloud-soniox.git` (GitHub may redirect from old `livekit-sarvam` name).
+**Repo:** `git@github.com:Shivek-cmd/livekitcloud-soniox.git` (GitHub redirects from old `livekit-sarvam` name).
 
-**Deploy:** Owner runs deploy on VPS (`bash scripts/vps_deploy.sh`) — do **not** run two `npm` builds in parallel on the small VPS (OOM risk).
+**Deploy:** Owner runs `bash scripts/vps_deploy.sh` on VPS — do **not** run two `npm` builds in parallel (OOM risk).
+
+**Restaurant name:** **Bizbull Restaurant** everywhere (Gurmukhi: `ਬਿਜ਼ਬਲ ਰੈਸਟੋਰੈਂਟ`). Old "Punjab Da Dhaba" branding removed in PR 016.
+
+---
+
+## Git / PR state (2026-06-29)
+
+| Branch | PR doc | Status | Notes |
+|--------|--------|--------|-------|
+| `main` | — | ✅ through **PR 015** | Last merge: `e341262` conversation layer |
+| `pr_016_order-flow-phrases` | `pr/pr_016_order-flow-phrases.md` | ⬜ **Open** | Phrases, phase fixes, Bizbull rename |
+| `pr_017_echo-and-flow-hardening` | `pr/pr_017_echo-and-flow-hardening.md` | ⬜ **Open** | Stacked on 016 — echo + intent + read-back |
+
+**To ship phone fixes:** merge **016** then **017** (or merge 017 into `main` if it includes 016 commits) → `bash scripts/vps_deploy.sh`.
+
+PR workflow: **`pr/pr_rules.md`** — doc first, branch name = doc name, merge via GitHub.
 
 ---
 
 ## What's DONE (do not re-litigate)
 
 ### Infrastructure (Phases 1–5) ✅
-- LiveKit **Cloud** (not self-hosted) — echo fixed, trunk Krisp NC
-- Soniox + GPT stack — US-reachable, replaced India-hosted Sarvam stack
-- Twilio SIP inbound + outbound test script
-- VPS deploy: `scripts/vps_deploy.sh` (pull main + menu sync + **npm web build** + restart)
+- LiveKit **Cloud** (not self-hosted) — trunk Krisp NC
+- Soniox + GPT stack — US-reachable
+- Twilio SIP inbound + `scripts/test_call.py` outbound
+- VPS deploy: `scripts/vps_deploy.sh` (pull main + menu sync + npm web build + restart)
 
 ### Voice / speech (PR 006–007, 013) ✅
 - **`speech_policy.py`** — Gurmukhi `voice_line` default; English overrides for Fish Pakora, Chole Bhature Combo, tandoor items, **Mango Kulfi**, etc.
 - **`clover_voice_labels.json`** — 61 items with `voice_line`, `speech_mode`, aliases
-- Prompt bans `1x/2x/3x`; word quantities (do, ik, two)
-- **`phone_echo.py`** — filters acoustic echo of agent TTS on phone (still has false-positive bugs — see Tier B)
+- Prompt bans `1x/2x/3x`; word quantities
 
 ### Clover menu (Phase 8a–8b) ✅
-- Sandbox probe + **`menu_cache_bizbull.json`** (61 items synced from Clover)
-- **`USE_CLOVER_MENU=1`** → `menu_provider.py` uses cache; tools: `check_menu_item`, `search_menu_items`
-- Voice labels merged on every deploy (`rebuild_voice_labels.py` + `clover_sync_menu.py`)
-- **`place_order()`** logs only — **does NOT submit to Clover yet** (Phase 8c)
+- **`menu_cache_bizbull.json`** (61 items) + `USE_CLOVER_MENU=1`
+- Tools: `check_menu_item`, `search_menu_items`
+- **`place_order()`** logs only — **does NOT submit to Clover** (Phase 8c)
 
 ### Tier A — Phone latency (PR 008) ✅
-**Problem:** Phone felt slow (~2–6s dead air). **Fix:** `restaurant/session_config.py` + `restaurant/turn_latency.py` — TurnDetector v1-mini, dynamic endpointing **0.2–0.8s**, preemptive TTS.
+`restaurant/session_config.py` + `turn_latency.py` — TurnDetector, **0.2–0.8s** endpointing, preemptive TTS.
 
-### Web — Order with Sierra (PR 009–013, 2026-06-28) ✅
+### Web — Order with Sierra (PR 009–013) ✅
+- **`voice.bizbull.ai`** — W1 shell + W2 live hybrid cart (`web_sync.py`)
+- Web shares phone turn tuning (PR 013)
 
-| PR | What shipped |
-|----|--------------|
-| **009** | Domain **`voice.bizbull.ai`** (retired `sarvam.bizbull.ai`); relative `/token`; Caddy + deploy builds `web/dist` |
-| **010** | Plan doc `docs/plan/11-web-order-with-sierra.md` |
-| **011 W1** | Tab shell: **Order with Sierra** \| Store; 3-panel layout (Sierra + live menu + order stub); captions; `GET /menu` |
-| **012 W2** | **Live order panel + hybrid cart** — `order.state` push, cart RPCs, tap **Add**, qty steppers; `restaurant/web_sync.py` |
-| **013** | Web uses **same turn latency as phone** (0.8s max endpointing); **Mango Kulfi** says English not "amb kulfi" |
+### Tier B — Conversation layer (PR 015, on `main`) ✅
+Refactored from monolithic `agent.py` prompt into code-driven flow:
 
-**Web architecture (current):**
+| Module | Role |
+|--------|------|
+| **`restaurant/prompts.py`** | Short phone + **W6 web** system prompts |
+| **`restaurant/conversation.py`** | Intent detection, fixed templates, speech guards |
+| **`restaurant/order_flow.py`** | Phase state machine + per-turn `[TURN GUIDANCE]` |
+| **`agent.py`** | Wires modules, phone echo hook, tools, web_sync |
+| **`tests/test_conversation.py`** | Intent + flow unit tests |
+
+Log grep for debugging: `USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY`
+
+---
+
+## Open PRs — phone fixes (NOT on `main` until merged)
+
+### PR 016 — Order flow phrases
+- Exact **allergies** line: `"Any allergies or special instructions?"`
+- **Read-back** template: English one/two, `"All good?"`, via `format_order_readback()`
+- Pickup/delivery intent fix; quantity template `"How many — one or two?"`
+- **Bizbull Restaurant** branding (`menu.py`, web title, systemd)
+
+### PR 017 — Echo + flow hardening (stacked on 016)
+Live-call regressions from sessions `AJ_au2zatxEoKfG`, `AJ_WdBBeaBJx2zN`, `AJ_rQKPc8CZWSTL`:
+
+| Fix | File |
+|-----|------|
+| Real speech not dropped as echo (pickup, orders) | `phone_echo.py` |
+| Echo **reprompt loop** broken (one greeting reprompt max) | `agent.py`, `phone_echo.py` |
+| **`ਹਾਂ ਜੀ`** → `confirm_yes` at read-back (no repeat loop) | `conversation.py`, `order_flow.py` |
+| `one paneer tikka…` → `add_item` intent | `conversation.py` |
+| Read-back **before** name/phone (`readback_confirmed` gate) | `order_flow.py` |
+| Auto-save pickup/delivery on intent | `agent.py` |
+
+**Tests:** `tests/test_phone_echo.py` + extended `test_conversation.py` (24 tests on PR 017 branch).
+
+---
+
+## Known issues still open (after 016–017 merge)
+
+| ID | Issue | Next PR |
+|----|--------|---------|
+| **B-2** | Menu search misses `sweet` / `mithai` / desserts category | TBD |
+| **B-5** | LLM sometimes read-backs in Punjabi (`ਇੱਕ`, rupees) not English template | Prompt tighten / post-process |
+| **B-8** | Long TTS lists get interrupted | Hard cap enforcement |
+| **B-9/B-10** | Cold LLM TTFT; tool double-hop on menu | Prompt/cache optimization |
+| **Echo (residual)** | Heavy echo on outbound India test calls — use inbound CA number for realistic test | Monitor after 017 deploy |
+
+See **`docs/plan/10-voice-quality-tier-b.md`** for full backlog.
+
+---
+
+## Phone order flow (intended, after PR 016–017)
+
 ```
-Browser (voice.bizbull.ai)
-  ├─ GET /menu, /token  → token_server (Caddy → :8001)
-  ├─ LiveKit WebRTC     → agent in room
-  └─ order.state + RPCs → restaurant/web_sync.py ↔ OrderCart (server truth)
+Greet → browse/add items → "Anything else?" → allergies (English)
+  → pickup/delivery → read-back + "All good?" (English one/two, dollars)
+  → name → phone → place_order() [log only until 8c]
 ```
 
-**Key web files:** `web/src/components/OrderWithSierra.tsx`, `SierraPanel`, `LiveMenu`, `OrderPanel`, `web/src/hooks/useCart.tsx`, `token_server.py` (`/menu`).
+Phase enum: `restaurant/order_flow.py` → `OrderPhase`.
 
-**Store tab:** placeholder — build after W3–W6.
+Fixed spoken lines (`restaurant/conversation.py`):
+
+| Line | Constant |
+|------|----------|
+| Allergies | `ALLERGIES_QUESTION` |
+| Pickup/delivery | `PICKUP_DELIVERY_QUESTION` |
+| Quantity | `QUANTITY_QUESTION` |
+| Confirm close | `CONFIRM_CLOSE` (`"All good?"`) |
 
 ---
 
 ## What's NOT done — roadmap
 
-### Web — Order with Sierra (next)
+### Web — Order with Sierra
 
 See **`docs/plan/11-web-order-with-sierra.md`**.
 
 | Phase | Scope | Status |
 |-------|--------|--------|
-| **W3** | Menu highlight (`ui.focus`), modifier picker, Sierra ack on tap-add | ⬜ **Next web work** |
-| W4 | Avatar (provider TBD) | ⬜ |
-| W5 | Hardening (reconnect, idle timeout, rate limits) | ⬜ |
-| W6 | Web prompt variant (prices on screen, tap awareness) | ⬜ |
+| W1–W2 | Shell + live cart | ✅ |
+| **W3** | Menu highlight, modifier picker, tap-add ack | ⬜ **Next web** |
+| W4 | Avatar | ⬜ |
+| W5 | Hardening | ⬜ |
+| W6 | Web prompt variant | ✅ (PR 015 `prompts.py`) |
 
 ### Phase 8c–8f (Clover POS)
 
 | Phase | Scope | Status |
 |-------|--------|--------|
-| **8c** | Submit orders to Clover (atomic checkout → create → print) | ⬜ **Next product (phone + web orders)** |
-| 8d | Webhooks + 86'd item availability | ⬜ |
-| 8e | Production pilot (OAuth, one merchant) | ⬜ |
-| 8f | Multi-tenant SaaS routing | ⬜ |
-
-See **`docs/plan/09-clover-pos.md`**.
-
-### Tier B — Voice quality / conversation (bugs from live calls)
-
-See **`docs/plan/10-voice-quality-tier-b.md`**. Top items:
-
-1. **`phone_echo.py` false positives** — real questions dropped → dead air
-2. **Menu search gaps** — `search_menu("mithhe")` / `("sweet")` fails; desserts exist
-3. **Quantity too early** — asks "ਕਿੰਨਾ?" before customer confirms item
-4. **Order flow not enforced in code** — prompt-only; LLM mashups
-5. **Prompt size** — cold LLM ~1.5–3s TTFT
-6. **Mid-call re-greeting** after missed turns
+| **8c** | Submit orders to Clover checkout API | ⬜ **Next product milestone** |
+| 8d | Webhooks + 86'd items | ⬜ |
+| 8e | Production pilot | ⬜ |
+| 8f | Multi-tenant SaaS | ⬜ |
 
 ---
 
@@ -111,37 +167,20 @@ See **`docs/plan/10-voice-quality-tier-b.md`**. Top items:
 
 | File | Role |
 |------|------|
-| `agent.py` | System prompt, tools, phone echo hook, web_sync bind, entrypoint |
-| `restaurant/session_config.py` | **Shared** turn handling (phone + web); phone-only AEC warmup |
-| `restaurant/web_sync.py` | Web: `order.state` publish + cart RPCs |
-| `restaurant/orders.py` | `OrderCart`, `to_state_dict()`, cart mutators |
-| `restaurant/turn_latency.py` | Per-turn `LATENCY` logging |
-| `restaurant/voice_stack.py` | Soniox STT/TTS + GPT builders |
-| `restaurant/phone_echo.py` | Echo filter (needs Tier B fix) |
-| `restaurant/menu_provider.py` | Menu tools + `catalog()` + `find_item_by_id()` |
-| `restaurant/clover/speech_policy.py` | `voice_line` / `speech_mode` per dish |
+| `agent.py` | Entrypoint, tools, echo hook, turn guidance inject, web_sync |
+| `restaurant/prompts.py` | Phone + web system prompts |
+| `restaurant/conversation.py` | Intents, templates, `is_confirm_yes()`, read-back format |
+| `restaurant/order_flow.py` | Phase machine, `[TURN GUIDANCE]` builder |
+| `restaurant/phone_echo.py` | Phone echo filter (B-1 — PR 017) |
+| `restaurant/session_config.py` | Shared turn handling (phone + web) |
+| `restaurant/web_sync.py` | Web order.state + cart RPCs |
+| `restaurant/orders.py` | `OrderCart`, summaries |
+| `restaurant/menu_provider.py` | Menu tools + Clover cache |
+| `restaurant/menu.py` | Static fallback menu + `RESTAURANT_NAME` |
 | `token_server.py` | `/token`, `/menu`, `/health` |
-| `web/src/` | React app (`@livekit/components-react`) |
-| `scripts/vps_deploy.sh` | Pull main + labels + menu sync + **npm build** + restart |
-| `scripts/test_call.py` | Outbound Twilio test call to your phone |
-
----
-
-## Turn / latency tuning (phone **and** web)
-
-Both channels share `_turn_handling()` in `session_config.py`. Env vars in `/opt/livekit-sarvam/.env`:
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `PHONE_ENDPOINTING_MAX` | **0.8** | Max wait after speech before turn ends |
-| `PHONE_ENDPOINTING_MIN` | 0.2 | Min endpointing delay |
-| `PHONE_PREEMPTIVE_GENERATION` | true | Start LLM before turn fully confirmed |
-| `PHONE_PREEMPTIVE_TTS` | true | Start TTS early |
-| `PHONE_GREETING_SETTLE_SEC` | 2.0 | Phone only — pause after greeting |
-| `PHONE_AEC_WARMUP_SEC` | 1.0 | Phone only — AEC warmup |
-| `USE_CLOVER_MENU` | 1 | Load Clover cache (required on VPS) |
-
-After `.env` change: `systemctl restart restaurant-agent`.
+| `web/src/` | React Order with Sierra UI |
+| `scripts/vps_deploy.sh` | Production deploy |
+| `scripts/test_call.py` | Outbound Twilio test (India = extra echo/latency) |
 
 ---
 
@@ -151,23 +190,31 @@ After `.env` change: `systemctl restart restaurant-agent`.
 # SSH
 ssh root@89.117.18.192
 
-# Deploy (pull main, sync menu, rebuild web, restart agent + token)
+# Deploy (after main updated)
 bash /opt/livekit-sarvam/scripts/vps_deploy.sh
 
-# Test call (outbound to your phone)
+# Outbound test (expect more echo than inbound)
 cd /opt/livekit-sarvam
 PYTHONPATH=/opt/livekit-sarvam uv run python scripts/test_call.py +919413752688
 
-# Watch conversation + latency
-journalctl -u restaurant-agent -f | grep -E 'USER:|SIERRA:|LATENCY|Ignoring|ORDER_PLACED|web-sync'
+# Watch conversation
+journalctl -u restaurant-agent -f | grep -E 'USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY'
 
-# Services
+# Health
 systemctl is-active restaurant-agent restaurant-token caddy
-
-# Live URLs
 curl -s https://voice.bizbull.ai/health
-curl -s https://voice.bizbull.ai/menu | head -c 200
 ```
+
+### Env vars (`/opt/livekit-sarvam/.env`)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `USE_CLOVER_MENU` | 1 | Required on VPS |
+| `PHONE_ENDPOINTING_MAX` | 0.8 | Turn end delay |
+| `PHONE_GREETING_SETTLE_SEC` | 2.0 | Pause after greeting (phone) |
+| `PHONE_AEC_WARMUP_SEC` | 1.0 | AEC warmup (phone) |
+
+Restart after `.env` change: `systemctl restart restaurant-agent`.
 
 ---
 
@@ -175,34 +222,32 @@ curl -s https://voice.bizbull.ai/menu | head -c 200
 
 | PR | Topic | Merged |
 |----|-------|--------|
-| 008 | Tier A phone latency + 0.8 endpointing | ✅ |
-| 009 | Web domain → `voice.bizbull.ai` | ✅ |
-| 010 | Web Order-with-Sierra plan doc | ✅ |
-| 011 | Web W1 — tabs + 3-panel + live menu + captions | ✅ |
-| 012 | Web W2 — live order + hybrid tap-to-add | ✅ |
-| 013 | Web shared latency + Mango Kulfi TTS fix | ✅ (`0666017`) |
+| 013 | Web shared latency + Mango Kulfi TTS | ✅ |
+| 014 | Handoff docs sync | ✅ |
+| 015 | Conversation layer + W6 web prompt | ✅ `e341262` |
+| 016 | Order flow phrases + Bizbull branding | ⬜ Open |
+| 017 | Echo filter + intent/flow hardening | ⬜ Open (stacked on 016) |
 
-PR docs in **`pr/`** folder. **`pr/pr_rules.md`** for workflow.
+Full index: **`pr/README.md`**.
 
 ---
 
-## Test numbers & accounts
+## Test numbers
 
 | Item | Value |
 |------|-------|
-| Twilio test number | `+15878175156` |
-| Dev test mobile | `+919413752688` (India — adds PSTN latency) |
-| Web app | `https://voice.bizbull.ai` |
+| Twilio (inbound/production test) | `+15878175156` |
+| Dev mobile (outbound test) | `+919413752688` — India PSTN, **more echo** than inbound |
+| Web | `https://voice.bizbull.ai` |
 | LiveKit Cloud | `bizbull-restaurant-cyeyyw0l.livekit.cloud` |
-| VPS path | `/opt/livekit-sarvam/` |
 
 ---
 
 ## Recommended next session priorities
 
-1. **Web W3** — menu highlight (`ui.focus`), modifier picker, tap-add voice ack
-2. **Tier B-1** — `phone_echo.py` false positives
-3. **Tier B-2** — menu search aliases (`sweet`, `mithai`, `dessert`)
+1. **Merge PR 016 + 017** → deploy VPS → run phone checklist in `pr/pr_017_echo-and-flow-hardening.md`
+2. **Tier B-2** — menu search aliases (`sweet`, `mithai`, `dessert`)
+3. **Web W3** — menu highlight, modifier picker
 4. **Phase 8c** — Clover order submit from `place_order()`
 
 ---
@@ -212,10 +257,10 @@ PR docs in **`pr/`** folder. **`pr/pr_rules.md`** for workflow.
 | Doc | When to read |
 |-----|--------------|
 | **This file** | Every new conversation |
-| `docs/plan/11-web-order-with-sierra.md` | Web product plan + W3–W6 |
-| `docs/plan/06-milestones.md` | Phase status |
-| `docs/plan/09-clover-pos.md` | Clover integration design |
-| `docs/plan/10-voice-quality-tier-b.md` | Known voice bugs + fixes |
-| `docs/vps-config.md` | VPS, deploy, env, SIP, Caddy |
-| `docs/plan/02-architecture.md` | System diagram |
-| `pr/pr_011` … `pr/pr_013` | Recent web PR details |
+| `pr/pr_016_order-flow-phrases.md` | Phrase/phase fixes (open) |
+| `pr/pr_017_echo-and-flow-hardening.md` | Echo + confirm fixes (open) |
+| `docs/plan/10-voice-quality-tier-b.md` | Voice bug backlog + status |
+| `docs/plan/11-web-order-with-sierra.md` | Web W3–W6 |
+| `docs/plan/09-clover-pos.md` | Clover 8c+ |
+| `docs/vps-config.md` | VPS, Caddy, SIP |
+| `pr/pr_rules.md` | How to open PRs |
