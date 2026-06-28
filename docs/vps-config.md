@@ -1,5 +1,7 @@
 # VPS Configuration Reference
 
+> **Session state / what's merged / next steps:** see [`HANDOFF.md`](HANDOFF.md) (updated 2026-06-29).
+>
 > This VPS is **shared** with several unrelated projects. Only the **livekit-sarvam** project below is
 > ours. Everything under "Other projects (DO NOT TOUCH)" belongs to other apps — never stop, edit, or
 > remove those containers/services.
