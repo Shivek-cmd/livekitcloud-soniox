@@ -1,7 +1,7 @@
 # Sierra — Session Handoff (start here)
 
 > **Primary doc for new conversations.** Read this first, then drill into linked files.
-> Last updated: **2026-06-29** (PR 015 merged; PR 016–017 open on GitHub).
+> Last updated: **2026-06-29** (PR 015 merged; PR 016–018 open on GitHub).
 > **VPS:** `89.117.18.192` — `/opt/livekit-sarvam/` — deploy **`main`** after PRs merge.
 
 ---
@@ -233,6 +233,7 @@ Restart after `.env` change: `systemctl restart restaurant-agent`.
 | 015 | Conversation layer + W6 web prompt | ✅ `e341262` |
 | 016 | Order flow phrases + Bizbull branding | ⬜ Open |
 | 017 | Echo filter + intent/flow hardening | ⬜ Open (stacked on 016) |
+| 018 | Trilingual greeting + customer language | ⬜ Open (stacked on 017) |
 
 Full index: **`pr/README.md`**.
 
@@ -251,7 +252,7 @@ Full index: **`pr/README.md`**.
 
 ## Recommended next session priorities
 
-1. **Merge PR 016 + 017** → deploy VPS → run phone checklist in `pr/pr_017_echo-and-flow-hardening.md`
+1. **Merge PR 016 + 017 + 018** → deploy VPS → test phone + web language
 2. **Tier B-2** — menu search aliases (`sweet`, `mithai`, `dessert`)
 3. **Web W3** — menu highlight, modifier picker
 4. **Phase 8c** — Clover order submit from `place_order()`
@@ -264,7 +265,7 @@ Full index: **`pr/README.md`**.
 |-----|--------------|
 | **This file** | Every new conversation |
 | `pr/pr_016_order-flow-phrases.md` | Phrase/phase fixes (open) |
-| `pr/pr_017_echo-and-flow-hardening.md` | Echo + confirm fixes (open) |
+| `pr/pr_018_customer-language.md` | Greeting + language (open) |
 | `docs/plan/10-voice-quality-tier-b.md` | Voice bug backlog + status |
 | `docs/plan/11-web-order-with-sierra.md` | Web W3–W6 |
 | `docs/plan/09-clover-pos.md` | Clover 8c+ |
