@@ -14,6 +14,11 @@ git reset --hard origin/main
 PYTHONPATH="$REPO_DIR" "$UV" run python scripts/rebuild_voice_labels.py
 PYTHONPATH="$REPO_DIR" "$UV" run python scripts/clover_sync_menu.py
 
+# Rebuild the web frontend (served by Caddy from web/dist; not tracked in git)
+if [ -f "$REPO_DIR/web/package.json" ]; then
+  (cd "$REPO_DIR/web" && npm install && npm run build)
+fi
+
 systemctl restart restaurant-agent restaurant-token
 systemctl is-active restaurant-agent restaurant-token
 
