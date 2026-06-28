@@ -77,7 +77,7 @@ Quiet background loop on web calls via LiveKit `BackgroundAudioPlayer`. **Phone 
 
 ```
 WEB_AMBIENT_ENABLED=1
-WEB_AMBIENT_VOLUME=0.25
+WEB_AMBIENT_VOLUME=0.6
 WEB_AMBIENT_FADE_IN=1.0
 # WEB_AMBIENT_AUDIO_PATH=/opt/livekit-sarvam/data/audio/restaurant_ambience.mp3
 # WEB_AMBIENT_THINKING=0
