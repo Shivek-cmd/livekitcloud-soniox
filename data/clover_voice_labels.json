@@ -2301,8 +2301,8 @@
           ]
         }
       ],
-      "voice_line": "Chole",
-      "speech_mode": "english"
+      "voice_line": "ਛੋਲੇ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "paneer_butter_masala",
@@ -4820,8 +4820,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 399,
-      "voice_line": "Bhatura",
-      "speech_mode": "english"
+      "voice_line": "ਭਟੂਰਾ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "plain_rice",
@@ -5050,8 +5050,8 @@
           ]
         }
       ],
-      "voice_line": "Chole Bhature Combo",
-      "speech_mode": "english"
+      "voice_line": "ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ",
+      "speech_mode": "gurmukhi"
     },
     {
       "key": "lunch_thali_combo",
@@ -6572,8 +6572,8 @@
           ]
         }
       ],
-      "voice_line": "ਅੰਬ ਲੱਸੀ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Mango Lassi",
+      "speech_mode": "english"
     },
     {
       "key": "masala_chai",
@@ -6601,8 +6601,8 @@
       "veg": true,
       "category_key": "drinks",
       "price_cents": 649,
-      "voice_line": "ਅੰਬ ਸ਼ੇਕ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Mango Shake",
+      "speech_mode": "english"
     },
     {
       "key": "soft_drink",

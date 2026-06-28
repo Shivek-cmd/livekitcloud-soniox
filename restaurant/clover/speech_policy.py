@@ -5,7 +5,7 @@ Soniox TTS with language=pa pronounces Gurmukhi well but misreads Roman menu tex
 ("Aloo Paratha", "2x") — playground tests confirm script matters, not the model.
 
 Default: voice_line = speak_as (Gurmukhi) when available.
-English voice_line ONLY for explicit overrides (Fish Pakora, Chole Bhature Combo, etc.).
+English voice_line ONLY for explicit overrides (Fish Pakora, Mango Shake, etc.).
 """
 
 from __future__ import annotations
@@ -23,9 +23,8 @@ ENGLISH_VOICE_KEYS: frozenset[str] = frozenset(
         "fish_pakora",
         "tandoori_shrimp",
         "butter_prawn_masala",
-        "chole_bhature_combo",
-        "chole",
-        "bhatura_single",
+        "mango_lassi",
+        "mango_shake",
         "butter_chicken",
         "chicken_tikka",
         "seekh_kebab",
@@ -41,9 +40,8 @@ VOICE_LINE_OVERRIDES: dict[str, str] = {
     "fish_pakora": "Fish Pakora",
     "tandoori_shrimp": "Tandoori Shrimp",
     "butter_prawn_masala": "Butter Prawn Masala",
-    "chole_bhature_combo": "Chole Bhature Combo",
-    "chole": "Chole",
-    "bhatura_single": "Bhatura",
+    "mango_lassi": "Mango Lassi",
+    "mango_shake": "Mango Shake",
     "kulfi": "Mango Kulfi",
 }
 
