@@ -19,6 +19,7 @@ from restaurant.turn_latency import TurnLatencyTracker
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant import menu_provider
 from restaurant.conversation import (
+    UserIntent,
     detect_intent,
     echo_recovery_phrase,
     sanitize_assistant_speech,
@@ -114,9 +115,12 @@ class RestaurantAgent(Agent):
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         user_text = (new_message.text_content or "").strip()
+        intent = detect_intent(user_text)
 
         if self.is_phone:
-            if is_likely_phone_echo(user_text, self._recent_agent_lines):
+            if is_likely_phone_echo(
+                user_text, self._recent_agent_lines, intent=intent
+            ):
                 logger.info("Ignoring phone echo turn: %s", user_text)
                 if is_greeting_tail_echo(user_text):
                     self._greeting_echo_pending_reprompt = True
@@ -124,6 +128,15 @@ class RestaurantAgent(Agent):
                 else:
                     self._schedule_echo_reprompt(greeting_only=False)
                 raise StopResponse()
+
+        if intent == UserIntent.PICKUP and not self.cart.order_type:
+            self.cart.order_type = "pickup"
+            self._flow.sync_from_cart(self.cart)
+            await self._sync_web()
+        elif intent == UserIntent.DELIVERY and not self.cart.order_type:
+            self.cart.order_type = "delivery"
+            self._flow.sync_from_cart(self.cart)
+            await self._sync_web()
 
         self._real_user_turns += 1
         self._greeting_echo_pending_reprompt = False
@@ -172,8 +185,8 @@ class RestaurantAgent(Agent):
         self._flow.sync_from_cart(self.cart)
         await self._sync_web()
         if order_type == "delivery":
-            return f"Set to delivery. Delivery charge ${DELIVERY_CHARGE} will be added. Now ask for delivery address."
-        return "Set to pickup. Ask for customer name and phone number."
+            return f"Set to delivery. Delivery charge ${DELIVERY_CHARGE} will be added. Ask for delivery address."
+        return "Set to pickup. Continue the order flow — read back cart before asking for name/phone."
 
     @function_tool
     async def set_customer_info(

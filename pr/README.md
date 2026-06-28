@@ -20,5 +20,6 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 014 | `pr_014_handoff-docs` | Session handoff + docs sync | ✅ |
 | 015 | `pr_015_conversation-production` | Tier B conversation layer + W6 web prompt | ✅ |
 | 016 | `pr_016_order-flow-phrases` | Fixed phrases, phase advance, read-back templates | ⬜ |
+| 017 | `pr_017_echo-and-flow-hardening` | B-1 echo filter + intent/flow hardening from live call | ⬜ |
 
-**Start next session:** read **`docs/HANDOFF.md`**, then implement/deploy PR 015.
+**Start next session:** read **`docs/HANDOFF.md`**, merge PR 016–017, deploy VPS.
