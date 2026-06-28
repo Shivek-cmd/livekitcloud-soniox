@@ -1,5 +1,5 @@
 [Unit]
-Description=Punjab Da Dhaba Voice Agent
+Description=Bizbull Restaurant Voice Agent
 After=network.target
 
 [Service]
