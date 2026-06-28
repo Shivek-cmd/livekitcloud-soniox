@@ -32,6 +32,11 @@ from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
 from restaurant.prompts import build_system_prompt
 from restaurant import reservations as res_store
 from restaurant.web_sync import WebSync
+from restaurant.ambient_audio import (
+    build_web_ambient_player,
+    start_web_ambient,
+    stop_web_ambient,
+)
 
 load_dotenv()
 
@@ -366,6 +371,21 @@ async def entrypoint(ctx: JobContext):
         agent=agent,
         room_input_options=RoomInputOptions(),
     )
+
+    background_audio = None
+    if not is_phone:
+        background_audio = build_web_ambient_player()
+        if background_audio is not None:
+            await start_web_ambient(
+                background_audio,
+                room=ctx.room,
+                agent_session=session,
+            )
+
+            async def _stop_web_ambient() -> None:
+                await stop_web_ambient(background_audio)
+
+            ctx.add_shutdown_callback(_stop_web_ambient)
 
     # Web channel: register cart RPCs + push live order state to the browser.
     if not is_phone:

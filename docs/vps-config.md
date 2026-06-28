@@ -71,6 +71,23 @@ PHONE_INTERRUPTION_MIN_WORDS=1
 
 Restart after change: `systemctl restart restaurant-agent`.
 
+### Web ambient audio (optional — PR 020, web only)
+
+Quiet background loop on web calls via LiveKit `BackgroundAudioPlayer`. **Phone is never affected.**
+
+```
+WEB_AMBIENT_ENABLED=1
+WEB_AMBIENT_VOLUME=0.25
+WEB_AMBIENT_FADE_IN=1.0
+# WEB_AMBIENT_AUDIO_PATH=/opt/livekit-sarvam/data/audio/restaurant_ambience.mp3
+# WEB_AMBIENT_THINKING=0
+```
+
+Drop `restaurant_ambience.mp3` in `/opt/livekit-sarvam/data/audio/` or set `WEB_AMBIENT_AUDIO_PATH`.
+If no custom file exists, builtin office ambience is used for testing.
+
+Logs: `journalctl -u restaurant-agent -f | grep -i ambient`
+
 ### Latency / conversation logs
 
 ```bash
