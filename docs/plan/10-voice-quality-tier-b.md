@@ -16,7 +16,7 @@ Tier A fixed **latency + echo stability + numbered lists**. Tier B fixes **conve
 **File:** `restaurant/phone_echo.py`  
 **Symptom:** User asks price for dish Sierra just named → log `Ignoring phone echo turn` → **14s dead air** → user says "hello" → re-greeting / garbled recovery.  
 **Cause:** Token overlap between user question and `_recent_agent_lines` (not acoustic echo).  
-**Fix direction:** Require higher overlap threshold for longer utterances; ignore echo filter when user message contains price keywords (`price`, `rate`, `kina`, `ਕੀਮਤ`, `ਪ੍ਰਾਈਜ਼`); or only apply echo filter within N seconds of greeting.
+**Fix direction:** PR 017 — intent bypass, stricter overlap, order/price signal whitelist.
 
 ### B2. Menu search misses common queries
 **File:** `restaurant/clover/menu.py`, `menu_provider.py`  

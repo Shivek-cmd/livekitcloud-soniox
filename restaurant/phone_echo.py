@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import re
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
+
+if TYPE_CHECKING:
+    from restaurant.conversation import UserIntent
 
 # Fragments commonly transcribed from the opening greeting on mobile/outbound echo.
 _GREETING_TAIL_PHRASES: tuple[str, ...] = (
@@ -16,6 +19,37 @@ _GREETING_TAIL_PHRASES: tuple[str, ...] = (
     "welcome to bizbull",
     "bizbull restaurant",
     "sat sri akal",
+)
+
+# Intents that must never be dropped — caller is answering or ordering, not echoing.
+_BYPASS_INTENTS: frozenset[str] = frozenset(
+    {
+        "pickup",
+        "delivery",
+        "add_item",
+        "order_done",
+        "ask_price",
+        "ask_availability",
+        "confirm_no",
+        "confirm_yes",
+        "human",
+    }
+)
+
+_PRICE_SIGNAL_RE = re.compile(
+    r"\b(price|prices|cost|how much|kitna|kina|rate|ਕੀਮਤ|ਕਿਨਾ|ਦਾਮ)\b",
+    re.I,
+)
+
+_ORDER_SIGNAL_RE = re.compile(
+    r"\b("
+    r"pickup|pick up|delivery|order|add|want|need|"
+    r"one|two|three|four|five|"
+    r"yeah|yep|yes|haan|han|"
+    r"paneer|chicken|mango|shake|tikka|curry|naan|lassi|kulfi|"
+    r"ਚਾਹੀ|ਆਰਡਰ|ਪਿਕਅੱਪ|ਡਿਲਿਵਰੀ|ਕਰ ਦ|ਕਿਹਾ|ਇੱਕ|ਦੋ|ਤੇ"
+    r")\b|\d",
+    re.I,
 )
 
 
@@ -36,7 +70,25 @@ def is_greeting_tail_echo(user_text: str) -> bool:
     return any(phrase in u for phrase in _GREETING_TAIL_PHRASES)
 
 
-def is_likely_phone_echo(user_text: str, recent_agent_lines: Sequence[str]) -> bool:
+def should_bypass_phone_echo_filter(user_text: str, intent: UserIntent | None) -> bool:
+    """True when user speech must be processed even if it overlaps recent agent lines."""
+    if not user_text.strip():
+        return False
+    if intent is not None and intent.value in _BYPASS_INTENTS:
+        return True
+    if _PRICE_SIGNAL_RE.search(user_text):
+        return True
+    if _ORDER_SIGNAL_RE.search(user_text):
+        return True
+    return False
+
+
+def is_likely_phone_echo(
+    user_text: str,
+    recent_agent_lines: Sequence[str],
+    *,
+    intent: UserIntent | None = None,
+) -> bool:
     """Return True if user_text is probably acoustic echo of recent agent speech."""
     user = user_text.strip()
     if not user:
@@ -46,25 +98,49 @@ def is_likely_phone_echo(user_text: str, recent_agent_lines: Sequence[str]) -> b
         return True
 
     u_norm = _normalize(user)
+    for agent in recent_agent_lines:
+        if agent and u_norm == _normalize(agent):
+            return True
+
+    if should_bypass_phone_echo_filter(user_text, intent):
+        return False
+
     u_tokens = _tokens(user)
 
     for agent in recent_agent_lines:
         if not agent:
             continue
         a_norm = _normalize(agent)
-        if len(u_norm) >= 10 and (u_norm in a_norm or a_norm in u_norm):
-            return True
 
         a_tokens = _tokens(agent)
         if not u_tokens or not a_tokens:
             continue
 
-        overlap = sum(1 for t in u_tokens if t in a_tokens)
-        if len(u_tokens) >= 4 and overlap >= max(3, int(0.6 * len(u_tokens))):
-            return True
-        if len(u_tokens) == 3 and overlap == 3:
-            return True
-        if len(u_tokens) == 2 and overlap == 2 and u_tokens == a_tokens[:2]:
-            return True
+        a_set = set(a_tokens)
+        unique_user = [t for t in u_tokens if t not in a_set]
+        overlap = sum(1 for t in u_tokens if t in a_set)
+
+        # Caller added their own words (yeah, numbers, dish names) — not echo.
+        if len(u_tokens) >= 4 and len(unique_user) >= 2:
+            continue
+
+        if len(u_tokens) >= 6:
+            needed = max(4, int(0.85 * len(u_tokens)))
+            if overlap < needed:
+                continue
+        elif len(u_tokens) >= 4:
+            needed = max(3, int(0.75 * len(u_tokens)))
+            if overlap < needed:
+                continue
+        elif len(u_tokens) == 3:
+            if overlap < 3:
+                continue
+        elif len(u_tokens) == 2:
+            if not (overlap == 2 and u_tokens == a_tokens[:2]):
+                continue
+        else:
+            continue
+
+        return True
 
     return False

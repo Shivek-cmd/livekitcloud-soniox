@@ -65,7 +65,35 @@ _ADD_RE = re.compile(
     r"add|order|want|need|get me|give me|i.?ll take|i want|"
     r"i'd like|chahiye|dedo|de do|lao|"
     r"order karo|order kar|add karo|add kar|"
-    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ"
+    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ"
+    r")\b",
+    re.I,
+)
+
+_QTY_ITEM_RE = re.compile(
+    r"\b("
+    r"one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
+    r"\d+"
+    r")\s+\w+",
+    re.I,
+)
+
+_I_SAID_RE = re.compile(r"\b(i said|ਕਿਹਾ)\b", re.I)
+
+_ALLERGY_NO_RE = re.compile(
+    r"\b("
+    r"not at all|no allergy|no allergies|none at all|nothing at all|"
+    r"not really|don't have any|do not have any|"
+    r"not not"
+    r")\b",
+    re.I,
+)
+
+_WANT_ORDER_ONLY_RE = re.compile(
+    r"\b("
+    r"i want to order|want to order|order karna|order kar|"
+    r"ਆਰਡਰ ਕਰ|ਕੁਝ ਆਰਡਰ"
     r")\b",
     re.I,
 )
@@ -121,6 +149,23 @@ _QTY_WORDS = {
 }
 
 
+def is_want_to_order_only(text: str) -> bool:
+    """Caller wants to order but has not named a dish yet."""
+    t = (text or "").strip()
+    if not t or not _WANT_ORDER_ONLY_RE.search(t):
+        return False
+    if _QTY_ITEM_RE.search(t) or menu_item_hint_in_text(t):
+        return False
+    return True
+
+
+def menu_item_hint_in_text(text: str) -> bool:
+    """Heuristic: utterance names a likely menu item (used for intent routing)."""
+    from restaurant import menu_provider
+
+    return menu_provider.resolve_item_in_text(text) is not None
+
+
 def detect_intent(text: str) -> UserIntent:
     t = (text or "").strip()
     if not t:
@@ -137,7 +182,11 @@ def detect_intent(text: str) -> UserIntent:
         return UserIntent.PICKUP
     if _DELIVERY_RE.search(t):
         return UserIntent.DELIVERY
+    if _ALLERGY_NO_RE.search(t):
+        return UserIntent.CONFIRM_NO
     if re.search(r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)", t):
+        return UserIntent.ADD_ITEM
+    if _I_SAID_RE.search(t) or _QTY_ITEM_RE.search(t):
         return UserIntent.ADD_ITEM
     if _NO_RE.search(t):
         return UserIntent.CONFIRM_NO
@@ -157,14 +206,15 @@ def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
     if intent in (UserIntent.CONFIRM_NO, UserIntent.PICKUP, UserIntent.DELIVERY):
         return True
     t = (text or "").lower()
+    if _ALLERGY_NO_RE.search(text):
+        return True
     if "allerg" in t or "ਐਲਰਜੀ" in text:
         return True
     if intent == UserIntent.CONFIRM_YES and ("instruction" in t or "special" in t):
         return True
-    # Short no / bas after allergies prompt
     if intent == UserIntent.CONFIRM_NO:
         return True
-    if intent == UserIntent.GENERAL and _NO_RE.search(text):
+    if intent == UserIntent.GENERAL and (_NO_RE.search(text) or _ALLERGY_NO_RE.search(text)):
         return True
     return False
 

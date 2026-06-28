@@ -116,13 +116,35 @@ def test_confirming_readback_template():
     cart = OrderCart()
     cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
     cart.order_type = "pickup"
-    cart.customer_name = "Raj"
-    cart.customer_phone = "4165551234"
     flow = OrderFlowController(is_phone=True)
     flow.mark_items_complete()
     flow.mark_special_instructions_done()
     flow.sync_from_cart(cart)
-    plan = flow.build_turn_plan("yes", UserIntent.CONFIRM_YES, cart)
     assert flow.state.phase == OrderPhase.CONFIRMING
-    assert "SPOKEN READ-BACK" in plan.guidance or "say exactly" in plan.guidance.lower()
+    plan = flow.build_turn_plan("yes", UserIntent.CONFIRM_YES, cart)
+    assert flow.state.readback_confirmed is True
+    assert flow.state.phase == OrderPhase.CUSTOMER_NAME
     assert "All good?" in plan.guidance
+
+
+def test_want_to_order_asks_pickup_delivery():
+    cart = OrderCart()
+    flow = OrderFlowController(is_phone=True)
+    plan = flow.build_turn_plan(
+        "ਹਾਂ ਜੀ, ਮੈਂ ਕੁਝ ਆਰਡਰ ਕਰਨਾ ਸੀ ਜੀ।",
+        UserIntent.ADD_ITEM,
+        cart,
+    )
+    assert "Will that be pickup or delivery?" in plan.guidance
+
+
+def test_readback_before_name():
+    cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
+    cart.order_type = "pickup"
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_special_instructions_done()
+    flow.sync_from_cart(cart)
+    assert flow.state.phase == OrderPhase.CONFIRMING
+    assert flow.state.readback_confirmed is False
