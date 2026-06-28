@@ -1,8 +1,8 @@
-"""AgentSession voice tuning — phone latency (Tier A) vs web.
+"""AgentSession voice tuning — shared latency config for phone and web.
 
-Phone uses LiveKit TurnDetector + dynamic endpointing + preemptive TTS.
-Echo is handled by Cloud SIP/Krisp + phone_echo.py; we no longer add a full
-second of endpointing or disable interruptions globally.
+Both channels use LiveKit TurnDetector (v1-mini) + dynamic endpointing +
+preemptive TTS. Phone-only echo handling (AEC warmup, greeting settle) lives
+in agent.py / phone_echo.py.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def phone_greeting_settle_seconds() -> float:
     return _env_float("PHONE_GREETING_SETTLE_SEC", 2.0)
 
 
-def _phone_turn_handling() -> TurnHandlingOptions:
+def _turn_handling() -> TurnHandlingOptions:
     # Default TurnDetector thresholds (LiveKit-calibrated). Logs showed eou_delay
     # hitting max_delay=2.5s — lower cap commits turns faster on Punjabi calls.
     return TurnHandlingOptions(
@@ -64,33 +64,9 @@ def _phone_turn_handling() -> TurnHandlingOptions:
     )
 
 
-def _web_turn_handling() -> TurnHandlingOptions:
-    return TurnHandlingOptions(
-        turn_detection=inference.TurnDetector(),
-        endpointing={
-            "mode": "dynamic",
-            "min_delay": 0.25,
-            "max_delay": 2.0,
-        },
-        interruption={
-            "mode": "adaptive",
-            "enabled": True,
-            "min_duration": 0.35,
-            "min_words": 0,
-            "resume_false_interruption": True,
-        },
-        preemptive_generation={
-            "enabled": True,
-            "preemptive_tts": True,
-            "max_speech_duration": 10.0,
-            "max_retries": 2,
-        },
-    )
-
-
 def build_agent_session(*, is_phone: bool) -> AgentSession:
-    """Create AgentSession with channel-appropriate latency tuning."""
-    turn_handling = _phone_turn_handling() if is_phone else _web_turn_handling()
+    """Create AgentSession with channel-appropriate STT/TTS; shared turn latency."""
+    turn_handling = _turn_handling()
     kwargs: dict = {
         "stt": build_stt(is_phone),
         "llm": build_llm(),
