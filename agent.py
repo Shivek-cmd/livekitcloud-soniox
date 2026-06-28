@@ -27,6 +27,7 @@ from restaurant import menu_provider
 from restaurant.orders import OrderCart
 from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
 from restaurant import reservations as res_store
+from restaurant.web_sync import WebSync
 
 load_dotenv()
 
@@ -296,11 +297,20 @@ class RestaurantAgent(Agent):
         self._echo_reprompt_done = False
         self._greeting_echo_pending_reprompt = False
         self._real_user_turns = 0
+        self._web_sync: WebSync | None = None
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
     def bind_phone_session(self, session) -> None:
         self._phone_session = session
+
+    def bind_web_sync(self, web_sync: WebSync) -> None:
+        self._web_sync = web_sync
+
+    async def _sync_web(self) -> None:
+        """Push the current cart to the web UI (no-op on phone)."""
+        if self._web_sync is not None:
+            await self._web_sync.publish_order_state()
 
     def note_agent_speech(self, text: str) -> None:
         line = text.strip()
@@ -354,7 +364,9 @@ class RestaurantAgent(Agent):
         item = menu_provider.find_item(item_name)
         if not item:
             return f"'{item_name}' is not on our menu. Ask the customer to clarify or call search_menu_items."
-        return self.cart.add_item(item, quantity, note)
+        result = self.cart.add_item(item, quantity, note)
+        await self._sync_web()
+        return result
 
     @function_tool
     async def remove_from_order(
@@ -362,7 +374,9 @@ class RestaurantAgent(Agent):
         item_name: Annotated[str, "Name of the item to remove"],
     ) -> str:
         """Remove an item from the customer's order."""
-        return self.cart.remove_item(item_name)
+        result = self.cart.remove_item(item_name)
+        await self._sync_web()
+        return result
 
     @function_tool
     async def set_order_type(
@@ -374,6 +388,7 @@ class RestaurantAgent(Agent):
         if order_type not in ("pickup", "delivery"):
             return "order_type must be 'pickup' or 'delivery'."
         self.cart.order_type = order_type
+        await self._sync_web()
         if order_type == "delivery":
             return f"Set to delivery. Delivery charge ${DELIVERY_CHARGE} will be added. Now ask for delivery address."
         return "Set to pickup. Ask for customer name and phone number."
@@ -387,6 +402,7 @@ class RestaurantAgent(Agent):
         """Save the customer's name and phone number."""
         self.cart.customer_name = name
         self.cart.customer_phone = phone
+        await self._sync_web()
         return f"Saved: {name}, {phone}."
 
     @function_tool
@@ -396,6 +412,7 @@ class RestaurantAgent(Agent):
     ) -> str:
         """Save the delivery address for a delivery order."""
         self.cart.delivery_address = address
+        await self._sync_web()
         return f"Delivery address saved: {address}."
 
     @function_tool
@@ -423,6 +440,10 @@ class RestaurantAgent(Agent):
             "address": self.cart.delivery_address,
         }
         logger.info(f"ORDER_PLACED: {json.dumps(order_data, ensure_ascii=False)}")
+
+        eta = "30-40 min" if self.cart.order_type == "delivery" else "20-25 min"
+        self.cart.mark_placed(eta=eta)
+        await self._sync_web()
 
         wait = "30-40 ਮਿੰਟ" if self.cart.order_type == "delivery" else "20-25 ਮਿੰਟ"
         return (
@@ -529,6 +550,13 @@ async def entrypoint(ctx: JobContext):
         agent=agent,
         room_input_options=RoomInputOptions(),
     )
+
+    # Web channel: register cart RPCs + push live order state to the browser.
+    if not is_phone:
+        web_sync = WebSync(ctx.room, agent)
+        web_sync.register()
+        agent.bind_web_sync(web_sync)
+        await web_sync.publish_order_state()
 
     @session.on("user_input_transcribed")
     def _on_user_transcript(ev) -> None:

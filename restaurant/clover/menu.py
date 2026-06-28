@@ -286,6 +286,9 @@ class MenuCache:
                 break
         return out
 
+    def get_by_id(self, clover_item_id: str) -> CachedMenuItem | None:
+        return self._by_id.get(clover_item_id)
+
     def catalog(self) -> dict:
         """Full menu grouped by category, JSON-serializable for the web menu panel."""
         groups: dict[str, list[dict]] = {}

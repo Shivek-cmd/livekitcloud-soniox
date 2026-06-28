@@ -230,8 +230,8 @@ These become the stable interface between agent and UI; both sides version it (`
 
 | Phase | Deliverable | Notes |
 |-------|-------------|-------|
-| **W1** | New shell: tab switcher + **responsive** 3-panel layout (desktop 3-col / mobile stacked); agent-state indicator + live captions; `GET /menu` + live-menu panel (with prices) | No avatar, no cart sync yet. Visible progress. |
-| **W2** | **Live order panel + hybrid cart**: `OrderCart.to_state_dict()`, `publish_order_state()` on every mutation, `get_order_state` RPC, client→agent cart RPCs (`cart_add/remove/set_qty`), menu "Add" buttons, frontend order board | The core real-time win + tap-to-add. |
+| **W1** ✅ | New shell: tab switcher + **responsive** 3-panel layout (desktop 3-col / mobile stacked); agent-state indicator + live captions; `GET /menu` + live-menu panel (with prices) | Done — PR 011. |
+| **W2** ✅ | **Live order panel + hybrid cart**: `OrderCart.to_state_dict()`, `publish_order_state()` on every mutation, `get_order_state` RPC, client→agent cart RPCs (`cart_add/remove/set_qty`), menu "Add" buttons, frontend order board | Done — PR 012. |
 | **W3** | **Menu highlight + modifier picker**: `ui.focus` packets → highlight/autoscroll; modifier picker for tap-add of items with required choices; Sierra acknowledges tap-adds | Ties menu to conversation. |
 | **W4** | **Avatar**: provider integration via `AvatarSession`, `videoTrack` in UI, audio-only fallback | Provider chosen at this point (§7 #1). |
 | **W5** | **Hardening**: reconnect/resync, error states, mobile polish, idle timeout, rate limiting | Production edge cases. |

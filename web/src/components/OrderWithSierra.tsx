@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
 import { fetchToken } from '../lib/api'
+import { CartProvider } from '../hooks/useCart'
 import { SierraPanel } from './SierraPanel'
 import { LiveMenu } from './LiveMenu'
 import { OrderPanel } from './OrderPanel'
@@ -44,11 +45,13 @@ export function OrderWithSierra() {
       className="ows"
     >
       <RoomAudioRenderer />
-      <div className="ows-grid">
-        <SierraPanel started={!!conn} connecting={starting} onStart={startCall} error={error} />
-        <LiveMenu />
-        <OrderPanel connected={!!conn} />
-      </div>
+      <CartProvider>
+        <div className="ows-grid">
+          <SierraPanel started={!!conn} connecting={starting} onStart={startCall} error={error} />
+          <LiveMenu />
+          <OrderPanel connected={!!conn} />
+        </div>
+      </CartProvider>
     </LiveKitRoom>
   )
 }
