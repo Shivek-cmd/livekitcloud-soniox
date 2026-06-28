@@ -9,7 +9,7 @@ Adds **LiveKit `BackgroundAudioPlayer`** for **web calls only** — a quiet loop
 
 - **Phone:** unchanged (no ambient — echo/STT risk).
 - **Web:** ambient starts after `session.start()`, stops on job shutdown.
-- **Default:** enabled (`WEB_AMBIENT_ENABLED=1`), volume `0.25`, 1s fade-in.
+- **Default:** enabled (`WEB_AMBIENT_ENABLED=1`), volume `0.6`, 1s fade-in.
 - **Audio source:** `data/audio/restaurant_ambience.mp3` if present; else LiveKit builtin `OFFICE_AMBIENCE` for testing until you add a custom loop.
 
 ## Files Added
@@ -43,7 +43,7 @@ Index PR 020.
 
 ```
 WEB_AMBIENT_ENABLED=1          # 0 to disable web ambient
-WEB_AMBIENT_VOLUME=0.25        # 0.0–1.0
+WEB_AMBIENT_VOLUME=0.6         # 0.0–1.0
 WEB_AMBIENT_FADE_IN=1.0        # seconds
 WEB_AMBIENT_AUDIO_PATH=        # override path to mp3/wav
 WEB_AMBIENT_THINKING=0         # 1 = keyboard cue during tool/LLM think

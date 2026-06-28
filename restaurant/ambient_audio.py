@@ -10,7 +10,7 @@ from livekit.agents import AudioConfig, BackgroundAudioPlayer, BuiltinAudioClip
 
 logger = logging.getLogger("ambient-audio")
 
-_DEFAULT_VOLUME = 0.25
+_DEFAULT_VOLUME = 0.6
 _DEFAULT_FADE_IN = 1.0
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_CUSTOM_PATH = _REPO_ROOT / "data" / "audio" / "restaurant_ambience.mp3"
