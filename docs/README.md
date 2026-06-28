@@ -8,6 +8,7 @@
 | [plan/06-milestones.md](plan/06-milestones.md) | Build phases 1–8 |
 | [plan/09-clover-pos.md](plan/09-clover-pos.md) | Clover POS integration plan |
 | [plan/10-voice-quality-tier-b.md](plan/10-voice-quality-tier-b.md) | Voice/conversation bug backlog |
+| [plan/11-web-order-with-sierra.md](plan/11-web-order-with-sierra.md) | Web "Order with Sierra" plan (avatar + live menu + live order) |
 | [vps-config.md](vps-config.md) | VPS deploy, env, SIP, services |
 | [plan/02-architecture.md](plan/02-architecture.md) | System diagram + call flow |
 | [reference/](reference/) | LiveKit, Soniox, Clover captured docs |
