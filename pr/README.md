@@ -23,6 +23,7 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 017 | `pr_017_echo-and-flow-hardening` | Echo filter + intent + read-back hardening | ⬜ **Open** (stacked on 016) |
 | 018 | `pr_018_customer-language` | Trilingual greeting + language detection + web parity | ⬜ **Open** (stacked on 017) |
 | 019 | `pr_019_speech-policy-mango-chole` | Mango drink English TTS + chole/bhature Gurmukhi | ⬜ **Open** |
+| 020 | `pr_020_web-background-ambient` | Web-only LiveKit background ambient audio | ⬜ **Open** |
 
 ---
 
