@@ -35,7 +35,8 @@ Punjabi. The old India-hosted provider was **fully removed** from code, docs, an
 | **Web shared latency** (same 0.8s endpointing as phone) | ✅ PR 013 |
 | Per-turn latency logging (`LATENCY` lines) | ✅ `restaurant/turn_latency.py` |
 | Natural menu offers (no 1-2-3 lists) | ✅ search cap + prompt (partial — LLM can still slip) |
-| **Tier B — conversation bugs** (echo false positives, search gaps, order flow) | ⬜ See `docs/plan/10-voice-quality-tier-b.md` |
+| **Tier B — conversation layer** (prompts, intents, order flow in code) | ✅ PR 015 on `main` |
+| **Tier B — phone hardening** (phrases, echo, confirm) | ⬜ PR 016–017 open — see `docs/HANDOFF.md` |
 | Punjabi voice quality pass (Soniox voices) | ⬜ |
 | STT accuracy across Punjabi accents | ⬜ |
 | Digit/phone-number read-back accuracy | ⬜ |
@@ -64,7 +65,7 @@ See **`11-web-order-with-sierra.md`**.
 | W3 | Menu highlight, modifier picker, tap-add ack | ⬜ **Next** |
 | W4 | Avatar | ⬜ |
 | W5 | Hardening | ⬜ |
-| W6 | Web prompt variant | ⬜ |
+| W6 | Web prompt variant | ✅ PR 015 (`restaurant/prompts.py`) |
 
 ## Phase 9 — Other features (deferred)
 

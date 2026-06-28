@@ -19,7 +19,25 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 013 | `pr_013_web-shared-latency` | Web shared latency + Mango Kulfi TTS | ✅ |
 | 014 | `pr_014_handoff-docs` | Session handoff + docs sync | ✅ |
 | 015 | `pr_015_conversation-production` | Tier B conversation layer + W6 web prompt | ✅ |
-| 016 | `pr_016_order-flow-phrases` | Fixed phrases, phase advance, read-back templates | ⬜ |
-| 017 | `pr_017_echo-and-flow-hardening` | B-1 echo filter + intent/flow hardening from live call | ⬜ |
+| 016 | `pr_016_order-flow-phrases` | Fixed phrases, phase advance, Bizbull branding | ⬜ **Open** |
+| 017 | `pr_017_echo-and-flow-hardening` | Echo filter + intent + read-back hardening | ⬜ **Open** (stacked on 016) |
 
-**Start next session:** read **`docs/HANDOFF.md`**, merge PR 016–017, deploy VPS.
+---
+
+## Current session state (2026-06-29)
+
+**`main`** ends at PR **015** (`e341262`).
+
+**Open work:** merge **016** → **017** → deploy VPS → phone test checklist in `pr_017_echo-and-flow-hardening.md`.
+
+**New AI session:** read **`docs/HANDOFF.md`** first — full architecture, file map, ops commands, known bugs.
+
+---
+
+## PR 016 + 017 merge order
+
+1. Merge `pr_016_order-flow-phrases` into `main`
+2. Merge `pr_017_echo-and-flow-hardening` into `main` (or merge 017 directly if GitHub shows 016 commits included)
+3. On VPS: `bash /opt/livekit-sarvam/scripts/vps_deploy.sh`
+
+Branch `pr_017_echo-and-flow-hardening` contains all 016 commits plus 017 fixes.
