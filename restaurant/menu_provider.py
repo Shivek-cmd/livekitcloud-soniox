@@ -103,5 +103,13 @@ def search_menu(query: str, *, limit: int = 2) -> str:
     )
 
 
+def catalog() -> dict | None:
+    """Full menu catalog grouped by category for the web menu panel, or None if unavailable."""
+    cache = _get_cache()
+    if not cache:
+        return None
+    return cache.catalog()
+
+
 def menu_source_label() -> str:
     return "clover_cache" if _get_cache() else "static_menu"

@@ -6,6 +6,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from livekit.api import AccessToken, VideoGrants, LiveKitAPI, CreateAgentDispatchRequest
 
+from restaurant import menu_provider
+
 load_dotenv()
 
 LIVEKIT_API_KEY = os.environ["LIVEKIT_API_KEY"]
@@ -25,6 +27,15 @@ app.add_middleware(
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/menu")
+async def get_menu():
+    """Full menu catalog (grouped by category) for the web menu panel."""
+    catalog = menu_provider.catalog()
+    if catalog is None:
+        raise HTTPException(status_code=503, detail="Menu is not available")
+    return catalog
 
 
 @app.get("/token")

@@ -286,6 +286,34 @@ class MenuCache:
                 break
         return out
 
+    def catalog(self) -> dict:
+        """Full menu grouped by category, JSON-serializable for the web menu panel."""
+        groups: dict[str, list[dict]] = {}
+        order: list[str] = []
+        for it in self._items:
+            cat = it.category_name or "Other"
+            if cat not in groups:
+                groups[cat] = []
+                order.append(cat)
+            groups[cat].append(
+                {
+                    "id": it.clover_item_id,
+                    "name": it.name,
+                    "voice_line": it.voice_line,
+                    "price": round(it.price_dollars, 2),
+                    "veg": it.veg,
+                    "available": it.available,
+                    "has_spice": any(g.name == "Spice Level" for g in it.modifier_groups),
+                    "options": [g.name for g in it.modifier_groups],
+                }
+            )
+        return {
+            "tenant_id": self.tenant_id,
+            "synced_at": self.synced_at,
+            "item_count": len(self._items),
+            "categories": [{"name": c, "items": groups[c]} for c in order],
+        }
+
     def list_by_category(self, category_query: str, *, limit: int = 10) -> list[CachedMenuItem]:
         q = _norm(category_query)
         out = [
