@@ -19,6 +19,12 @@ phone. Phone-only echo handling (AEC warmup, greeting settle) is unchanged.
 - Removed `_web_turn_handling()` (was `max_delay: 2.0`).
 - `build_agent_session()` always uses `_turn_handling()`; STT/TTS still
   differ by channel via `build_stt(is_phone)` / `build_tts(is_phone)`.
+### `restaurant/clover/speech_policy.py`
+- Added **`kulfi`** to English voice overrides — TTS says **"Mango Kulfi"** not Gurmukhi "amb kulfi".
+### `data/clover_voice_labels.json`
+- Rebuilt (`voice_line: "Mango Kulfi"`, `speech_mode: english` for kulfi).
+### `web/package-lock.json`
+- Lockfile added (from W2 `@livekit/components-react` deps).
 
 ## What's NOT in This PR
 - W3 (menu highlight, modifier picker, tap-add ack).

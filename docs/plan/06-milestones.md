@@ -6,9 +6,11 @@ Working Punjabi voice conversation, agent pipeline validated.
 - `agent.py` — STT → LLM → TTS pipeline + restaurant tools (orders, reservations, menu)
 - `token_server.py` — FastAPI token + agent dispatch (web)
 
-## Phase 2 — Web Channel ✅ DONE
-- React web app ("Start Call" + voice UI), served via Caddy at `sarvam.bizbull.ai`
-- Token server dispatches the agent on each web call
+## Phase 2 — Web Channel ✅ DONE (expanded 2026-06-28)
+- React web app at **`https://voice.bizbull.ai`** (migrated from `sarvam.bizbull.ai`, PR 009)
+- Token server: `/token`, `/menu`, `/health` (Caddy → port 8001)
+- **Order with Sierra** tab: W1 shell + W2 live cart (PR 011–012) — see `docs/plan/11-web-order-with-sierra.md`
+- Store tab: placeholder
 
 ## Phase 3 — Phone Channel (Twilio SIP) ✅ DONE
 - Twilio number `+15878175156` → SIP → LiveKit
@@ -30,6 +32,7 @@ Punjabi. The old India-hosted provider was **fully removed** from code, docs, an
 | Task | Status |
 |---|---|
 | **Tier A — phone latency** (TurnDetector, preemptive TTS, 0.8s endpointing) | ✅ PR 008 — see `docs/HANDOFF.md` |
+| **Web shared latency** (same 0.8s endpointing as phone) | ✅ PR 013 |
 | Per-turn latency logging (`LATENCY` lines) | ✅ `restaurant/turn_latency.py` |
 | Natural menu offers (no 1-2-3 lists) | ✅ search cap + prompt (partial — LLM can still slip) |
 | **Tier B — conversation bugs** (echo false positives, search gaps, order flow) | ⬜ See `docs/plan/10-voice-quality-tier-b.md` |
@@ -50,7 +53,21 @@ Voice orders flow into restaurant Clover POS. See **`09-clover-pos.md`** for ful
 | 8e | Production pilot (one merchant, OAuth) | ⬜ |
 | 8f | Multi-tenant routing (SaaS) | ⬜ |
 
-## Phase 7 — Other features (deferred)
+## Phase 7 — Web "Order with Sierra" (in progress)
+
+See **`11-web-order-with-sierra.md`**.
+
+| Phase | Scope | Status |
+|-------|--------|--------|
+| W1 | Tab shell, 3-panel layout, live menu, captions | ✅ PR 011 |
+| W2 | Live order panel, hybrid tap-to-add, `web_sync.py` | ✅ PR 012 |
+| W3 | Menu highlight, modifier picker, tap-add ack | ⬜ **Next** |
+| W4 | Avatar | ⬜ |
+| W5 | Hardening | ⬜ |
+| W6 | Web prompt variant | ⬜ |
+
+## Phase 9 — Other features (deferred)
+
 | Feature | Notes |
 |---|---|
 | **Multi-tenant** (non-POS) | Per-restaurant voice config — partially overlaps Phase 8f |
@@ -58,6 +75,7 @@ Voice orders flow into restaurant Clover POS. See **`09-clover-pos.md`** for ful
 | Outbound calls | Agent proactively calls users |
 | Analytics | Transcript logging, latency dashboard |
 | WhatsApp channel | Via LiveKit SIP connectors |
+| **Store tab** (web) | Browse/order without call — after W3–W6 |
 
 ## What NOT to build yet
 - No delivery / pay-on-call / non-Clover POS — see `09-clover-pos.md` out-of-scope list

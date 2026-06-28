@@ -47,10 +47,10 @@ TWILIO_AUTH_TOKEN=<twilio token>
 
 ### Voice stack
 Soniox `stt-rt-v5` (STT) + OpenAI `gpt-4o-mini` (LLM) + Soniox `tts-rt-v1` voice `Maya` (TTS).
-Built in `restaurant/voice_stack.py`. Phone/web session tuning in `restaurant/session_config.py`.
+Built in `restaurant/voice_stack.py`. **Shared** phone/web turn tuning in `restaurant/session_config.py` (PR 013 — both channels use 0.8s max endpointing).
 All US/EU/JP-hosted (low latency for Canada callers).
 
-**Production commit (2026-06-27):** `dd8c5e2` — Tier A phone latency (TurnDetector, 0.8s endpointing).
+**Production commit (2026-06-28):** `0666017` — web W2 + shared latency + Mango Kulfi TTS fix.
 
 ### Phone tuning env vars (optional — defaults in `session_config.py`)
 
@@ -140,6 +140,27 @@ Deploy latest `main`:
 bash scripts/vps_deploy.sh
 ```
 
+`vps_deploy.sh` also runs `npm install && npm run build` in `web/` (serves `web/dist` via Caddy).
+
+### Caddy — `voice.bizbull.ai`
+
+Our web block (shared Caddy on VPS):
+
+```
+voice.bizbull.ai {
+  handle /token* { reverse_proxy localhost:8001 }
+  handle /menu*  { reverse_proxy localhost:8001 }
+  handle /health { reverse_proxy localhost:8001 }
+  handle {
+    root * /opt/livekit-sarvam/web/dist
+    file_server
+    try_files {path} /index.html
+  }
+}
+```
+
+> **`sarvam.bizbull.ai` retired** (PR 009). Use **`voice.bizbull.ai`** only.
+
 Manual equivalent:
 
 ```bash
@@ -148,8 +169,11 @@ git fetch origin main && git reset --hard origin/main
 /root/.local/bin/uv sync
 PYTHONPATH=/opt/livekit-sarvam /root/.local/bin/uv run python scripts/rebuild_voice_labels.py
 PYTHONPATH=/opt/livekit-sarvam /root/.local/bin/uv run python scripts/clover_sync_menu.py
+(cd /opt/livekit-sarvam/web && npm install && npm run build)
 systemctl restart restaurant-agent restaurant-token
 ```
+
+> **VPS tip:** Do not run two `npm` builds at once (e.g. deploy + worktree validation) — small box OOMs and SSH hangs.
 
 ---
 
@@ -179,7 +203,6 @@ These belong to other apps. Never modify them.
 | Soniox app | `soniox-frontend-1`, `soniox-twilio-bridge-1`, `soniox-voice-server-1`, `soniox-store-api-1`, `soniox-caddy-1` |
 | POS integration | `pos_integration_app-app-1` (`integration.bizbull.ai`) |
 | Order app | `order.bizbull.ai` |
-| Caddy (shared reverse proxy) | `caddy.service` — also serves `sarvam.bizbull.ai` (our web app) |
+| Caddy (shared reverse proxy) | `caddy.service` — serves **`voice.bizbull.ai`** (static `web/dist` + `/token`, `/menu` → port 8001) |
 
-> Our web app is served by the shared Caddy at `sarvam.bizbull.ai` (static `web/dist` + `/token` →
-> port 8001). The domain name still says "sarvam" for historical reasons; the backend is now Soniox.
+> Our web app is at **`https://voice.bizbull.ai`**. Backend is Soniox + LiveKit Cloud (not Sarvam).
