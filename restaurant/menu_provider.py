@@ -137,3 +137,49 @@ def catalog() -> dict | None:
 
 def menu_source_label() -> str:
     return "clover_cache" if _get_cache() else "static_menu"
+
+
+def item_has_spice_level(name: str) -> bool:
+    """True if this menu item has a Spice Level modifier group."""
+    cache = _get_cache()
+    if cache:
+        hit = cache.find_item(name)
+        if hit:
+            return any(g.name == "Spice Level" for g in hit.modifier_groups)
+        return False
+    item = static_find_item(name)
+    return bool(item and item.get("spice_level"))
+
+
+def resolve_item_in_text(text: str) -> dict | None:
+    """Best-effort menu item match from free-form caller text."""
+    t = (text or "").strip()
+    if not t:
+        return None
+    direct = find_item(t)
+    if direct and not direct.get("unavailable"):
+        return direct
+    cache = _get_cache()
+    if cache:
+        hits = cache.search(t, limit=1)
+        if hits and hits[0].available:
+            return hits[0].to_cart_dict()
+    # Try longest token runs (3+ chars) for dish names in mixed sentences
+    import re
+
+    for chunk in re.findall(r"[A-Za-z\u0900-\u097F\u0A00-\u0A7F]{4,}", t):
+        hit = find_item(chunk)
+        if hit and not hit.get("unavailable"):
+            return hit
+    return None
+
+
+def item_price_dollars(name: str) -> float | None:
+    item = find_item(name)
+    if not item:
+        return None
+    if "price" in item:
+        return float(item["price"])
+    if "price_cents" in item:
+        return item["price_cents"] / 100.0
+    return None

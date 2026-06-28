@@ -1,10 +1,12 @@
 # Tier B — Voice quality & conversation backlog
 
-> **Status:** Not started (Tier A latency ✅ done 2026-06-27).
+> **Status:** In progress — PR 015 (conversation layer + shortened prompts + W6).
 > **Context:** Live test call logs from 2026-06-27 (`AJ_iN5nL8JwDa8D`, `dd8c5e2` deploy).
 > **Start here after Tier A:** `docs/HANDOFF.md`
 
 Tier A fixed **latency + echo stability + numbered lists**. Tier B fixes **conversation correctness** and **production demo quality** before Phase 8c Clover submit.
+
+**PR 015** implements B-3–B-7, B-9, W6 via `restaurant/prompts.py`, `conversation.py`, `order_flow.py`.
 
 ---
 
