@@ -1,7 +1,9 @@
 """Tests for phone echo filter (Tier B-1)."""
 
 from restaurant.conversation import UserIntent, detect_intent
-from restaurant.phone_echo import is_likely_phone_echo, should_bypass_phone_echo_filter
+from restaurant.order_flow import OrderFlowController, OrderPhase
+from restaurant.orders import OrderCart
+from restaurant.phone_echo import is_likely_phone_echo, is_recovery_phrase_echo, should_bypass_phone_echo_filter
 
 
 def test_pickup_answer_not_echo():
@@ -42,3 +44,32 @@ def test_qty_item_intent():
 
 def test_allergy_no_mixed():
     assert detect_intent("ਨਹੀਂ ਨਹੀਂ ਜੀ, not not at all.") == UserIntent.CONFIRM_NO
+
+
+def test_haan_ji_confirm_yes():
+    assert detect_intent("ਹਾਂ ਜੀ।") == UserIntent.CONFIRM_YES
+    assert detect_intent("haan ji") == UserIntent.CONFIRM_YES
+    assert detect_intent("All good") == UserIntent.CONFIRM_YES
+
+
+def test_recovery_phrase_echo():
+    assert is_recovery_phrase_echo("ਹਾਂ ਜੀ, go ahead, I'm listening.")
+    assert is_likely_phone_echo(
+        "What would you like to know from the—",
+        ["What would you like to know from the menu?"],
+        intent=UserIntent.GENERAL,
+    )
+
+
+def test_confirming_haan_ji_advances_to_name():
+    cart = OrderCart()
+    cart.add_item({"name": "Gajar Halwa", "voice_line": "Gajar Halwa", "price": 7}, 1)
+    cart.order_type = "pickup"
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_special_instructions_done()
+    flow.sync_from_cart(cart)
+    plan = flow.build_turn_plan("ਹਾਂ ਜੀ।", UserIntent.CONFIRM_YES, cart)
+    assert flow.state.readback_confirmed is True
+    assert flow.state.phase == OrderPhase.CUSTOMER_NAME
+    assert "name for the order" in plan.guidance.lower()

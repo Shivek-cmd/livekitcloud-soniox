@@ -108,7 +108,11 @@ _DONE_RE = re.compile(
 )
 
 _YES_RE = re.compile(
-    r"^(yes|yeah|yep|yup|haan|han|ha ji|ji|correct|right|ok|okay|ਠੀਕ|ਹਾਂ)(?:\s+ji)?\.?$",
+    r"^(yes|yeah|yep|yup|correct|right|ok|okay|all good|"
+    r"haan|han|ha ji|ji|"
+    r"ਹਾਂ|ਠੀਕ|ਬਿਲਕੁਲ|ਜੀ)"
+    r"(?:\s+(ji|ਜੀ|hai|ਹੈ))?"
+    r"[\s\.।,!?]*$",
     re.I,
 )
 
@@ -166,6 +170,19 @@ def menu_item_hint_in_text(text: str) -> bool:
     return menu_provider.resolve_item_in_text(text) is not None
 
 
+def is_confirm_yes(text: str) -> bool:
+    """Short affirmative — haan ji / ਹਾਂ ਜੀ / yes / ok / all good."""
+    t = re.sub(r"[\s\.।,!?]+$", "", (text or "").strip())
+    if not t:
+        return False
+    if _YES_RE.match(t):
+        return True
+    # STT sometimes drops ji: "haan" or lone "ji" / "ਜੀ" after All good?
+    if re.match(r"^(haan|han|ਹਾਂ|ji|ਜੀ|ok|okay|yes|yeah)$", t, re.I):
+        return True
+    return False
+
+
 def detect_intent(text: str) -> UserIntent:
     t = (text or "").strip()
     if not t:
@@ -176,7 +193,7 @@ def detect_intent(text: str) -> UserIntent:
         return UserIntent.ASK_PRICE
     if _DONE_RE.search(t):
         return UserIntent.ORDER_DONE
-    if _YES_RE.match(t):
+    if is_confirm_yes(t):
         return UserIntent.CONFIRM_YES
     if _PICKUP_RE.search(t) and not _DELIVERY_RE.search(t):
         return UserIntent.PICKUP
