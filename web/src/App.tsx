@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { Room, RoomEvent, Track, ConnectionState } from 'livekit-client'
 import './App.css'
 
-const TOKEN_URL = 'https://sarvam.bizbull.ai/token'
+const TOKEN_URL = '/token'
 
 type CallState = 'idle' | 'connecting' | 'connected' | 'error'
 
