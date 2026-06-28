@@ -1,5 +1,5 @@
 [Unit]
-Description=Punjab Da Dhaba Token Server
+Description=Bizbull Restaurant Token Server
 After=network.target
 
 [Service]

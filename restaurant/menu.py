@@ -1,5 +1,5 @@
-RESTAURANT_NAME = "ਪੰਜਾਬ ਦਾ ਢਾਬਾ"
-RESTAURANT_NAME_EN = "Punjab Da Dhaba"
+RESTAURANT_NAME = "ਬਿਜ਼ਬਲ ਰੈਸਟੋਰੈਂਟ"
+RESTAURANT_NAME_EN = "Bizbull Restaurant"
 OPENING_HOURS = "ਸੋਮਵਾਰ ਤੋਂ ਐਤਵਾਰ, ਸਵੇਰੇ 11 ਵਜੇ ਤੋਂ ਰਾਤ 11 ਵਜੇ ਤੱਕ"
 DELIVERY_CHARGE = 5
 MIN_ORDER_DELIVERY = 20

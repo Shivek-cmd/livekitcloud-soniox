@@ -60,7 +60,7 @@ def init_db(db_path: Path | None = None) -> None:
                 menu_cache_updated_at TEXT,
                 delivery_charge REAL NOT NULL DEFAULT 5,
                 min_order_delivery REAL NOT NULL DEFAULT 20,
-                restaurant_name TEXT NOT NULL DEFAULT 'ਪੰਜਾਬ ਦਾ ਢਾਬਾ',
+                restaurant_name TEXT NOT NULL DEFAULT 'ਬਿਜ਼ਬਲ ਰੈਸਟੋਰੈਂਟ',
                 restaurant_name_en TEXT NOT NULL DEFAULT 'Bizbull Restaurant'
             )
             """
@@ -180,7 +180,7 @@ def bootstrap_bizbull_from_env(db_path: Path | None = None) -> Tenant:
         menu_cache_updated_at=None,
         delivery_charge=float(os.getenv("DELIVERY_CHARGE", "5")),
         min_order_delivery=float(os.getenv("MIN_ORDER_DELIVERY", "20")),
-        restaurant_name=os.getenv("RESTAURANT_NAME", "ਪੰਜਾਬ ਦਾ ਢਾਬਾ"),
+        restaurant_name=os.getenv("RESTAURANT_NAME", "ਬਿਜ਼ਬਲ ਰੈਸਟੋਰੈਂਟ"),
         restaurant_name_en=os.getenv("RESTAURANT_NAME_EN", "Bizbull Restaurant"),
     )
     existing = get_tenant(tenant_id, db_path)

@@ -12,6 +12,7 @@ Fixes live-call phrase and flow bugs from PR 015 testing:
 3. **Order read-back** — `get_order_summary()` includes a spoken template: voice_line names, English quantities (one/two), `"All good?"` — no **ik/do**, no **ਸੰਬੰਧ**, no confirm before pickup.
 4. **Pickup/delivery intent** — `"ਚਾਹੀਦਾ pickup"` no longer misclassified as `add_item`.
 5. **Quantity ask** — template `"How many — one or two?"` (English numbers only).
+6. **Restaurant branding** — replace leftover **Punjab Da Dhaba** with **Bizbull Restaurant** in `menu.py`, tenant defaults, web title, package name, and systemd descriptions.
 
 ## Files Modified
 
@@ -21,6 +22,9 @@ Fixes live-call phrase and flow bugs from PR 015 testing:
 - `restaurant/prompts.py` — ban Roman ik/do for quantities
 - `agent.py` — sync flow on customer/delivery tools
 - `tests/test_conversation.py` — new cases
+- `restaurant/menu.py`, `restaurant/tenants/store.py` — `RESTAURANT_NAME` → Bizbull
+- `web/index.html`, `web/package.json` — page title + package name
+- `deploy/restaurant-agent.service`, `deploy/restaurant-token.service` — systemd descriptions
 
 ## Post-Merge: VPS
 
