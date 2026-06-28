@@ -18,6 +18,7 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 012 | `pr_012_web-w2-live-order` | Web W2 — live order + hybrid cart | ✅ |
 | 013 | `pr_013_web-shared-latency` | Web shared latency + Mango Kulfi TTS | ✅ |
 | 014 | `pr_014_handoff-docs` | Session handoff + docs sync | ✅ |
-| 015 | `pr_015_conversation-production` | Tier B conversation layer + W6 web prompt | ⬜ |
+| 015 | `pr_015_conversation-production` | Tier B conversation layer + W6 web prompt | ✅ |
+| 016 | `pr_016_order-flow-phrases` | Fixed phrases, phase advance, read-back templates | ⬜ |
 
 **Start next session:** read **`docs/HANDOFF.md`**, then implement/deploy PR 015.

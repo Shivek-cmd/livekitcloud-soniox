@@ -184,6 +184,7 @@ class RestaurantAgent(Agent):
         """Save the customer's name and phone number."""
         self.cart.customer_name = name
         self.cart.customer_phone = phone
+        self._flow.sync_from_cart(self.cart)
         await self._sync_web()
         return f"Saved: {name}, {phone}."
 
@@ -194,13 +195,20 @@ class RestaurantAgent(Agent):
     ) -> str:
         """Save the delivery address for a delivery order."""
         self.cart.delivery_address = address
+        self._flow.sync_from_cart(self.cart)
         await self._sync_web()
         return f"Delivery address saved: {address}."
 
     @function_tool
     async def get_order_summary(self) -> str:
         """Get the full current order to read back to the customer before confirming."""
-        return self.cart.summary()
+        from restaurant.conversation import format_order_readback
+
+        summary = self.cart.summary()
+        readback = format_order_readback(self.cart)
+        if readback:
+            return f"{summary}\n\nSPOKEN READ-BACK (say exactly):\n{readback}"
+        return summary
 
     @function_tool
     async def place_order(self) -> str:

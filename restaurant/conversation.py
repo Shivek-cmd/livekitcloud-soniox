@@ -5,6 +5,16 @@ from __future__ import annotations
 import re
 from enum import Enum
 
+from restaurant.orders import OrderCart
+
+# ── Fixed spoken lines (Canadian Punjabi restaurant code-mix) ─────────────────
+
+ALLERGIES_QUESTION = "Any allergies or special instructions?"
+PICKUP_DELIVERY_QUESTION = "Will that be pickup or delivery?"
+QUANTITY_QUESTION = "How many — one or two?"
+CONFIRM_CLOSE = "All good?"
+
+
 # ── Intent ────────────────────────────────────────────────────────────────────
 
 
@@ -16,6 +26,8 @@ class UserIntent(str, Enum):
     ORDER_DONE = "order_done"
     CONFIRM_YES = "confirm_yes"
     CONFIRM_NO = "confirm_no"
+    PICKUP = "pickup"
+    DELIVERY = "delivery"
     HUMAN = "human"
     UNCLEAR = "unclear"
 
@@ -38,12 +50,22 @@ _AVAIL_RE = re.compile(
     re.I,
 )
 
+_PICKUP_RE = re.compile(
+    r"\b(pickup|pick up|pick-up|takeaway|take away|ਪਿਕਅੱਪ|ਪਿਕ ਅੱਪ)\b",
+    re.I,
+)
+
+_DELIVERY_RE = re.compile(
+    r"\b(delivery|deliver|home delivery|ਡਿਲਿਵਰੀ|ਘਰ.*ਡਿਲਿਵਰ)\b",
+    re.I,
+)
+
 _ADD_RE = re.compile(
     r"\b("
     r"add|order|want|need|get me|give me|i.?ll take|i want|"
-    r"i'd like|chahiye|chahida|chahidi|dedo|de do|lao|"
+    r"i'd like|chahiye|dedo|de do|lao|"
     r"order karo|order kar|add karo|add kar|"
-    r"ਚਾਹੀਦ|ਚਾਹੀਦਾ|ਚਾਹੀਦੀ|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ"
+    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ"
     r")\b",
     re.I,
 )
@@ -52,12 +74,24 @@ _DONE_RE = re.compile(
     r"\b("
     r"that.?s it|that.?s all|nothing else|no more|bas|bus|"
     r"done ordering|i.?m done|finish|"
-    r"ਬਸ|ਹੋ ਗਿਆ|ਔਰ ਨਹੀ|ਕੁਝ ਨਹੀ"
+    r"ਬਸ|ਹੋ ਗਿਆ|ਔਰ ਨਹੀ|ਕੁਝ ਨਹੀ|ਨਹੀਂ.*ਬਸ"
     r")\b",
     re.I,
 )
 
-_YES_RE = re.compile(r"^(yes|yeah|yep|yup|haan|han|ha ji|ji|correct|right|ok|okay|ਠੀਕ|ਹਾਂ)\.?$", re.I)
+_YES_RE = re.compile(
+    r"^(yes|yeah|yep|yup|haan|han|ha ji|ji|correct|right|ok|okay|ਠੀਕ|ਹਾਂ)(?:\s+ji)?\.?$",
+    re.I,
+)
+
+_NO_RE = re.compile(
+    r"\b("
+    r"^no\.?$|nope|nah|nothing|none|"
+    r"nahi|nahin|na|"
+    r"ਨਹੀਂ|ਨਹੀ|ਕੋਈ.*ਨਹੀਂ|ਕੁਝ ਨਹੀ"
+    r")\b",
+    re.I,
+)
 
 _HUMAN_RE = re.compile(
     r"\b("
@@ -73,6 +107,19 @@ _GREETING_RE = re.compile(
     re.I,
 )
 
+_QTY_WORDS = {
+    1: "one",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+}
+
 
 def detect_intent(text: str) -> UserIntent:
     t = (text or "").strip()
@@ -86,6 +133,14 @@ def detect_intent(text: str) -> UserIntent:
         return UserIntent.ORDER_DONE
     if _YES_RE.match(t):
         return UserIntent.CONFIRM_YES
+    if _PICKUP_RE.search(t) and not _DELIVERY_RE.search(t):
+        return UserIntent.PICKUP
+    if _DELIVERY_RE.search(t):
+        return UserIntent.DELIVERY
+    if re.search(r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)", t):
+        return UserIntent.ADD_ITEM
+    if _NO_RE.search(t):
+        return UserIntent.CONFIRM_NO
     if _ADD_RE.search(t):
         return UserIntent.ADD_ITEM
     if _AVAIL_RE.search(t):
@@ -97,15 +152,79 @@ def is_add_intent(text: str) -> bool:
     return detect_intent(text) == UserIntent.ADD_ITEM
 
 
+def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
+    """Caller answered the allergies / special-instructions question."""
+    if intent in (UserIntent.CONFIRM_NO, UserIntent.PICKUP, UserIntent.DELIVERY):
+        return True
+    t = (text or "").lower()
+    if "allerg" in t or "ਐਲਰਜੀ" in text:
+        return True
+    if intent == UserIntent.CONFIRM_YES and ("instruction" in t or "special" in t):
+        return True
+    # Short no / bas after allergies prompt
+    if intent == UserIntent.CONFIRM_NO:
+        return True
+    if intent == UserIntent.GENERAL and _NO_RE.search(text):
+        return True
+    return False
+
+
 # ── Templates (B-7, B-5) ────────────────────────────────────────────────────
 
 
 def format_price_reply(price_dollars: float) -> str:
     """Single-line English price — no fluff."""
-    amount = int(round(price_dollars)) if abs(price_dollars - round(price_dollars)) < 0.05 else round(price_dollars, 2)
+    amount = (
+        int(round(price_dollars))
+        if abs(price_dollars - round(price_dollars)) < 0.05
+        else round(price_dollars, 2)
+    )
     if isinstance(amount, float):
         return f"That's about {amount:.2f} dollars ji."
     return f"That's about {amount} dollars ji."
+
+
+def _qty_word(n: int) -> str:
+    return _QTY_WORDS.get(n, str(n))
+
+
+def _format_dollars(amount: float) -> str:
+    if abs(amount - round(amount)) < 0.05:
+        return str(int(round(amount)))
+    return f"{amount:.2f}"
+
+
+def format_order_readback(cart: OrderCart) -> str:
+    """Exact spoken read-back line for final confirmation (Step E)."""
+    if cart.is_empty:
+        return ""
+
+    item_parts: list[str] = []
+    for item in cart.items:
+        qty = _qty_word(item.quantity)
+        name = item.voice_line or item.name
+        if item.note:
+            item_parts.append(f"{qty} {name} ({item.note})")
+        else:
+            item_parts.append(f"{qty} {name}")
+
+    if len(item_parts) == 1:
+        items_str = item_parts[0]
+    elif len(item_parts) == 2:
+        items_str = f"{item_parts[0]} and {item_parts[1]}"
+    else:
+        items_str = ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
+
+    order_type = cart.order_type or "pickup"
+    total = _format_dollars(cart.total)
+    name = cart.customer_name or ""
+
+    if name:
+        return (
+            f"Okay {name} ji — {items_str}, {order_type}, "
+            f"total about {total} dollars. {CONFIRM_CLOSE}"
+        )
+    return f"Okay — {items_str}, {order_type}, total about {total} dollars. {CONFIRM_CLOSE}"
 
 
 def spice_question_allowed(*, has_spice_modifier: bool) -> bool:
@@ -134,12 +253,10 @@ def sanitize_assistant_speech(text: str, *, allow_greeting: bool) -> str:
 
     out = text
     if _GREETING_RE.search(out):
-        # Replace greeting openers with recovery phrase
         out = _GREETING_RE.sub("", out).strip()
         if not out or len(out) < 8:
             out = recovery_phrase(is_phone=True)
 
-    # Common slips from logs
     replacements = {
         "ਸوری": "ਮਾਫ ਕਰਨਾ",
         "سوری": "ਮਾਫ ਕਰਨਾ",

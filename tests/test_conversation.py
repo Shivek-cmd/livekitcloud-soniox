@@ -1,8 +1,10 @@
 """Tests for conversation intent, templates, and order flow guidance."""
 
 from restaurant.conversation import (
+    ALLERGIES_QUESTION,
     UserIntent,
     detect_intent,
+    format_order_readback,
     format_price_reply,
     sanitize_assistant_speech,
 )
@@ -25,8 +27,14 @@ def test_detect_add_intent():
     assert detect_intent("ਮੈਨੂੰ ਇੱਕ ਮੈਂਗੋ ਕੁਲਫੀ ਚਾਹੀਦੀ") == UserIntent.ADD_ITEM
 
 
+def test_pickup_not_add_item():
+    assert detect_intent("ਚਾਹੀਦਾ pickup") == UserIntent.PICKUP
+    assert detect_intent("pick up please") == UserIntent.PICKUP
+
+
 def test_detect_order_done():
     assert detect_intent("that's it") == UserIntent.ORDER_DONE
+    assert detect_intent("ਨਹੀਂ ਨਹੀਂ, ਬਸ") == UserIntent.ORDER_DONE
 
 
 def test_format_price_reply():
@@ -34,11 +42,37 @@ def test_format_price_reply():
     assert format_price_reply(13.48) == "That's about 13.48 dollars ji."
 
 
+def test_format_order_readback():
+    cart = OrderCart()
+    cart.add_item(
+        {
+            "name": "Paneer Tikka",
+            "voice_line": "Paneer Tikka",
+            "price": 14.99,
+        },
+        1,
+        note="medium",
+    )
+    cart.add_item(
+        {"name": "Gulab Jamun", "voice_line": "ਗੁਲਾਬ ਜਾਮੁਨ", "price": 6.99},
+        2,
+    )
+    cart.order_type = "pickup"
+    cart.customer_name = "Shivek"
+    line = format_order_readback(cart)
+    assert "one Paneer Tikka (medium)" in line
+    assert "two ਗੁਲਾਬ ਜਾਮੁਨ" in line
+    assert "pickup" in line
+    assert "All good?" in line
+    assert " ik " not in f" {line.lower()} "
+    assert " do " not in f" {line.lower()} "
+
+
 def test_sanitize_removes_regreeting():
     raw = "ਸਤ ਸ੍ਰੀ ਅਕਾਲ! How can I help?"
     out = sanitize_assistant_speech(raw, allow_greeting=False)
     assert "ਸਤ ਸ੍ਰੀ ਅਕਾਲ" not in out
-    assert out  # still has recovery content
+    assert out
 
 
 def test_quantity_gate_on_availability():
@@ -54,24 +88,41 @@ def test_quantity_allowed_on_add():
     flow = OrderFlowController(is_phone=True)
     plan = flow.build_turn_plan("add one mango kulfi", UserIntent.ADD_ITEM, cart)
     assert plan.quantity_allowed is True
+    assert "How many" in plan.guidance
 
 
-def test_price_guidance_one_line():
+def test_order_done_uses_allergies_template():
     cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
     flow = OrderFlowController(is_phone=True)
-    flow.note_discussed_item("Mango Kulfi", 6.99)
-    plan = flow.build_turn_plan("how much", UserIntent.ASK_PRICE, cart)
-    assert "price line" in plan.guidance.lower()
-    assert "Do NOT ask quantity" in plan.guidance
+    plan = flow.build_turn_plan("that's all", UserIntent.ORDER_DONE, cart)
+    assert ALLERGIES_QUESTION in plan.guidance
+    assert "special instructions" in plan.guidance
 
 
-def test_phase_advances_after_items_done():
+def test_phase_advances_after_no_allergy():
     cart = OrderCart()
-    cart.add_item(
-        {"name": "Mango Kulfi", "voice_line": "Mango Kulfi", "price": 6.99, "available": True},
-        1,
-    )
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
     flow = OrderFlowController(is_phone=True)
     flow.mark_items_complete()
+    flow.mark_allergies_asked()
+    plan = flow.build_turn_plan("ਨਹੀਂ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ", UserIntent.CONFIRM_NO, cart)
+    assert flow.state.special_instructions_done is True
+    assert flow.state.phase == OrderPhase.ORDER_TYPE
+    assert "pickup or delivery" in plan.guidance.lower()
+
+
+def test_confirming_readback_template():
+    cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
+    cart.order_type = "pickup"
+    cart.customer_name = "Raj"
+    cart.customer_phone = "4165551234"
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_special_instructions_done()
     flow.sync_from_cart(cart)
-    assert flow.state.phase == OrderPhase.SPECIAL_INSTRUCTIONS
+    plan = flow.build_turn_plan("yes", UserIntent.CONFIRM_YES, cart)
+    assert flow.state.phase == OrderPhase.CONFIRMING
+    assert "SPOKEN READ-BACK" in plan.guidance or "say exactly" in plan.guidance.lower()
+    assert "All good?" in plan.guidance
