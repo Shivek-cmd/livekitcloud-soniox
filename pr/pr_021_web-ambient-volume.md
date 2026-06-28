@@ -3,6 +3,9 @@
 ## Branch
 `pr_021_web-ambient-volume`
 
+## Status
+⬜ **Open** — branch pushed; merge to `main` then deploy.
+
 ## What This PR Does
 Raises default web background ambient volume from `0.25` to **`0.6`** (`restaurant/ambient_audio.py`). Still overridable via `WEB_AMBIENT_VOLUME` in `.env`.
 

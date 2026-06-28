@@ -1,6 +1,6 @@
 # Web App Plan — "Order with Sierra" (production)
 
-> **Status:** Planning (no code yet). v1 — 2026-06-28. Key decisions **locked** (see §7).
+> **Status:** W1–W2 ✅ merged; W6 web prompt ✅; web ambient ✅ (PR 020, volume PR 021 open). **W3 next.** See `docs/HANDOFF.md`.
 > **Goal:** Turn the web app into a production-grade ordering experience where a customer
 > places a real order by *talking to Sierra* while *watching her (avatar)*, *seeing the live
 > menu*, and *watching their order build in real time*. Quality bar: it should feel like two

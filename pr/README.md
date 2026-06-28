@@ -22,18 +22,22 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 016 | `pr_016_order-flow-phrases` | Fixed phrases, phase advance, Bizbull branding | ⬜ **Open** |
 | 017 | `pr_017_echo-and-flow-hardening` | Echo filter + intent + read-back hardening | ⬜ **Open** (stacked on 016) |
 | 018 | `pr_018_customer-language` | Trilingual greeting + language detection + web parity | ⬜ **Open** (stacked on 017) |
-| 019 | `pr_019_speech-policy-mango-chole` | Mango drink English TTS + chole/bhature Gurmukhi | ⬜ **Open** |
-| 020 | `pr_020_web-background-ambient` | Web-only LiveKit background ambient audio | ✅ |
+| 019 | `pr_019_speech-policy-mango-chole` | Mango drink English TTS + chole/bhature Gurmukhi | ✅ GitHub #44 |
+| 020 | `pr_020_web-background-ambient` | Web-only LiveKit background ambient audio | ✅ GitHub #45 |
 | 021 | `pr_021_web-ambient-volume` | Raise default web ambient volume to 0.6 | ⬜ **Open** |
 
 ---
 
 ## Current session state (2026-06-29)
 
-**`main`** ends at PR **015** (`e341262`).
+**`main`** through PR **020** (`260f183` — merge PR #45).
 
-**Open work:** merge **016 → 017 → 018** → deploy VPS.
+**Merged this session:** PR **019** (speech TTS fixes), PR **020** (web ambient).
+
+**Open — merge next:**
+1. **021** — ambient volume 0.6 (quick deploy after merge)
+2. **016 → 017 → 018** — phone phrases, echo hardening, customer language
 
 **New AI session:** read **`docs/HANDOFF.md`** first.
 
-Branch `pr_018_customer-language` contains 016 + 017 + 018 commits.
+Branch `pr_018_customer-language` contains 016 + 017 + 018 commits (if still using stacked branch).

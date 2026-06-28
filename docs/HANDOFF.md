@@ -1,7 +1,7 @@
 # Sierra — Session Handoff (start here)
 
 > **Primary doc for new conversations.** Read this first, then drill into linked files.
-> Last updated: **2026-06-29** (PR 015 merged; PR 016–018 open on GitHub).
+> Last updated: **2026-06-29** (PR 019–020 merged on `main`; PR 021 open; PR 016–018 still open).
 > **VPS:** `89.117.18.192` — `/opt/livekit-sarvam/` — deploy **`main`** after PRs merge.
 
 ---
@@ -13,7 +13,7 @@
 | Channel | Number / URL | Status |
 |---------|--------------|--------|
 | **Phone (primary)** | `+15878175156` via Twilio → LiveKit Cloud SIP | Production testing |
-| **Web** | **`https://voice.bizbull.ai`** | W1–W2 live (Order with Sierra tab) |
+| **Web** | **`https://voice.bizbull.ai`** | W1–W2 live + **web ambient audio** (PR 020) |
 
 **Stack:** LiveKit Cloud + Soniox STT/TTS (`Maya`, `language=pa`) + GPT-4o-mini + Clover menu cache (61 items).
 
@@ -21,7 +21,7 @@
 
 **Deploy:** Owner runs `bash scripts/vps_deploy.sh` on VPS — do **not** run two `npm` builds in parallel (OOM risk).
 
-**Restaurant name:** **Bizbull Restaurant** everywhere (Gurmukhi: `ਬਿਜ਼ਬਲ ਰੈਸਟੋਰੈਂਟ`). Old "Punjab Da Dhaba" branding removed in PR 016.
+**Restaurant name:** **Bizbull Restaurant** everywhere (Gurmukhi: `ਬਿਜ਼ਬਲ ਰੈਸਟੋਰੈਂਟ`). Old "Punjab Da Dhaba" branding removed in PR 016 (when merged).
 
 ---
 
@@ -29,12 +29,20 @@
 
 | Branch | PR doc | Status | Notes |
 |--------|--------|--------|-------|
-| `main` | — | ✅ through **PR 015** | Last merge: `e341262` conversation layer |
+| `main` | — | ✅ through **PR 020** | Last merge: `260f183` web ambient audio |
 | `pr_016_order-flow-phrases` | `pr/pr_016_order-flow-phrases.md` | ⬜ **Open** | Phrases, phase fixes, Bizbull rename |
-| `pr_017_echo-and-flow-hardening` | `pr/pr_017_echo-and-flow-hardening.md` | ⬜ **Open** | Echo + intent + read-back |
-| `pr_018_customer-language` | `pr/pr_018_customer-language.md` | ⬜ **Open** | Greeting + language state + web parity |
+| `pr_017_echo-and-flow-hardening` | `pr/pr_017_echo-and-flow-hardening.md` | ⬜ **Open** | Echo + intent + read-back (stacked on 016) |
+| `pr_018_customer-language` | `pr/pr_018_customer-language.md` | ⬜ **Open** | Greeting + language state (stacked on 017) |
+| `pr_021_web-ambient-volume` | `pr/pr_021_web-ambient-volume.md` | ⬜ **Open** | Default ambient volume **0.25 → 0.6** |
 
-**To ship:** merge **016 → 017 → 018** → `bash scripts/vps_deploy.sh`.
+**Recently merged to `main`:**
+
+| PR | Topic | Merge |
+|----|-------|-------|
+| **019** | Mango Shake/Lassi English TTS; Chole/Bhatura Gurmukhi | GitHub PR #44 → `2bf30d2` |
+| **020** | Web-only `BackgroundAudioPlayer` ambient loop | GitHub PR #45 → `260f183` |
+
+**To ship next:** merge **016 → 017 → 018** (phone/language stack), then **021** (ambient volume) → `bash scripts/vps_deploy.sh`.
 
 PR workflow: **`pr/pr_rules.md`** — doc first, branch name = doc name, merge via GitHub.
 
@@ -48,10 +56,12 @@ PR workflow: **`pr/pr_rules.md`** — doc first, branch name = doc name, merge v
 - Twilio SIP inbound + `scripts/test_call.py` outbound
 - VPS deploy: `scripts/vps_deploy.sh` (pull main + menu sync + npm web build + restart)
 
-### Voice / speech (PR 006–007, 013) ✅
-- **`speech_policy.py`** — Gurmukhi `voice_line` default; English overrides for Fish Pakora, Chole Bhature Combo, tandoor items, **Mango Kulfi**, etc.
-- **`clover_voice_labels.json`** — 61 items with `voice_line`, `speech_mode`, aliases
+### Voice / speech (PR 006–007, 013, 019) ✅
+- **`speech_policy.py`** + **`clover_voice_labels.json`** — 61 items with `voice_line`, `speech_mode`, aliases
+- English TTS overrides: Fish Pakora, tandoor items, **Mango Kulfi**, **Mango Shake**, **Mango Lassi**, Paneer Tikka, etc.
+- Gurmukhi TTS: **ਛੋਲੇ**, **ਭਟੂਰਾ**, **ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ**, dal/saag/desserts, etc. (PR 019 fixed chole/bhature; removed wrong English override)
 - Prompt bans `1x/2x/3x`; word quantities
+- Rebuild labels: `scripts/rebuild_voice_labels.py` — tests in `tests/test_speech_policy.py`
 
 ### Clover menu (Phase 8a–8b) ✅
 - **`menu_cache_bizbull.json`** (61 items) + `USE_CLOVER_MENU=1`
@@ -73,19 +83,19 @@ Refactored from monolithic `agent.py` prompt into code-driven flow:
 | **`restaurant/prompts.py`** | Short phone + **W6 web** system prompts |
 | **`restaurant/conversation.py`** | Intent detection, fixed templates, speech guards |
 | **`restaurant/order_flow.py`** | Phase state machine + per-turn `[TURN GUIDANCE]` |
-| **`agent.py`** | Wires modules, phone echo hook, tools, web_sync |
+| **`agent.py`** | Entrypoint, tools, echo hook, turn guidance, web_sync, **web ambient** |
 | **`tests/test_conversation.py`** | Intent + flow unit tests |
 
-### PR 018 — Customer language + greeting (stacked on 017)
-- **Greeting:** `OPENING_GREETING` — trilingual hello (phone + web)
-- **`preferred_language`** — script detect (pa/hi/en) → injected every `[TURN GUIDANCE]`
-- **Web:** UI English ≠ reply language; localized "anything else?" / name ask
-- **Fixed order steps** still English only (allergies, read-back, etc.)
-Log grep: `USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY` (TURN_GUIDANCE includes `lang=pa|hi|en`).
+### Web ambient audio (PR 020, on `main`) ✅
+- **`restaurant/ambient_audio.py`** — LiveKit `BackgroundAudioPlayer`, **web only** (phone unchanged)
+- Loops `data/audio/restaurant_ambience.mp3` if present; else builtin `OFFICE_AMBIENCE`
+- Env: `WEB_AMBIENT_ENABLED`, `WEB_AMBIENT_VOLUME`, `WEB_AMBIENT_FADE_IN`, `WEB_AMBIENT_AUDIO_PATH`
+- PR 020 shipped at volume **0.25**; **PR 021** raises default to **0.6** (merge + deploy to hear louder loop)
+- Logs: `journalctl … | grep -i ambient`
 
 ---
 
-## Open PRs — phone fixes (NOT on `main` until merged)
+## Open PRs — phone + language (NOT on `main` until merged)
 
 ### PR 016 — Order flow phrases
 - Exact **allergies** line: `"Any allergies or special instructions?"`
@@ -105,19 +115,29 @@ Live-call regressions from sessions `AJ_au2zatxEoKfG`, `AJ_WdBBeaBJx2zN`, `AJ_rQ
 | Read-back **before** name/phone (`readback_confirmed` gate) | `order_flow.py` |
 | Auto-save pickup/delivery on intent | `agent.py` |
 
-**Tests:** `tests/test_phone_echo.py` + extended `test_conversation.py` (24 tests on PR 017 branch).
+**Tests:** `tests/test_phone_echo.py` + extended `test_conversation.py`.
+
+### PR 018 — Customer language + greeting (stacked on 017)
+- **Greeting:** `OPENING_GREETING` — trilingual hello (phone + web)
+- **`preferred_language`** — script detect (pa/hi/en) → injected every `[TURN GUIDANCE]`
+- **Web:** UI English ≠ reply language; localized "anything else?" / name ask
+- **Fixed order steps** still English only (allergies, read-back, etc.)
+
+**Ship order:** 016 → 017 → 018 → deploy → test phone + web language.
 
 ---
 
-## Known issues still open (after 016–017 merge)
+## Known issues still open
 
 | ID | Issue | Next PR |
 |----|--------|---------|
 | **B-2** | Menu search misses `sweet` / `mithai` / desserts category | TBD |
+| **B-11** | LLM says item "not on menu" without calling `check_menu_item` (paneer tikka, papad exist in cache) | Availability turn guidance in `order_flow.py` |
 | **B-5** | LLM sometimes read-backs in Punjabi (`ਇੱਕ`, rupees) not English template | Prompt tighten / post-process |
 | **B-8** | Long TTS lists get interrupted | Hard cap enforcement |
 | **B-9/B-10** | Cold LLM TTFT; tool double-hop on menu | Prompt/cache optimization |
-| **Echo (residual)** | Heavy echo on outbound India test calls — use inbound CA number for realistic test | Monitor after 017 deploy |
+| **Speech audit** | ~20 more `voice_line` items flagged (naan, biryani, combos…) — only 5 fixed in PR 019 | TBD PR after audit review |
+| **Echo (residual)** | Heavy echo on outbound India test calls — use inbound CA number | Monitor after 017 deploy |
 
 See **`docs/plan/10-voice-quality-tier-b.md`** for full backlog.
 
@@ -157,6 +177,7 @@ See **`docs/plan/11-web-order-with-sierra.md`**.
 | W4 | Avatar | ⬜ |
 | W5 | Hardening | ⬜ |
 | W6 | Web prompt variant | ✅ (PR 015 `prompts.py`) |
+| Ambient | Web background loop | ✅ PR 020 (+ volume PR 021) |
 
 ### Phase 8c–8f (Clover POS)
 
@@ -173,7 +194,9 @@ See **`docs/plan/11-web-order-with-sierra.md`**.
 
 | File | Role |
 |------|------|
-| `agent.py` | Entrypoint, tools, echo hook, turn guidance inject, web_sync |
+| `agent.py` | Entrypoint, tools, echo hook, turn guidance, web_sync, web ambient start/stop |
+| `restaurant/ambient_audio.py` | Web `BackgroundAudioPlayer` config (PR 020) |
+| `restaurant/clover/speech_policy.py` | Which items speak English vs Gurmukhi (PR 019) |
 | `restaurant/prompts.py` | Phone + web system prompts |
 | `restaurant/conversation.py` | Intents, templates, `is_confirm_yes()`, read-back format |
 | `restaurant/order_flow.py` | Phase machine, `[TURN GUIDANCE]` builder |
@@ -182,11 +205,12 @@ See **`docs/plan/11-web-order-with-sierra.md`**.
 | `restaurant/web_sync.py` | Web order.state + cart RPCs |
 | `restaurant/orders.py` | `OrderCart`, summaries |
 | `restaurant/menu_provider.py` | Menu tools + Clover cache |
-| `restaurant/menu.py` | Static fallback menu + `RESTAURANT_NAME` |
+| `data/clover_voice_labels.json` | Per-item `voice_line` / `speech_mode` (rebuild via script) |
+| `data/audio/` | Optional `restaurant_ambience.mp3` for web ambient |
 | `token_server.py` | `/token`, `/menu`, `/health` |
-| `web/src/` | React Order with Sierra UI |
+| `web/src/` | React Order with Sierra UI (`RoomAudioRenderer` plays agent + ambient tracks) |
 | `scripts/vps_deploy.sh` | Production deploy |
-| `scripts/test_call.py` | Outbound Twilio test (India = extra echo/latency) |
+| `scripts/rebuild_voice_labels.py` | Re-apply speech policy to voice labels JSON |
 
 ---
 
@@ -203,8 +227,8 @@ bash /opt/livekit-sarvam/scripts/vps_deploy.sh
 cd /opt/livekit-sarvam
 PYTHONPATH=/opt/livekit-sarvam uv run python scripts/test_call.py +919413752688
 
-# Watch conversation
-journalctl -u restaurant-agent -f | grep -E 'USER:|SIERRA:|TURN_GUIDANCE|Ignoring|Session started|ORDER_PLACED|LATENCY'
+# Watch conversation + ambient
+journalctl -u restaurant-agent -f | grep -E 'USER:|SIERRA:|TURN_GUIDANCE|ambient|Ignoring|Session started|ORDER_PLACED|LATENCY'
 
 # Health
 systemctl is-active restaurant-agent restaurant-token caddy
@@ -219,6 +243,10 @@ curl -s https://voice.bizbull.ai/health
 | `PHONE_ENDPOINTING_MAX` | 0.8 | Turn end delay |
 | `PHONE_GREETING_SETTLE_SEC` | 2.0 | Pause after greeting (phone) |
 | `PHONE_AEC_WARMUP_SEC` | 1.0 | AEC warmup (phone) |
+| `WEB_AMBIENT_ENABLED` | 1 | Web background loop on/off |
+| `WEB_AMBIENT_VOLUME` | 0.6 (after PR 021) | Ambient loudness 0.0–1.0 |
+| `WEB_AMBIENT_FADE_IN` | 1.0 | Fade-in seconds |
+| `WEB_AMBIENT_AUDIO_PATH` | (optional) | Custom mp3/wav path |
 
 Restart after `.env` change: `systemctl restart restaurant-agent`.
 
@@ -228,12 +256,13 @@ Restart after `.env` change: `systemctl restart restaurant-agent`.
 
 | PR | Topic | Merged |
 |----|-------|--------|
-| 013 | Web shared latency + Mango Kulfi TTS | ✅ |
-| 014 | Handoff docs sync | ✅ |
-| 015 | Conversation layer + W6 web prompt | ✅ `e341262` |
+| 015 | Conversation layer + W6 web prompt | ✅ |
 | 016 | Order flow phrases + Bizbull branding | ⬜ Open |
-| 017 | Echo filter + intent/flow hardening | ⬜ Open (stacked on 016) |
-| 018 | Trilingual greeting + customer language | ⬜ Open (stacked on 017) |
+| 017 | Echo filter + intent/flow hardening | ⬜ Open |
+| 018 | Trilingual greeting + customer language | ⬜ Open |
+| **019** | Mango drink English + chole/bhature Gurmukhi TTS | ✅ `2bf30d2` |
+| **020** | Web-only background ambient audio | ✅ `260f183` |
+| **021** | Ambient default volume 0.6 | ⬜ Open |
 
 Full index: **`pr/README.md`**.
 
@@ -252,10 +281,13 @@ Full index: **`pr/README.md`**.
 
 ## Recommended next session priorities
 
-1. **Merge PR 016 + 017 + 018** → deploy VPS → test phone + web language
-2. **Tier B-2** — menu search aliases (`sweet`, `mithai`, `dessert`)
-3. **Web W3** — menu highlight, modifier picker
-4. **Phase 8c** — Clover order submit from `place_order()`
+1. **Merge PR 021** → deploy → confirm web ambient at volume 0.6
+2. **Merge PR 016 + 017 + 018** → deploy → test phone + web language
+3. **B-11** — force `check_menu_item` on availability turns (paneer tikka false negative)
+4. **Tier B-2** — menu search aliases (`sweet`, `mithai`, `dessert`)
+5. **Speech audit** — remaining English/Gurmukhi `voice_line` fixes (see session notes in tier B doc)
+6. **Web W3** — menu highlight, modifier picker
+7. **Phase 8c** — Clover order submit from `place_order()`
 
 ---
 
@@ -264,10 +296,13 @@ Full index: **`pr/README.md`**.
 | Doc | When to read |
 |-----|--------------|
 | **This file** | Every new conversation |
+| `pr/README.md` | Full PR index + merge status |
 | `pr/pr_016_order-flow-phrases.md` | Phrase/phase fixes (open) |
-| `pr/pr_018_customer-language.md` | Greeting + language (open) |
+| `pr/pr_019_speech-policy-mango-chole.md` | Mango/chole TTS (merged) |
+| `pr/pr_020_web-background-ambient.md` | Web ambient (merged) |
+| `pr/pr_021_web-ambient-volume.md` | Ambient volume (open) |
 | `docs/plan/10-voice-quality-tier-b.md` | Voice bug backlog + status |
 | `docs/plan/11-web-order-with-sierra.md` | Web W3–W6 |
 | `docs/plan/09-clover-pos.md` | Clover 8c+ |
-| `docs/vps-config.md` | VPS, Caddy, SIP |
+| `docs/vps-config.md` | VPS, Caddy, SIP, ambient env |
 | `pr/pr_rules.md` | How to open PRs |

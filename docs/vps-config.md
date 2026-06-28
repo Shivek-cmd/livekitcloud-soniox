@@ -75,9 +75,11 @@ Restart after change: `systemctl restart restaurant-agent`.
 
 Quiet background loop on web calls via LiveKit `BackgroundAudioPlayer`. **Phone is never affected.**
 
+Default volume on `main` (PR 020): **0.25**. **PR 021** raises code default to **0.6** — merge + deploy, or set in `.env` now:
+
 ```
 WEB_AMBIENT_ENABLED=1
-WEB_AMBIENT_VOLUME=0.6
+WEB_AMBIENT_VOLUME=0.6          # 0.25 on main until PR 021; override anytime
 WEB_AMBIENT_FADE_IN=1.0
 # WEB_AMBIENT_AUDIO_PATH=/opt/livekit-sarvam/data/audio/restaurant_ambience.mp3
 # WEB_AMBIENT_THINKING=0
