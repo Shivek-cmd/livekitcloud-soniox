@@ -29,6 +29,9 @@ class OrderCart:
     customer_phone: Optional[str] = None
     delivery_address: Optional[str] = None
     delivery_charge: float = DELIVERY_CHARGE
+    placed: bool = False
+    order_id: Optional[str] = None
+    eta: Optional[str] = None
 
     @property
     def is_empty(self) -> bool:
@@ -71,6 +74,70 @@ class OrderCart:
                 removed = self.items.pop(i)
                 return f"Removed {removed.name} from order."
         return f"'{name}' not found in your order."
+
+    def set_quantity_by_id(self, clover_item_id: str, quantity: int) -> bool:
+        """Set quantity for a cart line identified by Clover id. qty<=0 removes it."""
+        for i, item in enumerate(self.items):
+            if item.clover_item_id == clover_item_id:
+                if quantity <= 0:
+                    self.items.pop(i)
+                else:
+                    item.quantity = quantity
+                return True
+        return False
+
+    def remove_by_id(self, clover_item_id: str) -> bool:
+        for i, item in enumerate(self.items):
+            if item.clover_item_id == clover_item_id:
+                self.items.pop(i)
+                return True
+        return False
+
+    def mark_placed(self, order_id: str | None = None, eta: str | None = None) -> None:
+        self.placed = True
+        self.order_id = order_id
+        self.eta = eta
+
+    def status(self) -> str:
+        if self.placed:
+            return "placed"
+        if self.is_empty:
+            return "empty"
+        if not self.order_type:
+            return "building"
+        if self.order_type == "delivery" and not self.delivery_address:
+            return "awaiting_contact"
+        if not (self.customer_name and self.customer_phone):
+            return "awaiting_contact"
+        return "confirming"
+
+    def to_state_dict(self) -> dict:
+        """JSON-serializable order state pushed to the web UI (see plan §4)."""
+        return {
+            "v": 1,
+            "status": self.status(),
+            "items": [
+                {
+                    "id": i.clover_item_id,
+                    "name": i.name,
+                    "voice_line": i.voice_line,
+                    "qty": i.quantity,
+                    "unit_price": round(i.price, 2),
+                    "line_total": round(i.price * i.quantity, 2),
+                    "note": i.note,
+                    "modifiers": [i.note] if i.note else [],
+                }
+                for i in self.items
+            ],
+            "order_type": self.order_type,
+            "delivery_address": self.delivery_address,
+            "customer": {"name": self.customer_name, "phone": self.customer_phone},
+            "subtotal": round(self.subtotal, 2),
+            "delivery_charge": round(self.delivery_charge, 2) if self.order_type == "delivery" else 0,
+            "total": round(self.total, 2),
+            "eta": self.eta,
+            "order_id": self.order_id,
+        }
 
     def summary(self) -> str:
         if self.is_empty:

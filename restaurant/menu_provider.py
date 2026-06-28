@@ -58,6 +58,30 @@ def find_item(name: str) -> dict | None:
     return item
 
 
+def find_item_by_id(clover_item_id: str) -> dict | None:
+    """Look up a menu item by its Clover id (used by web tap-to-add)."""
+    cache = _get_cache()
+    if not cache:
+        return None
+    hit = cache.get_by_id(clover_item_id)
+    if not hit:
+        return None
+    if not hit.available:
+        return {**hit.to_cart_dict(), "unavailable": True}
+    return hit.to_cart_dict()
+
+
+def required_modifier_groups(clover_item_id: str) -> list[str]:
+    """Names of required (min_required>0) modifier groups for an item, e.g. ['Choose Curry']."""
+    cache = _get_cache()
+    if not cache:
+        return []
+    hit = cache.get_by_id(clover_item_id)
+    if not hit:
+        return []
+    return [g.name for g in hit.modifier_groups if g.min_required and g.min_required > 0]
+
+
 def check_item(name: str) -> str:
     cache = _get_cache()
     if cache:
