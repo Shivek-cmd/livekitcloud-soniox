@@ -5,7 +5,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from restaurant.conversation import UserIntent, format_price_reply, is_add_intent
+from restaurant.conversation import (
+    ALLERGIES_QUESTION,
+    CONFIRM_CLOSE,
+    PICKUP_DELIVERY_QUESTION,
+    QUANTITY_QUESTION,
+    UserIntent,
+    format_order_readback,
+    format_price_reply,
+    is_add_intent,
+    is_allergies_step_answer,
+)
 from restaurant import menu_provider
 from restaurant.orders import OrderCart
 
@@ -28,9 +38,10 @@ class OrderFlowState:
     phase: OrderPhase = OrderPhase.BROWSING
     items_complete: bool = False
     special_instructions_done: bool = False
+    allergies_asked: bool = False
     last_discussed_item: str | None = None
     last_discussed_price: float | None = None
-    quantity_allowed: bool = False  # B-4 gate
+    quantity_allowed: bool = False
 
 
 @dataclass
@@ -85,9 +96,27 @@ class OrderFlowController:
     def mark_special_instructions_done(self) -> None:
         self.state.special_instructions_done = True
 
+    def mark_allergies_asked(self) -> None:
+        self.state.allergies_asked = True
+
     def on_item_added(self) -> None:
         self.state.quantity_allowed = False
         self.state.phase = OrderPhase.AWAITING_MORE
+
+    def _advance_from_user_turn(
+        self,
+        user_text: str,
+        intent: UserIntent,
+        cart: OrderCart,
+    ) -> None:
+        if intent == UserIntent.ORDER_DONE and not cart.is_empty:
+            self.mark_items_complete()
+
+        if self.state.phase == OrderPhase.SPECIAL_INSTRUCTIONS:
+            if self.state.allergies_asked and is_allergies_step_answer(user_text, intent):
+                self.mark_special_instructions_done()
+            elif intent == UserIntent.CONFIRM_NO:
+                self.mark_special_instructions_done()
 
     def build_turn_plan(
         self,
@@ -95,15 +124,14 @@ class OrderFlowController:
         intent: UserIntent,
         cart: OrderCart,
     ) -> TurnPlan:
+        self._advance_from_user_turn(user_text, intent, cart)
         self.sync_from_cart(cart)
 
-        # B-4: quantity gate from caller intent
         if is_add_intent(user_text) or intent == UserIntent.ADD_ITEM:
             self.state.quantity_allowed = True
 
         lines: list[str] = [f"[TURN GUIDANCE] phase={self.state.phase.value} intent={intent.value}"]
 
-        # Intent-specific rules (B-3)
         if intent == UserIntent.ASK_PRICE:
             lines.extend(self._price_guidance(user_text))
         elif intent == UserIntent.ASK_AVAILABILITY:
@@ -116,24 +144,36 @@ class OrderFlowController:
             self.state.quantity_allowed = True
         elif intent == UserIntent.ORDER_DONE:
             if not cart.is_empty:
-                self.state.items_complete = True
+                self.mark_items_complete()
+                self.sync_from_cart(cart)
                 lines.append(
-                    'Customer is done adding items. Ask ONCE: "Any allergies or special instructions?" '
-                    "then proceed to pickup/delivery."
+                    f'SAY EXACTLY: "{ALLERGIES_QUESTION}" '
+                    "(English — do not translate special instructions into Punjabi)."
                 )
+                self.mark_allergies_asked()
+        elif intent == UserIntent.PICKUP:
+            lines.append('Customer chose pickup. Call set_order_type("pickup") then ask for name.')
+        elif intent == UserIntent.DELIVERY:
+            lines.append('Customer chose delivery. Call set_order_type("delivery") then ask for address.')
         elif intent == UserIntent.HUMAN:
             lines.append("Call transfer_to_human immediately after one short line.")
+        elif intent == UserIntent.CONFIRM_YES and self.state.phase == OrderPhase.CONFIRMING:
+            lines.append("Customer confirmed. Call place_order() now.")
 
-        # Phase nudges when not overridden by intent
-        lines.extend(self._phase_guidance(cart))
+        lines.extend(self._phase_guidance(cart, intent))
 
-        # B-4 quantity gate
-        if not self.state.quantity_allowed:
+        if self.state.quantity_allowed:
+            lines.append(
+                f'If asking quantity, SAY: "{QUANTITY_QUESTION}" '
+                "(English number words one/two/three only — never ik/do or invented Punjabi)."
+            )
+        else:
             lines.append(
                 "Do NOT ask how many / ਕਿੰਨਾ until customer clearly wants to add or order the item."
             )
 
         lines.append("Reply in ONE short sentence. ONE question only.")
+        lines.append("Never ask permission to read the order — just read it when at confirming step.")
 
         return TurnPlan(
             guidance="\n".join(lines),
@@ -168,14 +208,25 @@ class OrderFlowController:
             "Do NOT mention price unless they asked.",
         ]
 
-    def _phase_guidance(self, cart: OrderCart) -> list[str]:
+    def _phase_guidance(self, cart: OrderCart, intent: UserIntent) -> list[str]:
         p = self.state.phase
         if p == OrderPhase.AWAITING_MORE:
             return ['After confirming an add, ask: "Anything else?"']
         if p == OrderPhase.SPECIAL_INSTRUCTIONS:
-            return ['Ask: "Any allergies or special instructions for anything?"']
+            if not self.state.allergies_asked:
+                return [
+                    f'SAY EXACTLY: "{ALLERGIES_QUESTION}" '
+                    "(keep special instructions in English)."
+                ]
+            return [
+                f'If not asked yet, SAY EXACTLY: "{ALLERGIES_QUESTION}"',
+            ]
         if p == OrderPhase.ORDER_TYPE:
-            return ['Ask: "Pickup or delivery?" then call set_order_type.']
+            return [
+                f'SAY EXACTLY: "{PICKUP_DELIVERY_QUESTION}"',
+                'Then call set_order_type("pickup") or set_order_type("delivery").',
+                "Do NOT read order total or confirm yet — pickup/delivery comes first.",
+            ]
         if p == OrderPhase.DELIVERY_ADDRESS:
             return ["Ask for full delivery address, then call set_delivery_address."]
         if p == OrderPhase.CUSTOMER_NAME:
@@ -183,12 +234,17 @@ class OrderFlowController:
         if p == OrderPhase.CUSTOMER_PHONE:
             return [
                 "Ask for phone number. Read back digits in ENGLISH. "
-                "Call set_customer_info only after name AND phone confirmed."
+                "Call set_customer_info only after name AND phone confirmed.",
             ]
         if p == OrderPhase.CONFIRMING:
+            readback = format_order_readback(cart)
             return [
-                "Call get_order_summary(), read back with voice_line names, "
-                "then total. Ask 'All good?' Once yes → place_order()."
+                "FINAL CONFIRMATION — call get_order_summary() first.",
+                "Do NOT ask if you may read the order — read it now.",
+                f'SAY EXACTLY (adjust name if needed): "{readback}"',
+                f'Close with "{CONFIRM_CLOSE}" — never "ਕਿਉਂਕਿ" or permission questions.',
+                "Do NOT use Roman ik/do — English one/two only.",
+                "After yes → place_order().",
             ]
         if p == OrderPhase.COLLECTING_ITEMS and cart.is_empty:
             return ["Help customer browse or add first item — use menu tools."]
