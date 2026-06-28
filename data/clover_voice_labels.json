@@ -6705,8 +6705,8 @@
       "veg": true,
       "category_key": "desserts",
       "price_cents": 549,
-      "voice_line": "ਅੰਬ ਕੁਲਫੀ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Mango Kulfi",
+      "speech_mode": "english"
     },
     {
       "key": "raita",

@@ -33,6 +33,7 @@ ENGLISH_VOICE_KEYS: frozenset[str] = frozenset(
         "tandoori_chicken_half",
         "tandoori_chicken_full",
         "paneer_tikka",
+        "kulfi",
     }
 )
 
@@ -43,6 +44,7 @@ VOICE_LINE_OVERRIDES: dict[str, str] = {
     "chole_bhature_combo": "Chole Bhature Combo",
     "chole": "Chole",
     "bhatura_single": "Bhatura",
+    "kulfi": "Mango Kulfi",
 }
 
 
