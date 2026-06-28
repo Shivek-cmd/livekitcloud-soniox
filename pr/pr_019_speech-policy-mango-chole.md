@@ -3,6 +3,9 @@
 ## Branch
 `pr_019_speech-policy-mango-chole`
 
+## Status
+✅ **Merged** — GitHub PR #44 → `main` at `2bf30d2` (2026-06-29).
+
 ## What This PR Does
 
 Fixes five menu item TTS pronunciations in `speech_policy.py` and regenerates `data/clover_voice_labels.json`:
@@ -14,6 +17,9 @@ Fixes five menu item TTS pronunciations in `speech_policy.py` and regenerates `d
 | Chole | English `Chole` | Gurmukhi **ਛੋਲੇ** |
 | Bhatura (single) | English `Bhatura` | Gurmukhi **ਭਟੂਰਾ** |
 | Chole Bhature Combo | English `Chole Bhature Combo` | Gurmukhi **ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ** |
+
+### `tests/test_speech_policy.py`
+- Unit tests for the five voice_line changes.
 
 ## Files Modified
 
