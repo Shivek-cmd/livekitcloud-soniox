@@ -6608,7 +6608,7 @@
       "key": "soft_drink",
       "clover_item_id": "TWGHW8EG2FDFE",
       "clover_name": "Soft Drink (can)",
-      "speak_as": "ਸੋਫਟ ਪੀਅ",
+      "speak_as": "ਸਾਫਟ ਡਰਿੰਕ",
       "aliases": [
         "soft drink",
         "pop",
@@ -6617,7 +6617,7 @@
       "veg": true,
       "category_key": "drinks",
       "price_cents": 249,
-      "voice_line": "ਸੋਫਟ ਪੀਅ",
+      "voice_line": "ਸਾਫਟ ਡਰਿੰਕ",
       "speech_mode": "gurmukhi"
     },
     {

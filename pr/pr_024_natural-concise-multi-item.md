@@ -10,6 +10,11 @@ Fixes two live-call issues when a caller says e.g. *"add one rasmalai and one kh
 1. **Human confirmations** — Sierra confirms like a cashier (*"Yes — one Rasmalai and one Kheer. Anything else?"*), not *"I can add… six ninety-nine… two pieces… what is the second item?"*
 2. **Multi-item same turn** — parses `"one X and one Y"`, adds both items in code when safe (no required modifiers), speaks once.
 
+Also in this PR:
+
+3. **Web ambient quieter** — default `WEB_AMBIENT_VOLUME` `0.4` → **`0.2`** (phone stays `0.4`).
+4. **Soft drink TTS** — `speak_as` / `voice_line` `ਸੋਫਟ ਪੀਅ` → **`ਸਾਫਟ ਡਰਿੰਕ`**.
+
 ## Files Added
 
 ### `restaurant/order_parse.py`
@@ -40,6 +45,15 @@ Unit tests for multi-item parsing and confirmation templates.
 
 ### `restaurant/conversation.py` (`sanitize_assistant_speech`)
 - Strip mid-call "I can add" / "added to cart" slips
+
+### `restaurant/ambient_audio.py`
+- Web default volume `0.4` → `0.2`
+
+### `docs/vps-config.md`
+- Document `WEB_AMBIENT_VOLUME=0.2`
+
+### `restaurant/clover/seed_menu.py` + `data/clover_voice_labels.json`
+- Soft drink Gurmukhi label: `ਸਾਫਟ ਡਰਿੰਕ`
 
 ## What's NOT in This PR
 - 4+ item complex orders with per-item modifiers

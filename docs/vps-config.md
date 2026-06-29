@@ -77,7 +77,7 @@ Quiet background loop via LiveKit `BackgroundAudioPlayer`. Same `restaurant_ambi
 
 ```
 WEB_AMBIENT_ENABLED=1
-WEB_AMBIENT_VOLUME=0.4
+WEB_AMBIENT_VOLUME=0.2
 WEB_AMBIENT_FADE_IN=1.0
 
 PHONE_AMBIENT_ENABLED=1

@@ -10,7 +10,7 @@ from livekit.agents import AudioConfig, BackgroundAudioPlayer, BuiltinAudioClip
 
 logger = logging.getLogger("ambient-audio")
 
-_DEFAULT_WEB_VOLUME = 0.4
+_DEFAULT_WEB_VOLUME = 0.2
 _DEFAULT_PHONE_VOLUME = 0.4
 _DEFAULT_FADE_IN = 1.0
 _REPO_ROOT = Path(__file__).resolve().parents[1]
