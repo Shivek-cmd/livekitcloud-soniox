@@ -4,7 +4,7 @@
 `pr_022_phone-ambient-audio`
 
 ## Status
-⬜ **Open** — doc first; implement on this branch.
+⬜ **Open** — implemented on branch; merge to `main` then deploy and test.
 
 ## What This PR Does
 
@@ -57,13 +57,12 @@ Shared optional override: `AMBIENT_AUDIO_PATH` (fallback: existing `WEB_AMBIENT_
 - Document `PHONE_AMBIENT_*` env vars.
 - Update web volume example to `0.5`.
 
-## Files Modified (when implemented)
+## Files Modified
 
-- `restaurant/ambient_audio.py`
-- `agent.py`
-- `tests/test_ambient_audio.py`
-- `docs/vps-config.md`
-- `pr/README.md`
+- `restaurant/ambient_audio.py` — shared `build_ambient_player(is_phone=…)`; web vol **0.5**, phone vol **0.35**; `PHONE_AMBIENT_*` env
+- `agent.py` — start/stop ambient on web **and** phone
+- `tests/test_ambient_audio.py` — phone toggle + channel tests
+- `docs/vps-config.md` — phone env vars + volume 0.5
 
 ## What's NOT in This PR
 
