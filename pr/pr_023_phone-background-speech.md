@@ -91,3 +91,7 @@ If audio breaks: `PHONE_BVC_ENABLED=0` + `PHONE_BACKGROUND_FILTER_ENABLED=0` →
 - [ ] Background "thank you" / "mm hmm" not acted on as order
 - [ ] After 3 dropped noise turns → one repeat prompt max
 - [ ] Web call still works (BVC for WebRTC if enabled)
+
+## Follow-up (same branch)
+
+- Shared phone + web endpointing default **`PHONE_ENDPOINTING_MAX=0.5`**, **`PHONE_ENDPOINTING_MIN=0.2`** (was 0.8s phone / 2.0s web).

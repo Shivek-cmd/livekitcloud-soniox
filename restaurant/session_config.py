@@ -51,17 +51,21 @@ def phone_background_filter_enabled() -> bool:
     return _env_bool("PHONE_BACKGROUND_FILTER_ENABLED", True)
 
 
+def _endpointing_delays() -> tuple[float, float]:
+    """Shared phone + web silence window before Sierra replies (env-tunable)."""
+    min_delay = _env_float("PHONE_ENDPOINTING_MIN", 0.2)
+    max_delay = _env_float("PHONE_ENDPOINTING_MAX", 0.5)
+    return min_delay, max_delay
+
+
 def _turn_handling(*, is_phone: bool) -> TurnHandlingOptions:
+    endpointing_min, endpointing_max = _endpointing_delays()
     if is_phone:
         min_words = int(_env_float("PHONE_INTERRUPTION_MIN_WORDS", 2))
         min_duration = _env_float("PHONE_INTERRUPTION_MIN_DURATION", 0.55)
-        endpointing_max = _env_float("PHONE_ENDPOINTING_MAX", 0.8)
-        endpointing_min = _env_float("PHONE_ENDPOINTING_MIN", 0.2)
     else:
         min_words = 1
         min_duration = 0.4
-        endpointing_max = 2.0
-        endpointing_min = 0.25
 
     return TurnHandlingOptions(
         turn_detection=inference.TurnDetector(version="v1-mini"),
