@@ -4870,7 +4870,7 @@
       "key": "chole_bhature_combo",
       "clover_item_id": "DFFP3Z9HWEHS2",
       "clover_name": "Chole Bhature Combo",
-      "speak_as": "ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ",
+      "speak_as": "ਛੋਲੇ ਭਟੂਰੇ ਕੌਂਬੋ",
       "aliases": [
         "chole bhature combo",
         "chole bhature",
@@ -5050,7 +5050,7 @@
           ]
         }
       ],
-      "voice_line": "ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ",
+      "voice_line": "ਛੋਲੇ ਭਟੂਰੇ ਕੌਂਬੋ",
       "speech_mode": "gurmukhi"
     },
     {
@@ -5340,7 +5340,7 @@
       "key": "nonveg_lunch_combo",
       "clover_item_id": "4Y4QHVNT43HM8",
       "clover_name": "Non-Veg Lunch Combo",
-      "speak_as": "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੰਬੋ",
+      "speak_as": "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੌਂਬੋ",
       "aliases": [
         "non veg lunch",
         "lunch combo"
@@ -5544,14 +5544,14 @@
           ]
         }
       ],
-      "voice_line": "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੰਬੋ",
+      "voice_line": "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੌਂਬੋ",
       "speech_mode": "gurmukhi"
     },
     {
       "key": "student_combo",
       "clover_item_id": "D9NJ6Z2QMCCP0",
       "clover_name": "Student Combo",
-      "speak_as": "ਸਟੂਡੈਂਟ ਕੰਬੋ",
+      "speak_as": "ਸਟੂਡੈਂਟ ਕੌਂਬੋ",
       "aliases": [
         "student combo",
         "cheap combo"
@@ -5753,14 +5753,14 @@
           ]
         }
       ],
-      "voice_line": "ਸਟੂਡੈਂਟ ਕੰਬੋ",
+      "voice_line": "ਸਟੂਡੈਂਟ ਕੌਂਬੋ",
       "speech_mode": "gurmukhi"
     },
     {
       "key": "couple_combo",
       "clover_item_id": "ZBEDKEPRP4MYG",
       "clover_name": "Couple Combo (for 2)",
-      "speak_as": "ਕਪਲ ਕੰਬੋ",
+      "speak_as": "ਕਪਲ ਕੌਂਬੋ",
       "aliases": [
         "couple combo",
         "combo for two"
@@ -6037,7 +6037,7 @@
           ]
         }
       ],
-      "voice_line": "ਕਪਲ ਕੰਬੋ",
+      "voice_line": "ਕਪਲ ਕੌਂਬੋ",
       "speech_mode": "gurmukhi"
     },
     {

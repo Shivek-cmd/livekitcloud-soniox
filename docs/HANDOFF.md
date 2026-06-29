@@ -59,7 +59,7 @@ PR workflow: **`pr/pr_rules.md`** — doc first, branch name = doc name, merge v
 ### Voice / speech (PR 006–007, 013, 019) ✅
 - **`speech_policy.py`** + **`clover_voice_labels.json`** — 61 items with `voice_line`, `speech_mode`, aliases
 - English TTS overrides: Fish Pakora, tandoor items, **Mango Kulfi**, **Mango Shake**, **Mango Lassi**, Paneer Tikka, etc.
-- Gurmukhi TTS: **ਛੋਲੇ**, **ਭਟੂਰਾ**, **ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ**, dal/saag/desserts, etc. (PR 019 fixed chole/bhature; removed wrong English override)
+- Gurmukhi TTS: **ਛੋਲੇ**, **ਭਟੂਰਾ**, **ਛੋਲੇ ਭਟੂਰੇ ਕੌਂਬੋ**, dal/saag/desserts, etc. (PR 019 fixed chole/bhature; removed wrong English override)
 - Prompt bans `1x/2x/3x`; word quantities
 - Rebuild labels: `scripts/rebuild_voice_labels.py` — tests in `tests/test_speech_policy.py`
 
