@@ -49,7 +49,7 @@ TWILIO_AUTH_TOKEN=<twilio token>
 
 ### Voice stack
 Soniox `stt-rt-v5` (STT) + OpenAI `gpt-4o-mini` (LLM) + Soniox `tts-rt-v1` voice `Maya` (TTS).
-Built in `restaurant/voice_stack.py`. **Shared** phone/web turn tuning in `restaurant/session_config.py` (PR 013 — both channels use 0.8s max endpointing).
+Built in `restaurant/voice_stack.py`. **Shared** phone/web endpointing in `restaurant/session_config.py` — both channels default **0.2–0.5s** max wait after caller stops speaking.
 All US/EU/JP-hosted (low latency for Canada callers).
 
 **Production commit (2026-06-28):** `0666017` — web W2 + shared latency + Mango Kulfi TTS fix.
@@ -60,13 +60,13 @@ Add to `/opt/livekit-sarvam/.env` to override without code deploy:
 
 ```
 USE_CLOVER_MENU=1
-PHONE_ENDPOINTING_MAX=0.8
-PHONE_ENDPOINTING_MIN=0.2
+PHONE_ENDPOINTING_MAX=0.5          # phone + web — lower = faster reply, may cut off pauses
+PHONE_ENDPOINTING_MIN=0.2          # phone + web
 PHONE_PREEMPTIVE_GENERATION=true
 PHONE_PREEMPTIVE_TTS=true
 PHONE_GREETING_SETTLE_SEC=2.0
 PHONE_AEC_WARMUP_SEC=1.0
-PHONE_INTERRUPTION_MIN_WORDS=1
+PHONE_INTERRUPTION_MIN_WORDS=2     # phone only
 ```
 
 Restart after change: `systemctl restart restaurant-agent`.

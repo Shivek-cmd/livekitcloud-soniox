@@ -31,8 +31,8 @@ Punjabi. The old India-hosted provider was **fully removed** from code, docs, an
 
 | Task | Status |
 |---|---|
-| **Tier A — phone latency** (TurnDetector, preemptive TTS, 0.8s endpointing) | ✅ PR 008 — see `docs/HANDOFF.md` |
-| **Web shared latency** (same 0.8s endpointing as phone) | ✅ PR 013 |
+| **Tier A — phone latency** (TurnDetector, preemptive TTS, 0.5s endpointing) | ✅ PR 008 + PR 023 follow-up — see `docs/HANDOFF.md` |
+| **Web shared latency** (same 0.5s endpointing as phone) | ✅ PR 013 + PR 023 follow-up |
 | Per-turn latency logging (`LATENCY` lines) | ✅ `restaurant/turn_latency.py` |
 | Natural menu offers (no 1-2-3 lists) | ✅ search cap + prompt (partial — LLM can still slip) |
 | **Tier B — conversation layer** (prompts, intents, order flow in code) | ✅ PR 015 on `main` |

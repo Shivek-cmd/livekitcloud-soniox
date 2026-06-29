@@ -20,8 +20,8 @@ Implemented in **`restaurant/session_config.py`** via `TurnHandlingOptions` (liv
 
 | Channel | Turn detection | Endpointing | Preemptive | Interruptions |
 |---------|----------------|-------------|------------|---------------|
-| **Phone** | `TurnDetector(v1-mini)` + bundled Silero VAD | dynamic **0.2–0.8s** | LLM + TTS | adaptive, `min_words=1` |
-| **Web** | `TurnDetector()` | dynamic 0.25–2.0s | LLM + TTS | adaptive |
+| **Phone** | `TurnDetector(v1-mini)` + bundled Silero VAD | dynamic **0.2–0.5s** | LLM + TTS | adaptive, `min_words=2` (phone) |
+| **Web** | `TurnDetector(v1-mini)` | dynamic **0.2–0.5s** | LLM + TTS | adaptive, `min_words=1` |
 
 Env overrides: `PHONE_ENDPOINTING_MAX`, etc. — see `docs/vps-config.md` and `docs/HANDOFF.md`.
 
@@ -53,7 +53,7 @@ Per-turn metrics: `journalctl … | grep LATENCY` (`restaurant/turn_latency.py`)
 | `endpointing.max_delay` | `3.0s` | Max wait before forcing the turn closed. |
 | `endpointing.mode` | `fixed` | `fixed` always uses the delays; `dynamic` adapts within range (Python). |
 
-> ~~Our agent sets `min_endpointing_delay=0.2` (phone)…~~ **Superseded** — phone uses `TurnHandlingOptions` endpointing in `session_config.py` (default max **0.8s**).
+> ~~Our agent sets `min_endpointing_delay=0.2` (phone)…~~ **Superseded** — shared endpointing in `session_config.py` (default max **0.5s**, min **0.2s**, phone + web).
 
 ## Interruption options — KEY to the echo/voice-breaking issue
 

@@ -69,7 +69,7 @@ PR workflow: **`pr/pr_rules.md`** — doc first, branch name = doc name, merge v
 - **`place_order()`** logs only — **does NOT submit to Clover** (Phase 8c)
 
 ### Tier A — Phone latency (PR 008) ✅
-`restaurant/session_config.py` + `turn_latency.py` — TurnDetector, **0.2–0.8s** endpointing, preemptive TTS.
+`restaurant/session_config.py` + `turn_latency.py` — TurnDetector, **0.2–0.5s** endpointing (phone + web), preemptive TTS.
 
 ### Web — Order with Sierra (PR 009–013) ✅
 - **`voice.bizbull.ai`** — W1 shell + W2 live hybrid cart (`web_sync.py`)
@@ -240,7 +240,8 @@ curl -s https://voice.bizbull.ai/health
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `USE_CLOVER_MENU` | 1 | Required on VPS |
-| `PHONE_ENDPOINTING_MAX` | 0.8 | Turn end delay |
+| `PHONE_ENDPOINTING_MAX` | 0.5 | Turn end delay (phone + web) |
+| `PHONE_ENDPOINTING_MIN` | 0.2 | Min turn end delay (phone + web) |
 | `PHONE_GREETING_SETTLE_SEC` | 2.0 | Pause after greeting (phone) |
 | `PHONE_AEC_WARMUP_SEC` | 1.0 | AEC warmup (phone) |
 | `WEB_AMBIENT_ENABLED` | 1 | Web background loop on/off |
