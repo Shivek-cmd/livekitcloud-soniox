@@ -1,4 +1,4 @@
-# PR 022 — Phone ambient audio + volume 0.5
+# PR 022 — Phone ambient audio + volume 0.4
 
 ## Branch
 `pr_022_phone-ambient-audio`
@@ -9,7 +9,7 @@
 ## What This PR Does
 
 1. **Phone ambient** — same `restaurant_ambience.mp3` loop on **inbound phone calls** (Twilio SIP), using LiveKit `BackgroundAudioPlayer` (same mechanism as web PR 020).
-2. **Web volume tune** — default `WEB_AMBIENT_VOLUME` **0.6 → 0.5** (still overridable in `.env`).
+2. **Volume tune** — default ambient volume **0.4** on web and phone (overridable in `.env`).
 3. **Refactor** — one shared ambient builder for web + phone; separate on/off and volume per channel.
 
 PR 020 deferred phone because of echo/STT risk. This PR enables phone with **lower default volume**, separate kill-switch, and live-call verification on inbound CA number.
@@ -21,7 +21,7 @@ PR 020 deferred phone because of echo/STT risk. This PR enables phone with **low
 | Setting | Web default | Phone default |
 |---------|-------------|---------------|
 | Enabled | `WEB_AMBIENT_ENABLED=1` | `PHONE_AMBIENT_ENABLED=1` |
-| Volume | `WEB_AMBIENT_VOLUME=0.5` | `PHONE_AMBIENT_VOLUME=0.35` |
+| Volume | `WEB_AMBIENT_VOLUME=0.4` | `PHONE_AMBIENT_VOLUME=0.4` |
 | Fade-in | `WEB_AMBIENT_FADE_IN=1.0` | `PHONE_AMBIENT_FADE_IN=1.0` |
 | Audio file | `data/audio/restaurant_ambience.mp3` (shared) | same |
 
@@ -95,11 +95,11 @@ journalctl -u restaurant-agent -f | grep -i ambient
 
 ```
 WEB_AMBIENT_ENABLED=1
-WEB_AMBIENT_VOLUME=0.5
+WEB_AMBIENT_VOLUME=0.4
 WEB_AMBIENT_FADE_IN=1.0
 
 PHONE_AMBIENT_ENABLED=1
-PHONE_AMBIENT_VOLUME=0.35
+PHONE_AMBIENT_VOLUME=0.4
 PHONE_AMBIENT_FADE_IN=1.0
 
 # Optional shared path (else data/audio/restaurant_ambience.mp3)
