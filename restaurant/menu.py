@@ -49,6 +49,7 @@ MENU = {
         "items": [
             {"name": "Gulab Jamun",       "punjabi": "ਗੁਲਾਬ ਜਾਮੁਨ",         "price": 6,  "veg": True},
             {"name": "Kheer",             "punjabi": "ਖੀਰ",                  "price": 6,  "veg": True},
+            {"name": "Rasmalai",          "punjabi": "ਰਸਮਲਾਈ",              "price": 7,  "veg": True},
             {"name": "Gajar Halwa",       "punjabi": "ਗਾਜਰ ਦਾ ਹਲਵਾ",        "price": 7,  "veg": True},
         ],
     },

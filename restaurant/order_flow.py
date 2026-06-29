@@ -12,6 +12,7 @@ from restaurant.conversation import (
     PICKUP_DELIVERY_QUESTION,
     QUANTITY_QUESTION,
     UserIntent,
+    confirm_items_added,
     format_order_readback,
     format_price_reply,
     is_add_intent,
@@ -25,6 +26,7 @@ from restaurant.conversation import (
     update_preferred_language,
 )
 from restaurant import menu_provider
+from restaurant.order_parse import parse_order_lines
 from restaurant.orders import OrderCart
 
 
@@ -177,12 +179,35 @@ class OrderFlowController:
                     "(English — do not invent Punjabi for pickup/delivery)."
                 )
             else:
-                lines.append(
-                    "Customer wants to add/order. Call add_to_order for each item. "
-                    "If dish differs from what you last suggested, confirm the name once. "
-                    "Ask quantity if unknown, then required modifiers ONE at a time. "
-                    "Spice only if Options include Spice Level."
-                )
+                parsed = parse_order_lines(user_text)
+                if len(parsed) >= 2:
+                    entries = [
+                        (
+                            line.quantity,
+                            line.item.get("voice_line")
+                            or line.item.get("speak_as")
+                            or line.item["name"],
+                        )
+                        for line in parsed
+                    ]
+                    confirm = confirm_items_added(entries, lang)
+                    follow = phrase_anything_else(lang)
+                    names = ", ".join(
+                        f"{line.quantity}x {line.item['name']}" for line in parsed
+                    )
+                    lines.append(
+                        f"Customer listed {len(parsed)} items in one sentence: {names}. "
+                        "Call add_to_order for EACH item in this turn before speaking. "
+                        "Do NOT call check_menu_item first. Do NOT ask what the second item is. "
+                        "Do NOT mention price, cart, menu, or portion counts like two pieces. "
+                        f'SAY EXACTLY after all added: "{confirm} {follow}"'
+                    )
+                else:
+                    lines.append(
+                        "Customer wants to add. Call add_to_order directly when the dish name is clear — "
+                        "do NOT call check_menu_item first unless the name is truly unclear. "
+                        "Use SAY EXACTLY from the tool result. Do NOT mention price on phone unless asked."
+                    )
             self.state.quantity_allowed = True
         elif intent == UserIntent.ORDER_DONE:
             if not cart.is_empty:

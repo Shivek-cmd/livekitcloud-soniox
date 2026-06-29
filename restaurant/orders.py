@@ -49,14 +49,20 @@ class OrderCart:
         if item.get("unavailable"):
             return f"Sorry, {item['name']} is not available right now. Ask the customer to pick something else."
 
+        from restaurant.conversation import format_add_tool_reply
+
+        voice = item.get("voice_line") or item.get("speak_as") or item["name"]
+
         for existing in self.items:
             if existing.name.lower() == item["name"].lower():
                 existing.quantity += quantity
                 if note:
                     existing.note = note
-                return f"Updated: {existing.quantity} of {item['name']} in cart (say: {item.get('voice_line', item['name'])})."
+                return format_add_tool_reply(
+                    [(existing.quantity, existing.voice_line or voice)],
+                    updated=True,
+                )
 
-        voice = item.get("voice_line") or item.get("speak_as") or item["name"]
         self.items.append(CartItem(
             name=item["name"],
             voice_line=voice,
@@ -66,14 +72,17 @@ class OrderCart:
             clover_item_id=item.get("clover_item_id"),
             speech_mode=item.get("speech_mode") or "mixed",
         ))
-        return f"Added {quantity} of {item['name']} to cart (say dish as: {voice})."
+        return format_add_tool_reply([(quantity, voice)])
 
     def remove_item(self, name: str) -> str:
+        from restaurant.conversation import format_remove_tool_reply
+
         for i, item in enumerate(self.items):
             if name.lower() in item.name.lower():
                 removed = self.items.pop(i)
-                return f"Removed {removed.name} from order."
-        return f"'{name}' not found in your order."
+                voice = removed.voice_line or removed.name
+                return format_remove_tool_reply(voice)
+        return f"INTERNAL: not found. Ask customer to clarify the item name."
 
     def set_quantity_by_id(self, clover_item_id: str, quantity: int) -> bool:
         """Set quantity for a cart line identified by Clover id. qty<=0 removes it."""
