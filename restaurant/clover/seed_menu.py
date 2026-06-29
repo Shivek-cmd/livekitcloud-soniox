@@ -344,7 +344,7 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
     # --- Combos & platters ---
     MenuItemSpec(
         "chole_bhature_combo", "Chole Bhature Combo", 15.99, "combos",
-        "ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ", ("chole bhature combo", "chole bhature", "bhatura combo"), True,
+        "ਛੋਲੇ ਭਟੂਰੇ ਕੌਂਬੋ", ("chole bhature combo", "chole bhature", "bhatura combo"), True,
         ("spice_level", "bhatura_count", "add_extras"),
         "Chole + bhature + pickle. Classic Punjabi combo.",
     ),
@@ -356,19 +356,19 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
     ),
     MenuItemSpec(
         "nonveg_lunch_combo", "Non-Veg Lunch Combo", 21.99, "combos",
-        "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੰਬੋ", ("non veg lunch", "lunch combo"), False,
+        "ਨਾਨ-ਵੈਜ ਲੰਚ ਕੌਂਬੋ", ("non veg lunch", "lunch combo"), False,
         ("combo_nonveg_curry", "spice_level", "combo_drink"),
         "1 non-veg curry + jeera rice + butter naan + drink.",
     ),
     MenuItemSpec(
         "student_combo", "Student Combo", 13.99, "combos",
-        "ਸਟੂਡੈਂਟ ਕੰਬੋ", ("student combo", "cheap combo"), True,
+        "ਸਟੂਡੈਂਟ ਕੌਂਬੋ", ("student combo", "cheap combo"), True,
         ("combo_curry_pick", "spice_level", "combo_drink"),
         "1 curry + 2 roti + drink. Weekday special.",
     ),
     MenuItemSpec(
         "couple_combo", "Couple Combo (for 2)", 39.99, "combos",
-        "ਕਪਲ ਕੰਬੋ", ("couple combo", "combo for two"), False,
+        "ਕਪਲ ਕੌਂਬੋ", ("couple combo", "combo for two"), False,
         ("combo_nonveg_curry", "spice_level", "combo_drink", "add_extras"),
         "2 mains + 2 naan + 2 drinks + dessert sampler.",
     ),

@@ -18,4 +18,4 @@ def test_mango_drinks_english():
 def test_chole_bhature_gurmukhi():
     assert _speech("chole") == ("ਛੋਲੇ", "gurmukhi")
     assert _speech("bhatura_single") == ("ਭਟੂਰਾ", "gurmukhi")
-    assert _speech("chole_bhature_combo") == ("ਛੋਲੇ ਭਟੂਰੇ ਕੰਬੋ", "gurmukhi")
+    assert _speech("chole_bhature_combo") == ("ਛੋਲੇ ਭਟੂਰੇ ਕੌਂਬੋ", "gurmukhi")
