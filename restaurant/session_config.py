@@ -1,17 +1,22 @@
 """AgentSession voice tuning — shared latency config for phone and web.
 
 Both channels use LiveKit TurnDetector (v1-mini) + dynamic endpointing +
-preemptive TTS. Phone-only echo handling (AEC warmup, greeting settle) lives
-in agent.py / phone_echo.py.
+preemptive TTS. Phone-only echo/background handling lives in agent.py.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 
+from livekit import rtc
 from livekit.agents import AgentSession, TurnHandlingOptions, inference
+from livekit.agents.voice import room_io
+from livekit.plugins import noise_cancellation
 
 from restaurant.voice_stack import build_llm, build_stt, build_tts
+
+logger = logging.getLogger("session-config")
 
 
 def _env_float(name: str, default: float) -> float:
@@ -36,21 +41,40 @@ def phone_greeting_settle_seconds() -> float:
     return _env_float("PHONE_GREETING_SETTLE_SEC", 2.0)
 
 
-def _turn_handling() -> TurnHandlingOptions:
-    # Default TurnDetector thresholds (LiveKit-calibrated). Logs showed eou_delay
-    # hitting max_delay=2.5s — lower cap commits turns faster on Punjabi calls.
+def phone_bvc_enabled() -> bool:
+    """Krisp BVC voice isolation on inbound audio (phone + web)."""
+    return _env_bool("PHONE_BVC_ENABLED", True)
+
+
+def phone_background_filter_enabled() -> bool:
+    """Drop low-signal phone transcripts (background chatter)."""
+    return _env_bool("PHONE_BACKGROUND_FILTER_ENABLED", True)
+
+
+def _turn_handling(*, is_phone: bool) -> TurnHandlingOptions:
+    if is_phone:
+        min_words = int(_env_float("PHONE_INTERRUPTION_MIN_WORDS", 2))
+        min_duration = _env_float("PHONE_INTERRUPTION_MIN_DURATION", 0.55)
+        endpointing_max = _env_float("PHONE_ENDPOINTING_MAX", 0.8)
+        endpointing_min = _env_float("PHONE_ENDPOINTING_MIN", 0.2)
+    else:
+        min_words = 1
+        min_duration = 0.4
+        endpointing_max = 2.0
+        endpointing_min = 0.25
+
     return TurnHandlingOptions(
         turn_detection=inference.TurnDetector(version="v1-mini"),
         endpointing={
             "mode": "dynamic",
-            "min_delay": _env_float("PHONE_ENDPOINTING_MIN", 0.2),
-            "max_delay": _env_float("PHONE_ENDPOINTING_MAX", 0.8),
+            "min_delay": endpointing_min,
+            "max_delay": endpointing_max,
         },
         interruption={
             "mode": "adaptive",
             "enabled": True,
-            "min_duration": _env_float("PHONE_INTERRUPTION_MIN_DURATION", 0.4),
-            "min_words": int(_env_float("PHONE_INTERRUPTION_MIN_WORDS", 1)),
+            "min_duration": min_duration,
+            "min_words": min_words,
             "discard_audio_if_uninterruptible": True,
             "false_interruption_timeout": 2.0,
             "resume_false_interruption": True,
@@ -64,16 +88,34 @@ def _turn_handling() -> TurnHandlingOptions:
     )
 
 
+def build_room_options(*, is_phone: bool) -> room_io.RoomOptions:
+    """Room audio input options — BVC telephony for SIP callers when enabled."""
+    if not phone_bvc_enabled():
+        logger.info("BVC disabled (PHONE_BVC_ENABLED=0)")
+        return room_io.RoomOptions()
+
+    def _select_noise_cancellation(params):
+        if params.participant.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP:
+            logger.info("BVC telephony selected for SIP participant")
+            return noise_cancellation.BVCTelephony()
+        logger.info("BVC selected for WebRTC participant")
+        return noise_cancellation.BVC()
+
+    return room_io.RoomOptions(
+        audio_input=room_io.AudioInputOptions(
+            noise_cancellation=_select_noise_cancellation,
+        ),
+    )
+
+
 def build_agent_session(*, is_phone: bool) -> AgentSession:
     """Create AgentSession with channel-appropriate STT/TTS; shared turn latency."""
-    turn_handling = _turn_handling()
     kwargs: dict = {
         "stt": build_stt(is_phone),
         "llm": build_llm(),
         "tts": build_tts(is_phone),
-        "turn_handling": turn_handling,
+        "turn_handling": _turn_handling(is_phone=is_phone),
     }
     if is_phone:
-        # Cloud telephony path + trunk Krisp handle most echo; keep a short AEC warmup.
         kwargs["aec_warmup_duration"] = _env_float("PHONE_AEC_WARMUP_SEC", 1.0)
     return AgentSession(**kwargs)

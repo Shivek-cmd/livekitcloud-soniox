@@ -30,7 +30,7 @@ LIVEKIT_URL = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
 LIVEKIT_API_KEY = os.environ.get("LIVEKIT_API_KEY", "devkey")
 LIVEKIT_API_SECRET = os.environ.get("LIVEKIT_API_SECRET", "7fb987483e9c463c7777ea7e9a97e4bde86bcaa5")
 TWILIO_NUMBER = os.environ.get("TWILIO_NUMBER", "+15878175156")
-KRISP_ENABLED = os.environ.get("KRISP_ENABLED", "").lower() in ("1", "true", "yes")
+KRISP_ENABLED = os.environ.get("KRISP_ENABLED", "1").lower() not in ("0", "false", "no")
 
 
 async def main():

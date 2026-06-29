@@ -10,4 +10,5 @@ dependencies = [
     "uvicorn[standard]",
     "python-dotenv",
     "twilio>=9.0",
+    "livekit-plugins-noise-cancellation>=0.2.5",
 ]

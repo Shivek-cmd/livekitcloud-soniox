@@ -8,19 +8,24 @@ from dotenv import load_dotenv
 from livekit.agents import (
     Agent,
     JobContext,
-    RoomInputOptions,
     WorkerOptions,
     cli,
     function_tool,
 )
 from livekit.agents.llm import StopResponse
-from restaurant.session_config import build_agent_session, phone_greeting_settle_seconds
+from restaurant.session_config import (
+    build_agent_session,
+    build_room_options,
+    phone_background_filter_enabled,
+    phone_greeting_settle_seconds,
+)
 from restaurant.turn_latency import TurnLatencyTracker
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant import menu_provider
 from restaurant.conversation import (
     OPENING_GREETING,
     UserIntent,
+    background_repeat_phrase,
     detect_intent,
     echo_recovery_phrase,
     is_confirm_yes,
@@ -29,6 +34,7 @@ from restaurant.conversation import (
 from restaurant.order_flow import OrderFlowController
 from restaurant.orders import OrderCart
 from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
+from restaurant.phone_background import is_likely_background_speech
 from restaurant.prompts import build_system_prompt
 from restaurant import reservations as res_store
 from restaurant.web_sync import WebSync
@@ -55,6 +61,8 @@ class RestaurantAgent(Agent):
         self._greeting_echo_pending_reprompt = False
         self._echo_recovery_scheduled = False
         self._real_user_turns = 0
+        self._background_ignore_streak = 0
+        self._background_reprompt_done = False
         self._web_sync: WebSync | None = None
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
@@ -89,6 +97,26 @@ class RestaurantAgent(Agent):
                 return
             self._echo_recovery_scheduled = True
         asyncio.create_task(self._echo_reprompt(greeting_only=greeting_only))
+
+    async def _background_reprompt(self) -> None:
+        if not self.is_phone or not self._phone_session:
+            return
+        await asyncio.sleep(0.6)
+        if not self._phone_session:
+            return
+        try:
+            await self._phone_session.say(
+                background_repeat_phrase(),
+                allow_interruptions=True,
+            )
+        except Exception:
+            logger.exception("Background reprompt failed")
+
+    def _schedule_background_reprompt(self) -> None:
+        if not self.is_phone or self._background_reprompt_done:
+            return
+        self._background_reprompt_done = True
+        asyncio.create_task(self._background_reprompt())
 
     async def _echo_reprompt(self, *, greeting_only: bool = False) -> None:
         """Invite the caller to speak after echo — avoids dead air on phone."""
@@ -139,6 +167,17 @@ class RestaurantAgent(Agent):
                     self._schedule_echo_reprompt(greeting_only=True)
                 raise StopResponse()
 
+            if is_likely_background_speech(
+                user_text,
+                intent,
+                enabled=phone_background_filter_enabled(),
+            ):
+                logger.info("Ignoring phone background turn: %s", user_text)
+                self._background_ignore_streak += 1
+                if self._background_ignore_streak >= 3:
+                    self._schedule_background_reprompt()
+                raise StopResponse()
+
         if intent == UserIntent.PICKUP and not self.cart.order_type:
             self.cart.order_type = "pickup"
             self._flow.sync_from_cart(self.cart)
@@ -151,6 +190,7 @@ class RestaurantAgent(Agent):
         self._real_user_turns += 1
         self._greeting_echo_pending_reprompt = False
         self._echo_recovery_scheduled = False
+        self._background_ignore_streak = 0
         self._inject_turn_guidance(turn_ctx, user_text)
 
     # ── ORDER TOOLS ──────────────────────────────────────────────────────────
@@ -365,7 +405,7 @@ async def entrypoint(ctx: JobContext):
     await session.start(
         room=ctx.room,
         agent=agent,
-        room_input_options=RoomInputOptions(),
+        room_options=build_room_options(is_phone=is_phone),
     )
 
     background_audio = build_ambient_player(is_phone=is_phone)
