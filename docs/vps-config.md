@@ -77,11 +77,11 @@ Quiet background loop via LiveKit `BackgroundAudioPlayer`. Same `restaurant_ambi
 
 ```
 WEB_AMBIENT_ENABLED=1
-WEB_AMBIENT_VOLUME=0.5
+WEB_AMBIENT_VOLUME=0.4
 WEB_AMBIENT_FADE_IN=1.0
 
 PHONE_AMBIENT_ENABLED=1
-PHONE_AMBIENT_VOLUME=0.35       # lower default — PSTN / echo safety
+PHONE_AMBIENT_VOLUME=0.4       # same default as web
 PHONE_AMBIENT_FADE_IN=1.0
 
 # AMBIENT_AUDIO_PATH=/opt/livekit-sarvam/data/audio/restaurant_ambience.mp3
