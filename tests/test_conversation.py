@@ -88,7 +88,20 @@ def test_quantity_allowed_on_add():
     flow = OrderFlowController(is_phone=True)
     plan = flow.build_turn_plan("add one mango kulfi", UserIntent.ADD_ITEM, cart)
     assert plan.quantity_allowed is True
-    assert "How many" in plan.guidance
+    assert "SAY EXACTLY" in plan.guidance or "add_to_order" in plan.guidance
+
+
+def test_multi_item_add_guidance():
+    cart = OrderCart()
+    flow = OrderFlowController(is_phone=True)
+    plan = flow.build_turn_plan(
+        "add one gulab jamun and one kheer",
+        UserIntent.ADD_ITEM,
+        cart,
+    )
+    assert "listed 2 items" in plan.guidance
+    assert "Do NOT ask what the second item is" in plan.guidance
+    assert "Anything else?" in plan.guidance
 
 
 def test_order_done_uses_allergies_template():

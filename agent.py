@@ -26,12 +26,16 @@ from restaurant.conversation import (
     OPENING_GREETING,
     UserIntent,
     background_repeat_phrase,
+    confirm_items_added,
     detect_intent,
     echo_recovery_phrase,
     is_confirm_yes,
+    is_want_to_order_only,
+    phrase_anything_else,
     sanitize_assistant_speech,
 )
 from restaurant.order_flow import OrderFlowController
+from restaurant.order_parse import can_auto_add_lines, parse_order_lines
 from restaurant.orders import OrderCart
 from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
 from restaurant.phone_background import is_likely_background_speech
@@ -55,8 +59,8 @@ class RestaurantAgent(Agent):
         self.cart = OrderCart()
         self.is_phone = is_phone
         self._flow = OrderFlowController(is_phone=is_phone)
+        self._session = None
         self._recent_agent_lines: list[str] = []
-        self._phone_session = None
         self._echo_reprompt_done = False
         self._greeting_echo_pending_reprompt = False
         self._echo_recovery_scheduled = False
@@ -67,8 +71,12 @@ class RestaurantAgent(Agent):
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
+    def bind_session(self, session) -> None:
+        self._session = session
+
     def bind_phone_session(self, session) -> None:
-        self._phone_session = session
+        """Backward-compatible alias."""
+        self.bind_session(session)
 
     def bind_web_sync(self, web_sync: WebSync) -> None:
         self._web_sync = web_sync
@@ -86,7 +94,7 @@ class RestaurantAgent(Agent):
         self._recent_agent_lines = self._recent_agent_lines[-6:]
 
     def _schedule_echo_reprompt(self, *, greeting_only: bool = False) -> None:
-        if not self.is_phone or not self._phone_session:
+        if not self.is_phone or not self._session:
             return
         if greeting_only:
             if self._echo_reprompt_done:
@@ -99,13 +107,13 @@ class RestaurantAgent(Agent):
         asyncio.create_task(self._echo_reprompt(greeting_only=greeting_only))
 
     async def _background_reprompt(self) -> None:
-        if not self.is_phone or not self._phone_session:
+        if not self.is_phone or not self._session:
             return
         await asyncio.sleep(0.6)
-        if not self._phone_session:
+        if not self._session:
             return
         try:
-            await self._phone_session.say(
+            await self._session.say(
                 background_repeat_phrase(),
                 allow_interruptions=True,
             )
@@ -121,7 +129,7 @@ class RestaurantAgent(Agent):
     async def _echo_reprompt(self, *, greeting_only: bool = False) -> None:
         """Invite the caller to speak after echo — avoids dead air on phone."""
         await asyncio.sleep(1.2 if greeting_only else 0.8)
-        if not self._phone_session:
+        if not self._session:
             return
         if greeting_only and self._real_user_turns > 0:
             return
@@ -131,12 +139,58 @@ class RestaurantAgent(Agent):
             else echo_recovery_phrase()
         )
         try:
-            await self._phone_session.say(line, allow_interruptions=True)
+            await self._session.say(line, allow_interruptions=True)
         except Exception:
             logger.exception("Echo reprompt failed")
         finally:
             if not greeting_only:
                 self._echo_recovery_scheduled = False
+
+    async def _try_auto_add_multi(
+        self,
+        turn_ctx,
+        user_text: str,
+        intent: UserIntent,
+    ) -> None:
+        """Add 2+ clear items in code — one human confirm, skip LLM turn."""
+        if intent != UserIntent.ADD_ITEM or is_want_to_order_only(user_text):
+            return
+
+        lines = parse_order_lines(user_text)
+        if not can_auto_add_lines(lines):
+            return
+
+        entries: list[tuple[int, str]] = []
+        for line in lines:
+            result = self.cart.add_item(line.item, line.quantity)
+            if "not available" in result.lower():
+                return
+            self._flow.on_item_added()
+            price = float(line.item.get("price") or (line.item.get("price_cents", 0) / 100))
+            self._flow.note_discussed_item(line.item["name"], price)
+            voice = (
+                line.item.get("voice_line")
+                or line.item.get("speak_as")
+                or line.item["name"]
+            )
+            entries.append((line.quantity, voice))
+
+        await self._sync_web()
+        lang = self._flow.state.preferred_language
+        confirm = confirm_items_added(entries, lang)
+        follow = phrase_anything_else(lang)
+        say_line = f"{confirm} {follow}"
+
+        turn_ctx.add_message(
+            role="system",
+            content=f'[AUTO-ADD] Items saved. Already spoken: "{say_line}"',
+        )
+        logger.info("AUTO_ADD items=%s", [e[1] for e in entries])
+
+        if self._session:
+            await self._session.say(say_line, allow_interruptions=True)
+            self.note_agent_speech(say_line)
+        raise StopResponse()
 
     def _inject_turn_guidance(self, turn_ctx, user_text: str) -> None:
         intent = detect_intent(user_text)
@@ -191,6 +245,10 @@ class RestaurantAgent(Agent):
         self._greeting_echo_pending_reprompt = False
         self._echo_recovery_scheduled = False
         self._background_ignore_streak = 0
+
+        self._flow.note_customer_language(user_text)
+        await self._try_auto_add_multi(turn_ctx, user_text, intent)
+
         self._inject_turn_guidance(turn_ctx, user_text)
 
     # ── ORDER TOOLS ──────────────────────────────────────────────────────────
@@ -202,7 +260,7 @@ class RestaurantAgent(Agent):
         quantity: Annotated[int, "How many of this item to add"],
         note: Annotated[str, "Modifier choices and special instructions e.g. 'medium spicy, butter naan'"] = "",
     ) -> str:
-        """Add an item to the customer's order. Call check_menu_item first if unsure about options."""
+        """Add one menu item. If customer listed several dishes, call once per item in the same turn."""
         item = menu_provider.find_item(item_name)
         if not item:
             return f"'{item_name}' is not on our menu. Ask the customer to clarify or call search_menu_items."
@@ -399,8 +457,7 @@ async def entrypoint(ctx: JobContext):
     TurnLatencyTracker(channel=channel).attach(session)
 
     agent = RestaurantAgent(is_phone=is_phone)
-    if is_phone:
-        agent.bind_phone_session(session)
+    agent.bind_session(session)
 
     await session.start(
         room=ctx.room,

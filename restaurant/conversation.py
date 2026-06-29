@@ -368,6 +368,65 @@ def _format_dollars(amount: float) -> str:
     return f"{amount:.2f}"
 
 
+def confirm_items_added(
+    entries: list[tuple[int, str]],
+    lang: CustomerLanguage,
+    *,
+    updated: bool = False,
+) -> str:
+    """Cashier-style add confirm — no price, no cart/menu language."""
+    if not entries:
+        return "Sure."
+
+    if updated and len(entries) == 1:
+        qty, voice = entries[0]
+        word = _qty_word(qty)
+        if lang == CustomerLanguage.PUNJABI:
+            return f"ਠੀਕ ਹੈ — {word} {voice} ਹੁਣ।"
+        if lang == CustomerLanguage.HINDI:
+            return f"ठीक है — {word} {voice} अब।"
+        return f"Sure — {word} {voice} now."
+
+    parts = [f"{_qty_word(qty)} {voice}" for qty, voice in entries]
+
+    if lang == CustomerLanguage.PUNJABI:
+        prefix, joiner = "ਠੀਕ ਹੈ — ", " ਤੇ "
+    elif lang == CustomerLanguage.HINDI:
+        prefix, joiner = "ठीक है — ", " और "
+    else:
+        prefix, joiner = "Yes — ", " and "
+
+    if len(parts) == 1:
+        body = parts[0]
+    elif len(parts) == 2:
+        body = f"{parts[0]}{joiner}{parts[1]}"
+    else:
+        body = ", ".join(parts[:-1]) + joiner + parts[-1]
+    return f"{prefix}{body}."
+
+
+def format_add_tool_reply(
+    entries: list[tuple[int, str]],
+    *,
+    updated: bool = False,
+) -> str:
+    confirm = confirm_items_added(entries, CustomerLanguage.ENGLISH, updated=updated)
+    return (
+        "INTERNAL: item saved.\n"
+        f'SAY EXACTLY: "{confirm}"\n'
+        "Do NOT mention price, cart, menu, pieces, or say I can add / I've added."
+    )
+
+
+def format_remove_tool_reply(voice_line: str) -> str:
+    confirm = f"Sure — removed {voice_line}."
+    return (
+        "INTERNAL: item removed.\n"
+        f'SAY EXACTLY: "{confirm}"\n'
+        "Do NOT mention cart or menu."
+    )
+
+
 def format_order_readback(cart: OrderCart) -> str:
     """Exact spoken read-back line for final confirmation (Step E)."""
     if cart.is_empty:
@@ -425,6 +484,15 @@ def background_repeat_phrase() -> str:
 # ── Assistant output guard (B-6) ──────────────────────────────────────────────
 
 
+_META_SPEECH_RE = re.compile(
+    r"\b(?:"
+    r"I can add|I(?:'ve| have) added|added to (?:the )?(?:cart|menu|order)|"
+    r"comes with \d+ pieces?"
+    r")\b",
+    re.I,
+)
+
+
 def sanitize_assistant_speech(text: str, *, allow_greeting: bool) -> str:
     """Strip mid-call re-greetings; normalize common script slips."""
     if not text or allow_greeting:
@@ -435,6 +503,12 @@ def sanitize_assistant_speech(text: str, *, allow_greeting: bool) -> str:
         out = _GREETING_RE.sub("", out).strip()
         if not out or len(out) < 8:
             out = recovery_phrase(is_phone=True)
+
+    if _META_SPEECH_RE.search(out):
+        out = _META_SPEECH_RE.sub("", out)
+        out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
+        if not out or len(out) < 6:
+            out = "Sure."
 
     replacements = {
         "ਸوری": "ਮਾਫ ਕਰਨਾ",
