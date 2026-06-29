@@ -15,8 +15,8 @@ QUANTITY_QUESTION = "How many — one or two?"
 CONFIRM_CLOSE = "All good?"
 
 OPENING_GREETING = (
-    "Hello! I'm Sierra from Bizbull Restaurant. "
-    "I can help you in English, Hindi, or Punjabi — how may I help you today?"
+    "Hi! Sierra from Bizbull here. "
+    "I speak English, Hindi, and Punjabi. How can I help?"
 )
 
 # ── Customer language (script detection + turn guidance) ────────────────────
@@ -161,6 +161,23 @@ _PICKUP_RE = re.compile(
     re.I,
 )
 
+# Phone STT often hears "pickup" as "one cup" / "one up" (Gurmukhi or English).
+_PICKUP_STT_RE = re.compile(
+    r"(?:"
+    r"ਇ(?:ੱਕ|ਕ)\s*(?:ਕ(?:ੱ?)?(?:ੱਪ|ਪ)|ਅ(?:ੱ?)?(?:ੱਪ|ਪ)|ਅਪ)|"
+    r"ਇਕ\s*(?:ਕ(?:ੱ?)?(?:ੱਪ|ਪ)|ਅ(?:ੱ?)?(?:ੱਪ|ਪ))|"
+    r"pick\s*up|"
+    r"one\s+cup|"
+    r"ikk\s+(?:cup|app|up)"
+    r")",
+    re.I,
+)
+
+_ALL_GOOD_RE = re.compile(
+    r"(?:all good|al good|aal good|ਆਲ\s*ਗ[uੰ]?[dD]?|ਆਲ\s*ਗ[uੰ]?ਡ)",
+    re.I,
+)
+
 _DELIVERY_RE = re.compile(
     r"\b(delivery|deliver|home delivery|ਡਿਲਿਵਰੀ|ਘਰ.*ਡਿਲਿਵਰ)\b",
     re.I,
@@ -241,8 +258,11 @@ _HUMAN_RE = re.compile(
 )
 
 _GREETING_RE = re.compile(
-    r"(sat\s*sri\s*akal|ਸਤ\s*ਸ੍ਰੀ\s*ਅਕਾਲ|welcome to bizbull|how may i help you today|"
-    r"i.?m sierra from bizbull|english,?\s*hindi,?\s*or punjabi)",
+    r"(sat\s*sri\s*akal|ਸਤ\s*ਸ੍ਰੀ\s*ਅਕਾਲ|welcome to bizbull|"
+    r"how may i help you today|how can i help|"
+    r"sierra from bizbull|i.?m sierra from bizbull|"
+    r"i speak english|english,?\s*hindi,?\s*(?:and|or)\s*punjabi|"
+    r"i can help you in english)",
     re.I,
 )
 
@@ -277,6 +297,22 @@ def menu_item_hint_in_text(text: str) -> bool:
     return menu_provider.resolve_item_in_text(text) is not None
 
 
+def is_likely_pickup_stt(text: str) -> bool:
+    """Misheard pickup on phone — e.g. ਇੱਕ ਕੱਪ, ਇੱਕ ਅੱਪ, pick up."""
+    t = (text or "").strip()
+    if not t or _DELIVERY_RE.search(t):
+        return False
+    if _PICKUP_RE.search(t) or _PICKUP_STT_RE.search(t):
+        return True
+    if _I_SAID_RE.search(t) and re.search(
+        r"ਕ(?:ੱ?)?(?:ੱਪ|ਪ)|ਅ(?:ੱ?)?(?:ੱਪ|ਪ)|cup|pick|pickup",
+        t,
+        re.I,
+    ):
+        return True
+    return False
+
+
 def is_confirm_yes(text: str) -> bool:
     """Short affirmative — haan ji / ਹਾਂ ਜੀ / yes / ok / all good."""
     t = re.sub(r"[\s\.।,!?]+$", "", (text or "").strip())
@@ -286,6 +322,12 @@ def is_confirm_yes(text: str) -> bool:
         return True
     # STT sometimes drops ji: "haan" or lone "ji" / "ਜੀ" after All good?
     if re.match(r"^(haan|han|ਹਾਂ|ji|ਜੀ|ok|okay|yes|yeah)$", t, re.I):
+        return True
+    if _ALL_GOOD_RE.search(t):
+        return True
+    if re.search(r"(yes|yeah|yep|yup|ਯੇਸ)", t, re.I) and _ALL_GOOD_RE.search(t):
+        return True
+    if re.search(r"ਹਾਂ", t) and (_ALL_GOOD_RE.search(t) or re.search(r"\bgood\b", t, re.I)):
         return True
     return False
 
@@ -319,6 +361,17 @@ def detect_intent(text: str) -> UserIntent:
     if _AVAIL_RE.search(t):
         return UserIntent.ASK_AVAILABILITY
     return UserIntent.GENERAL
+
+
+def resolve_intent(text: str, *, phase: str | None = None) -> UserIntent:
+    """Phase-aware intent — e.g. pickup STT at order_type before qty-add false positive."""
+    intent = detect_intent(text)
+    if phase == "order_type":
+        if is_likely_pickup_stt(text):
+            return UserIntent.PICKUP
+        if _DELIVERY_RE.search(text):
+            return UserIntent.DELIVERY
+    return intent
 
 
 def is_add_intent(text: str) -> bool:
@@ -427,7 +480,7 @@ def format_remove_tool_reply(voice_line: str) -> str:
     )
 
 
-def format_order_readback(cart: OrderCart) -> str:
+def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str:
     """Exact spoken read-back line for final confirmation (Step E)."""
     if cart.is_empty:
         return ""
@@ -449,15 +502,20 @@ def format_order_readback(cart: OrderCart) -> str:
         items_str = ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
 
     order_type = cart.order_type or "pickup"
-    total = _format_dollars(cart.total)
     name = cart.customer_name or ""
 
+    if include_price:
+        total = _format_dollars(cart.total)
+        if name:
+            return (
+                f"Okay {name} ji — {items_str}, {order_type}, "
+                f"total about {total} dollars. {CONFIRM_CLOSE}"
+            )
+        return f"Okay — {items_str}, {order_type}, total about {total} dollars. {CONFIRM_CLOSE}"
+
     if name:
-        return (
-            f"Okay {name} ji — {items_str}, {order_type}, "
-            f"total about {total} dollars. {CONFIRM_CLOSE}"
-        )
-    return f"Okay — {items_str}, {order_type}, total about {total} dollars. {CONFIRM_CLOSE}"
+        return f"Okay {name} ji — {items_str}, {order_type}. {CONFIRM_CLOSE}"
+    return f"Okay — {items_str}, {order_type}. {CONFIRM_CLOSE}"
 
 
 def spice_question_allowed(*, has_spice_modifier: bool) -> bool:
@@ -492,8 +550,17 @@ _META_SPEECH_RE = re.compile(
     re.I,
 )
 
+_PRICE_SPEECH_RE = re.compile(
+    r"(?:"
+    r",?\s*total about [\d.]+\s*dollars?|"
+    r"\$\s*[\d.]+|"
+    r"about \d+(?:\.\d+)?\s*dollars?"
+    r")",
+    re.I,
+)
 
-def sanitize_assistant_speech(text: str, *, allow_greeting: bool) -> str:
+
+def sanitize_assistant_speech(text: str, *, allow_greeting: bool, is_phone: bool = True) -> str:
     """Strip mid-call re-greetings; normalize common script slips."""
     if not text or allow_greeting:
         return text
@@ -508,6 +575,12 @@ def sanitize_assistant_speech(text: str, *, allow_greeting: bool) -> str:
         out = _META_SPEECH_RE.sub("", out)
         out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
         if not out or len(out) < 6:
+            out = "Sure."
+
+    if is_phone and _PRICE_SPEECH_RE.search(out):
+        out = _PRICE_SPEECH_RE.sub("", out)
+        out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
+        if not out or len(out) < 8:
             out = "Sure."
 
     replacements = {

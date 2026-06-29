@@ -6,6 +6,9 @@ from restaurant.conversation import (
     detect_intent,
     format_order_readback,
     format_price_reply,
+    is_confirm_yes,
+    is_likely_pickup_stt,
+    resolve_intent,
     sanitize_assistant_speech,
 )
 from restaurant.order_flow import OrderFlowController, OrderPhase
@@ -161,3 +164,48 @@ def test_readback_before_name():
     flow.sync_from_cart(cart)
     assert flow.state.phase == OrderPhase.CONFIRMING
     assert flow.state.readback_confirmed is False
+
+
+def test_ikk_cup_pickup_at_order_type():
+    assert resolve_intent("ਇੱਕ ਕੱਪ?", phase="order_type") == UserIntent.PICKUP
+    assert resolve_intent("ਇੱਕ ਅੱਪ।", phase="order_type") == UserIntent.PICKUP
+    assert resolve_intent("ਇੱਕ ਕੱਪ, ਆਈ ਸੈਡ।", phase="order_type") == UserIntent.PICKUP
+    assert is_likely_pickup_stt("pick up please") is True
+
+
+def test_confirm_yes_all_good_code_mix():
+    assert is_confirm_yes("ਹਾਂ ਜੀ, ਆਲ ਗੁੱਡ") is True
+    assert is_confirm_yes("ਯੇਸ, ਆਲ ਗੁੱਡ") is True
+    assert is_confirm_yes("yes all good") is True
+    assert resolve_intent("ਹਾਂ ਜੀ, ਆਲ ਗੁੱਡ") == UserIntent.CONFIRM_YES
+
+
+def test_confirming_advances_on_all_good():
+    cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
+    cart.order_type = "pickup"
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_special_instructions_done()
+    flow.sync_from_cart(cart)
+    plan = flow.build_turn_plan("ਹਾਂ ਜੀ, ਆਲ ਗੁੱਡ", UserIntent.GENERAL, cart)
+    assert flow.state.readback_confirmed is True
+    assert flow.state.phase == OrderPhase.CUSTOMER_NAME
+    assert "Do NOT repeat the order" in plan.guidance or "name" in plan.guidance.lower()
+
+
+def test_readback_without_price_on_phone():
+    cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
+    cart.order_type = "pickup"
+    line = format_order_readback(cart, include_price=False)
+    assert "dollar" not in line.lower()
+    assert "All good?" in line
+    assert "pickup" in line
+
+
+def test_sanitize_strips_price_on_phone():
+    raw = "Okay — one Kulfi, pickup, total about 33 dollars. All good?"
+    out = sanitize_assistant_speech(raw, allow_greeting=False, is_phone=True)
+    assert "dollar" not in out.lower()
+    assert "33" not in out
