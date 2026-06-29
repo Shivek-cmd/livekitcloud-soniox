@@ -25,17 +25,14 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 019 | `pr_019_speech-policy-mango-chole` | Mango drink English TTS + chole/bhature Gurmukhi | ✅ GitHub #44 |
 | 020 | `pr_020_web-background-ambient` | Web-only LiveKit background ambient audio | ✅ GitHub #45 |
 | 021 | `pr_021_web-ambient-volume` | Web ambient volume + custom `restaurant_ambience.mp3` | ✅ |
-| 022 | `pr_022_phone-ambient-audio` | Phone ambient (same loop) + web volume 0.5 | ⬜ **Open** |
+| 022 | `pr_022_phone-ambient-audio` | Phone ambient (same loop) + web volume 0.4 | ✅ |
+| 023 | `pr_023_phone-background-speech` | BVC + phone interruption tuning + background transcript filter | ⬜ **Open** |
 
 ---
 
 ## Current session state
 
-**`main`** through PR **021** (custom ambient mp3 + volume).
-
-**Open — merge next:**
-1. **022** — phone ambient + web volume 0.5
-2. **016 → 017 → 018** — phone phrases, echo hardening, customer language (if not already on main)
+**Open — merge next:** **023** — phone background speech hardening
 
 **New AI session:** read **`docs/HANDOFF.md`** first.
 

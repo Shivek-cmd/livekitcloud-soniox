@@ -95,6 +95,23 @@ If phone echo worsens: `PHONE_AMBIENT_ENABLED=0` (web unchanged).
 
 Logs: `journalctl -u restaurant-agent -f | grep -i ambient`
 
+### Phone background speech (PR 023)
+
+Krisp BVC voice isolation + stricter phone interruptions + transcript filter for background chatter.
+
+```
+PHONE_BVC_ENABLED=1                    # 0 = disable agent BVC (full revert of audio layer)
+PHONE_BACKGROUND_FILTER_ENABLED=1      # 0 = disable transcript background filter
+PHONE_INTERRUPTION_MIN_WORDS=2         # require 2+ words to barge-in (was 1)
+PHONE_INTERRUPTION_MIN_DURATION=0.55
+```
+
+SIP trunk Krisp NC: `KRISP_ENABLED=1` when running `scripts/setup_sip.py` (default on).
+
+Logs: `journalctl -u restaurant-agent -f | grep -iE 'background|BVC|Ignoring phone'`
+
+**Quick revert if calls break:** set `PHONE_BVC_ENABLED=0` and `PHONE_BACKGROUND_FILTER_ENABLED=0`, restart agent.
+
 ### Latency / conversation logs
 
 ```bash

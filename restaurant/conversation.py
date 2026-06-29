@@ -417,6 +417,11 @@ def echo_recovery_phrase() -> str:
     return "ਮੈਂ ਸੁਣ ਰਹੀ ਹਾਂ — go ahead ji."
 
 
+def background_repeat_phrase() -> str:
+    """One reprompt when background noise caused dropped turns."""
+    return "Sorry, I didn't catch that — could you repeat please?"
+
+
 # ── Assistant output guard (B-6) ──────────────────────────────────────────────
 
 
