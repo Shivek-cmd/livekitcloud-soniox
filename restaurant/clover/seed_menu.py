@@ -396,7 +396,7 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
     MenuItemSpec("mango_lassi", "Mango Lassi", 6.99, "drinks", "ਅੰਬ ਲੱਸੀ", ("mango lassi",), True, ("lassi_size",)),
     MenuItemSpec("masala_chai", "Masala Chai", 3.99, "drinks", "ਮਸਾਲਾ ਚਾਹ", ("masala chai", "chai"), True),
     MenuItemSpec("mango_shake", "Mango Shake", 6.49, "drinks", "ਅੰਬ ਸ਼ੇਕ", ("mango shake",), True),
-    MenuItemSpec("soft_drink", "Soft Drink (can)", 2.49, "drinks", "ਸੋਫਟ ਪੀਅ", ("soft drink", "pop", "coke"), True),
+    MenuItemSpec("soft_drink", "Soft Drink (can)", 2.49, "drinks", "ਸਾਫਟ ਡਰਿੰਕ", ("soft drink", "pop", "coke"), True),
     MenuItemSpec("nimbu_pani", "Nimbu Pani", 4.49, "drinks", "ਨਿੰਬੂ ਪਾਣੀ", ("nimbu pani", "lemonade"), True),
     # --- Desserts ---
     MenuItemSpec("gulab_jamun", "Gulab Jamun (2 pcs)", 5.99, "desserts", "ਗੁਲਾਬ ਜਾਮੁਨ", ("gulab jamun",), True),
