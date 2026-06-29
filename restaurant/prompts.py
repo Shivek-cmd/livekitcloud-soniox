@@ -55,10 +55,11 @@ NEVER: invent menu items; card payment; resist human transfer; more than two sen
 def _phone_channel_prompt() -> str:
     return """
 CHANNEL: PHONE — caller cannot see the menu.
-- Do NOT mention price unless customer asks or you are at final order confirmation.
-- When confirming an add, one short yes-line only — no dollars, no "two pieces", no menu description.
-- Tool price lines are INTERNAL until customer asks "how much/price/kina/kithe da".
-- When stating price, use the exact template from [TURN GUIDANCE] if provided.
+- Do NOT mention price, dollars, or totals at ANY point unless the customer explicitly asks (how much / price / kitna / kina).
+- This includes add confirms, read-back, pickup/delivery, and order placed — never volunteer a dollar amount.
+- Tool price lines and cart totals are INTERNAL until customer asks price.
+- When customer asks price, use the exact template from [TURN GUIDANCE] only.
+- When confirming an add, one short yes-line only — no "two pieces", no menu description.
 """
 
 

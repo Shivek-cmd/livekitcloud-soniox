@@ -32,6 +32,7 @@ from restaurant.conversation import (
     is_confirm_yes,
     is_want_to_order_only,
     phrase_anything_else,
+    resolve_intent,
     sanitize_assistant_speech,
 )
 from restaurant.order_flow import OrderFlowController
@@ -193,7 +194,7 @@ class RestaurantAgent(Agent):
         raise StopResponse()
 
     def _inject_turn_guidance(self, turn_ctx, user_text: str) -> None:
-        intent = detect_intent(user_text)
+        intent = resolve_intent(user_text, phase=self._flow.state.phase.value)
         plan = self._flow.build_turn_plan(user_text, intent, self.cart)
         turn_ctx.add_message(role="system", content=plan.guidance)
         logger.info(
@@ -205,7 +206,7 @@ class RestaurantAgent(Agent):
 
     async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
         user_text = (new_message.text_content or "").strip()
-        intent = detect_intent(user_text)
+        intent = resolve_intent(user_text, phase=self._flow.state.phase.value)
 
         if self.is_phone:
             if is_likely_phone_echo(
@@ -293,6 +294,11 @@ class RestaurantAgent(Agent):
         self._flow.sync_from_cart(self.cart)
         await self._sync_web()
         if order_type == "delivery":
+            if self.is_phone:
+                return (
+                    "Set to delivery. INTERNAL: delivery charge applies. "
+                    "Ask for delivery address. Do NOT mention price unless customer asked."
+                )
             return f"Set to delivery. Delivery charge ${DELIVERY_CHARGE} will be added. Ask for delivery address."
         return "Set to pickup. Continue the order flow — read back cart before asking for name/phone."
 
@@ -326,9 +332,16 @@ class RestaurantAgent(Agent):
         from restaurant.conversation import format_order_readback
 
         summary = self.cart.summary()
-        readback = format_order_readback(self.cart)
+        readback = format_order_readback(self.cart, include_price=not self.is_phone)
         if readback:
-            return f"{summary}\n\nSPOKEN READ-BACK (say exactly):\n{readback}"
+            price_note = (
+                " Do NOT mention price or totals in speech."
+                if self.is_phone
+                else ""
+            )
+            return (
+                f"{summary}\n\nSPOKEN READ-BACK (say exactly):\n{readback}{price_note}"
+            )
         return summary
 
     @function_tool
@@ -357,10 +370,17 @@ class RestaurantAgent(Agent):
         await self._sync_web()
 
         wait = "30-40 ਮਿੰਟ" if self.cart.order_type == "delivery" else "20-25 ਮਿੰਟ"
+        spoken = (
+            f"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। {wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
+        )
+        if self.is_phone:
+            return (
+                f"Order placed! INTERNAL total ${self.cart.total}. "
+                f'Tell customer: "{spoken}" Do NOT mention price or dollars.'
+            )
         return (
             f"Order placed! Total ${self.cart.total}. "
-            f"Tell customer: ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। "
-            f"{wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
+            f"Tell customer: {spoken}"
         )
 
     # ── MENU TOOLS ───────────────────────────────────────────────────────────
@@ -500,6 +520,7 @@ async def entrypoint(ctx: JobContext):
                 cleaned = sanitize_assistant_speech(
                     text,
                     allow_greeting=agent._real_user_turns == 0,
+                    is_phone=agent.is_phone,
                 )
                 if cleaned != text:
                     logger.warning("Mid-call re-greeting blocked in log: %s", text[:80])

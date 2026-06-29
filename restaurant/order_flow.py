@@ -165,6 +165,12 @@ class OrderFlowController:
             f'If unclear audio, prefer: "{phrase_repeat_request(lang)}"',
         ]
 
+        if self.is_phone:
+            lines.append(
+                "PHONE: Do NOT mention price, dollars, or totals in speech unless "
+                "customer asked price this turn (ASK_PRICE intent)."
+            )
+
         if is_add_intent(user_text) or intent == UserIntent.ADD_ITEM:
             self.state.quantity_allowed = True
 
@@ -206,7 +212,7 @@ class OrderFlowController:
                     lines.append(
                         "Customer wants to add. Call add_to_order directly when the dish name is clear — "
                         "do NOT call check_menu_item first unless the name is truly unclear. "
-                        "Use SAY EXACTLY from the tool result. Do NOT mention price on phone unless asked."
+                        "Use SAY EXACTLY from the tool result. Do NOT mention price unless customer asked."
                     )
             self.state.quantity_allowed = True
         elif intent == UserIntent.ORDER_DONE:
@@ -221,12 +227,12 @@ class OrderFlowController:
         elif intent == UserIntent.PICKUP:
             lines.append(
                 'Customer chose pickup. Call set_order_type("pickup") now. '
-                "Do NOT ask pickup/delivery again if already set."
+                "Do NOT ask pickup/delivery again if already set. Do NOT mention price."
             )
         elif intent == UserIntent.DELIVERY:
             lines.append(
                 'Customer chose delivery. Call set_order_type("delivery") now, then ask for address. '
-                "Do NOT ask pickup/delivery again if already set."
+                "Do NOT ask pickup/delivery again if already set. Do NOT mention price."
             )
         elif intent == UserIntent.HUMAN:
             lines.append("Call transfer_to_human immediately after one short line.")
@@ -327,13 +333,15 @@ class OrderFlowController:
                     "Read-back already confirmed — do NOT repeat the order.",
                     f'Ask: "{q}"',
                 ]
-            readback = format_order_readback(cart)
+            readback = format_order_readback(cart, include_price=not self.is_phone)
             out = [
                 "FINAL CONFIRMATION — call get_order_summary() first.",
-                "Read back in ENGLISH using the template below — English one/two, dollars, All good?",
+                "Read back items and pickup/delivery only — English one/two, then All good?",
+                "Do NOT mention price, dollars, or totals on phone.",
                 "Do NOT use Punjabi quantities (ਇੱਕ/ਦੋ) or rupees on this step.",
                 f'SAY EXACTLY (adjust name if needed): "{readback}"',
                 f'Close with "{CONFIRM_CLOSE}" only — not ਸਾਰਾ ਠੀਕ or permission questions.',
+                "After customer says yes / all good / ਆਲ ਗੁੱਡ — ask for name ONCE. Do NOT repeat read-back.",
             ]
             if (
                 self.state.readback_confirmed
@@ -343,8 +351,6 @@ class OrderFlowController:
                 out.append("Contact info collected. Call place_order() now.")
             elif self.state.readback_confirmed:
                 out.append("After read-back yes → collect name, then phone, then place_order().")
-            else:
-                out.append("After yes → advance to name/phone, then place_order().")
             return out
         if p == OrderPhase.COLLECTING_ITEMS and cart.is_empty:
             return ["Help customer browse or add first item — use menu tools."]

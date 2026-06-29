@@ -14,8 +14,9 @@ from restaurant.orders import OrderCart
 
 
 def test_opening_greeting_trilingual():
-    assert "English, Hindi, or Punjabi" in OPENING_GREETING
-    assert "Bizbull Restaurant" in OPENING_GREETING
+    assert "English, Hindi, and Punjabi" in OPENING_GREETING
+    assert "Sierra from Bizbull" in OPENING_GREETING
+    assert "How can I help" in OPENING_GREETING
 
 
 def test_detect_punjabi_script():
