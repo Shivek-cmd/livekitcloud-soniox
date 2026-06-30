@@ -248,11 +248,14 @@ _YES_RE = re.compile(
 )
 
 _NO_RE = re.compile(
+    r"(?:"
+    r"^(?:no[\s,\.!?]+)+$|"
     r"\b("
-    r"^no\.?$|nope|nah|nothing|none|"
+    r"nope|nah|nothing|none|"
     r"nahi|nahin|na|"
     r"ਨਹੀਂ|ਨਹੀ|ਕੋਈ.*ਨਹੀਂ|ਕੁਝ ਨਹੀ"
-    r")\b",
+    r")\b"
+    r")",
     re.I,
 )
 
@@ -379,6 +382,9 @@ def resolve_intent(text: str, *, phase: str | None = None) -> UserIntent:
             return UserIntent.PICKUP
         if _DELIVERY_RE.search(text):
             return UserIntent.DELIVERY
+    if phase == "special_instructions":
+        if is_allergies_step_answer(text, intent):
+            return UserIntent.CONFIRM_NO
     return intent
 
 
@@ -390,12 +396,14 @@ def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
     """Caller answered the allergies / special-instructions question."""
     if intent in (UserIntent.CONFIRM_NO, UserIntent.PICKUP, UserIntent.DELIVERY):
         return True
-    t = (text or "").lower()
+    t = (text or "").strip()
+    if re.match(r"^(?:no[\s,\.!?]+)+$", t, re.I):
+        return True
     if _ALLERGY_NO_RE.search(text):
         return True
-    if "allerg" in t or "ਐਲਰਜੀ" in text:
+    if "allerg" in t.lower() or "ਐਲਰਜੀ" in text:
         return True
-    if intent == UserIntent.CONFIRM_YES and ("instruction" in t or "special" in t):
+    if intent == UserIntent.CONFIRM_YES and ("instruction" in t.lower() or "special" in t.lower()):
         return True
     if intent == UserIntent.CONFIRM_NO:
         return True
@@ -509,21 +517,22 @@ def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str
     else:
         items_str = ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
 
-    order_type = cart.order_type or "pickup"
+    order_type = cart.order_type
     name = cart.customer_name or ""
+    type_part = f", {order_type}" if order_type else ""
 
     if include_price:
         total = _format_dollars(cart.total)
         if name:
             return (
-                f"Okay {name} ji — {items_str}, {order_type}, "
+                f"Okay {name} ji — {items_str}{type_part}, "
                 f"total about {total} dollars. {CONFIRM_CLOSE}"
             )
-        return f"Okay — {items_str}, {order_type}, total about {total} dollars. {CONFIRM_CLOSE}"
+        return f"Okay — {items_str}{type_part}, total about {total} dollars. {CONFIRM_CLOSE}"
 
     if name:
-        return f"Okay {name} ji — {items_str}, {order_type}. {CONFIRM_CLOSE}"
-    return f"Okay — {items_str}, {order_type}. {CONFIRM_CLOSE}"
+        return f"Okay {name} ji — {items_str}{type_part}. {CONFIRM_CLOSE}"
+    return f"Okay — {items_str}{type_part}. {CONFIRM_CLOSE}"
 
 
 def format_final_order_confirm(cart: OrderCart, *, include_price: bool = True) -> str:

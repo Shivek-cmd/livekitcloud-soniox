@@ -128,6 +128,20 @@ def test_phase_advances_after_no_allergy():
     assert "pickup or delivery" in plan.guidance.lower()
 
 
+def test_no_no_advances_allergies_loop():
+    cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
+    flow = OrderFlowController(is_phone=True)
+    flow.build_turn_plan("that's all", UserIntent.ORDER_DONE, cart)
+    assert flow.state.allergies_asked is True
+    intent = resolve_intent("No, no.", phase="special_instructions")
+    assert intent == UserIntent.CONFIRM_NO
+    plan = flow.build_turn_plan("No, no.", intent, cart)
+    assert flow.state.special_instructions_done is True
+    assert flow.state.phase == OrderPhase.ORDER_TYPE
+    assert "pickup or delivery" in plan.guidance.lower()
+
+
 def test_confirming_readback_template():
     cart = OrderCart()
     cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)

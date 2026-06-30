@@ -112,6 +112,7 @@ class OrderFlowController:
 
     def mark_items_complete(self) -> None:
         self.state.items_complete = True
+        self.state.allergies_asked = True
         self.state.phase = OrderPhase.SPECIAL_INSTRUCTIONS
 
     def mark_special_instructions_done(self) -> None:
@@ -325,14 +326,20 @@ class OrderFlowController:
                     f'SAY EXACTLY: "{ALLERGIES_QUESTION}" '
                     "(keep special instructions in English)."
                 ]
-            return [
-                f'If not asked yet, SAY EXACTLY: "{ALLERGIES_QUESTION}"',
-            ]
+            if not self.state.special_instructions_done:
+                return [
+                    "Allergies question already asked — do NOT repeat it.",
+                    "If customer said no / none / no allergies, ask pickup or delivery next.",
+                    "Do NOT ask for name or phone until after read-back is confirmed.",
+                    f'SAY EXACTLY: "{PICKUP_DELIVERY_QUESTION}" when they have no allergies.',
+                ]
+            return []
         if p == OrderPhase.ORDER_TYPE:
             return [
                 f'SAY EXACTLY: "{PICKUP_DELIVERY_QUESTION}"',
                 'Then call set_order_type("pickup") or set_order_type("delivery").',
                 "Do NOT read order total or confirm yet — pickup/delivery comes first.",
+                "Do NOT ask for name or phone until after read-back is confirmed.",
             ]
         if p == OrderPhase.DELIVERY_ADDRESS:
             return ["Ask for full delivery address, then call set_delivery_address."]
@@ -361,6 +368,12 @@ class OrderFlowController:
                 f'SAY EXACTLY: "{final_line}"',
             ]
         if p == OrderPhase.CONFIRMING:
+            if not cart.order_type:
+                return [
+                    f'Order type not set — SAY EXACTLY: "{PICKUP_DELIVERY_QUESTION}"',
+                    'Call set_order_type("pickup") or set_order_type("delivery") first.',
+                    "Do NOT read back items or ask name/phone until pickup/delivery is set.",
+                ]
             if self.state.readback_confirmed and not cart.customer_name:
                 q = phrase_name_for_order(self.state.preferred_language)
                 return [
