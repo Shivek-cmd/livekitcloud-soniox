@@ -40,8 +40,10 @@ def test_end_call_after_goodbye_deletes_room_and_shuts_down(monkeypatch):
     job_ctx.room.name = "phone-test-room"
     job_ctx.delete_room = AsyncMock()
 
-    speech = MagicMock()
-    speech.__await__ = lambda self: iter([])
+    async def _noop():
+        return None
+
+    speech = _noop()
 
     asyncio.run(
         end_call_after_goodbye(
