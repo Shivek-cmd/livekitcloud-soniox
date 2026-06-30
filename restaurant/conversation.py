@@ -19,6 +19,14 @@ OPENING_GREETING = (
     "I speak English, Hindi, and Punjabi. How can I help you?"
 )
 
+
+def order_placed_goodbye(*, order_type: str | None) -> str:
+    """Fixed Punjabi closing line after a successful order."""
+    wait = "30-40 ਮਿੰਟ" if order_type == "delivery" else "20-25 ਮਿੰਟ"
+    return (
+        f"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। {wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
+    )
+
 # ── Customer language (script detection + turn guidance) ────────────────────
 
 
