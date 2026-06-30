@@ -15,8 +15,8 @@ QUANTITY_QUESTION = "How many — one or two?"
 CONFIRM_CLOSE = "All good?"
 
 OPENING_GREETING = (
-    "Hi! Sierra from Bizbull here. "
-    "I speak English, Hindi, and Punjabi. How can I help?"
+    "Hi! I'm Sierra, your virtual assistant. "
+    "I speak English, Hindi, and Punjabi. How can I help you?"
 )
 
 # ── Customer language (script detection + turn guidance) ────────────────────

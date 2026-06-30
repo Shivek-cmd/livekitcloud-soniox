@@ -30,17 +30,18 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 024 | `pr_024_natural-concise-multi-item` | Concise confirms + multi-item parse + soft drink TTS | ✅ #54–55 |
 | 025 | `pr_025_pickup-confirm-no-price-readback` | Pickup STT, all-good, no price, greeting, ambient 0.2 | ✅ #56–57 |
 | 026 | `pr_026_handoff-doc-sync` | HANDOFF + PR index sync post 023–025 | ✅ |
-| 027 | `pr_027_admin-analytics-platform` | Admin analytics: Supabase + session capture + admin.bizbull.ai | ⬜ open |
+| 027 | `pr_027_admin-analytics-platform` | Admin analytics: Supabase + session capture + admin.bizbull.ai | ✅ |
+| 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting (no Bizbull in intro) | ⬜ open |
 
 ---
 
 ## Current session state
 
-**`main` through PR 025.** **PR 027 open** — admin analytics platform (Supabase + dashboard + agent capture).
+**`main` through PR 027.** **PR 028 open** — virtual assistant opening greeting.
 
-**New AI session:** read **`docs/HANDOFF.md`** first, then **`docs/plan/12-admin-analytics-supabase.md`** for analytics workstream.
+**New AI session:** read **`docs/HANDOFF.md`** first.
 
-**Next implementation PR:** **028** (after 027 merges).
+**Next implementation PR:** **029**.
 
 ## Phased delivery (single PR 027 — all in one)
 

@@ -24,9 +24,9 @@
 **Restaurant name:** **Bizbull Restaurant** (`ਬਿਜ਼ਬਲ ਰੈਸਟੋਰੈਂਟ`).
 
 **Opening greeting (phone + web):**
-> Hi! Sierra from Bizbull here. I speak English, Hindi, and Punjabi. How can I help?
+> Hi! I'm Sierra, your virtual assistant. I speak English, Hindi, and Punjabi. How can I help you?
 
-Constant: `OPENING_GREETING` in `restaurant/conversation.py` (PR 025).
+Constant: `OPENING_GREETING` in `restaurant/conversation.py` (PR 028).
 
 ---
 
