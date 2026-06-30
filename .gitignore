@@ -9,6 +9,8 @@ __pycache__/
 uv.lock
 node_modules/
 web/dist/
+admin/dist/
+data/sessions/
 data/tenants.db
 data/menu_cache_*.json
 *.log

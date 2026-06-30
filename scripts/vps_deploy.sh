@@ -19,6 +19,11 @@ if [ -f "$REPO_DIR/web/package.json" ]; then
   (cd "$REPO_DIR/web" && npm install && npm run build)
 fi
 
+# Admin dashboard (admin.bizbull.ai)
+if [ -f "$REPO_DIR/admin/package.json" ]; then
+  (cd "$REPO_DIR/admin" && npm install && npm run build)
+fi
+
 systemctl restart restaurant-agent restaurant-token
 systemctl is-active restaurant-agent restaurant-token
 

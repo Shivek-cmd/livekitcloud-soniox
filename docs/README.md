@@ -7,6 +7,7 @@
 | [**HANDOFF.md**](HANDOFF.md) | Current state, what's done, what's next, ops cheat sheet |
 | [plan/06-milestones.md](plan/06-milestones.md) | Build phases 1–8 + web W1–W6 |
 | [plan/11-web-order-with-sierra.md](plan/11-web-order-with-sierra.md) | Web "Order with Sierra" plan (W3–W6 next) |
+| [plan/12-admin-analytics-supabase.md](plan/12-admin-analytics-supabase.md) | Admin dashboard + Supabase call analytics (D0–D8, PR 027+) |
 | [plan/09-clover-pos.md](plan/09-clover-pos.md) | Clover POS integration plan |
 | [plan/10-voice-quality-tier-b.md](plan/10-voice-quality-tier-b.md) | Voice/conversation bugs — PR 015–020 ✅; 016–018 open |
 | [vps-config.md](vps-config.md) | VPS deploy, env, SIP, Caddy, web ambient |

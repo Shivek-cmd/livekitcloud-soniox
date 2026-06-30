@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from livekit.agents.metrics import EOUMetrics, LLMMetrics, TTSMetrics
@@ -40,6 +41,7 @@ class _TurnSlice:
 @dataclass
 class TurnLatencyTracker:
     channel: str
+    on_turn_latency: Callable[[dict], None] | None = None
     _turn: _TurnSlice = field(default_factory=_TurnSlice)
     _turn_counter: int = 0
     _user_was_speaking: bool = False
@@ -74,6 +76,14 @@ class TurnLatencyTracker:
         if t.tts_ttfb is not None:
             parts.append(f"tts_ttfb={t.tts_ttfb:.2f}s")
         logger.info("LATENCY %s", " | ".join(parts))
+        if self.on_turn_latency is not None:
+            anchor = t.user_stopped_at or t.user_final_at
+            self.on_turn_latency({
+                "eou_delay": t.eou_delay,
+                "llm_ttft": t.llm_ttft,
+                "tts_ttfb": t.tts_ttfb,
+                "user_stop_to_speaking_ms": self._ms(anchor, t.speaking_at),
+            })
 
     def _begin_turn(self) -> None:
         self._turn_counter += 1

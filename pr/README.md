@@ -29,15 +29,27 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 023 | `pr_023_phone-background-speech` | BVC + phone interruption + background filter | ✅ #52–53 |
 | 024 | `pr_024_natural-concise-multi-item` | Concise confirms + multi-item parse + soft drink TTS | ✅ #54–55 |
 | 025 | `pr_025_pickup-confirm-no-price-readback` | Pickup STT, all-good, no price, greeting, ambient 0.2 | ✅ #56–57 |
+| 026 | `pr_026_handoff-doc-sync` | HANDOFF + PR index sync post 023–025 | ✅ |
+| 027 | `pr_027_admin-analytics-platform` | Admin analytics: Supabase + session capture + admin.bizbull.ai | ⬜ open |
 
 ---
 
 ## Current session state
 
-**`main` through PR 025** (`7232d48` area). **No open PRs.**
+**`main` through PR 025.** **PR 027 open** — admin analytics platform (Supabase + dashboard + agent capture).
 
-**New AI session:** read **`docs/HANDOFF.md`** first.
+**New AI session:** read **`docs/HANDOFF.md`** first, then **`docs/plan/12-admin-analytics-supabase.md`** for analytics workstream.
 
-**Next PR number:** **026** (when starting new work).
+**Next implementation PR:** **028** (after 027 merges).
+
+## Phased delivery (single PR 027 — all in one)
+
+| Component | Status in PR 027 |
+|-----------|------------------|
+| Supabase `sierra-bizbull` + schema | ✅ migration in repo + applied |
+| Agent `SessionRecorder` + Supabase writer | ✅ |
+| Admin app `admin.bizbull.ai` | ✅ |
+| Recordings | ⬜ deferred |
+| Quality rubric UI | ⬜ deferred (table ready) |
 
 **Deploy after pull:** `bash /opt/livekit-sarvam/scripts/vps_deploy.sh`

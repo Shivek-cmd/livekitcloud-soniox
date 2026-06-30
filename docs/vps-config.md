@@ -110,7 +110,43 @@ SIP trunk Krisp NC: `KRISP_ENABLED=1` when running `scripts/setup_sip.py` (defau
 
 Logs: `journalctl -u restaurant-agent -f | grep -iE 'background|BVC|Ignoring phone'`
 
-**Quick revert if calls break:** set `PHONE_BVC_ENABLED=0` and `PHONE_BACKGROUND_FILTER_ENABLED=0`, restart agent.
+### Sierra analytics — Supabase (PR 027)
+
+Project **`sierra-bizbull`** · region **ca-central-1** · ref **`lzlwivsntqkpxfwjktid`**
+
+```
+SUPABASE_URL=https://lzlwivsntqkpxfwjktid.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<from Supabase dashboard — never commit>
+SESSION_ANALYTICS_ENABLED=1
+SESSION_FALLBACK_DIR=data/sessions
+```
+
+After first deploy: create Auth user in Supabase, then `insert into admin_users (email) values ('you@example.com');`
+
+Logs: `journalctl -u restaurant-agent -f | grep -iE 'analytics|Session analytics'`
+
+### Admin dashboard — `admin.bizbull.ai` (PR 027)
+
+Build: `cd /opt/livekit-sarvam/admin && npm ci && npm run build`
+
+Env file **`admin/.env`** (not committed):
+```
+VITE_SUPABASE_URL=https://lzlwivsntqkpxfwjktid.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon key from Supabase dashboard>
+```
+
+Caddy block (add alongside voice.bizbull.ai):
+```
+admin.bizbull.ai {
+  root * /opt/livekit-sarvam/admin/dist
+  file_server
+  try_files {path} /index.html
+}
+```
+
+**Quick revert if analytics breaks calls:** set `SESSION_ANALYTICS_ENABLED=0`, restart agent (voice unchanged).
+
+**Quick revert if phone tuning breaks calls:** set `PHONE_BVC_ENABLED=0` and `PHONE_BACKGROUND_FILTER_ENABLED=0`, restart agent.
 
 ### Latency / conversation logs
 
