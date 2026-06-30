@@ -58,6 +58,26 @@ def find_item(name: str) -> dict | None:
     return item
 
 
+def find_item_strict(name: str) -> dict | None:
+    """Exact / alias match only — used for auto-add."""
+    cache = _get_cache()
+    if cache:
+        hit = cache.find_item_strict(name)
+        if hit:
+            if not hit.available:
+                return {**hit.to_cart_dict(), "unavailable": True}
+            return hit.to_cart_dict()
+        return None
+    # Static menu: exact name / punjabi substring only
+    item = static_find_item(name)
+    if not item:
+        return None
+    q = name.lower().strip()
+    if q in item["name"].lower() or q in item.get("punjabi", "").lower():
+        return item
+    return None
+
+
 def find_item_by_id(clover_item_id: str) -> dict | None:
     """Look up a menu item by its Clover id (used by web tap-to-add)."""
     cache = _get_cache()

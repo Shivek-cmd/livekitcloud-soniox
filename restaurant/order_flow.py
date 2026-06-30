@@ -14,6 +14,7 @@ from restaurant.conversation import (
     UserIntent,
     confirm_items_added,
     format_order_readback,
+    format_final_order_confirm,
     format_price_reply,
     is_add_intent,
     is_allergies_step_answer,
@@ -40,6 +41,7 @@ class OrderPhase(str, Enum):
     CUSTOMER_NAME = "customer_name"
     CUSTOMER_PHONE = "customer_phone"
     CONFIRMING = "confirming"
+    FINAL_CONFIRM = "final_confirm"
     PLACED = "placed"
 
 
@@ -50,6 +52,7 @@ class OrderFlowState:
     special_instructions_done: bool = False
     allergies_asked: bool = False
     readback_confirmed: bool = False
+    final_confirmed: bool = False
     preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
     last_discussed_item: str | None = None
     last_discussed_price: float | None = None
@@ -102,7 +105,10 @@ class OrderFlowController:
         if not cart.customer_phone:
             self.state.phase = OrderPhase.CUSTOMER_PHONE
             return
-        self.state.phase = OrderPhase.CONFIRMING
+        if not self.state.final_confirmed:
+            self.state.phase = OrderPhase.FINAL_CONFIRM
+            return
+        self.state.phase = OrderPhase.FINAL_CONFIRM
 
     def mark_items_complete(self) -> None:
         self.state.items_complete = True
@@ -116,6 +122,9 @@ class OrderFlowController:
 
     def mark_readback_confirmed(self) -> None:
         self.state.readback_confirmed = True
+
+    def mark_final_confirmed(self) -> None:
+        self.state.final_confirmed = True
 
     def on_item_added(self) -> None:
         self.state.quantity_allowed = False
@@ -140,6 +149,11 @@ class OrderFlowController:
             intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
         ):
             self.mark_readback_confirmed()
+
+        if self.state.phase == OrderPhase.FINAL_CONFIRM and (
+            intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
+        ):
+            self.mark_final_confirmed()
 
     def note_customer_language(self, user_text: str) -> None:
         self.state.preferred_language = update_preferred_language(
@@ -185,7 +199,7 @@ class OrderFlowController:
                     "(English — do not invent Punjabi for pickup/delivery)."
                 )
             else:
-                parsed = parse_order_lines(user_text)
+                parsed = parse_order_lines(user_text, strict=True)
                 if len(parsed) >= 2:
                     entries = [
                         (
@@ -236,6 +250,13 @@ class OrderFlowController:
             )
         elif intent == UserIntent.HUMAN:
             lines.append("Call transfer_to_human immediately after one short line.")
+        elif self.state.phase == OrderPhase.FINAL_CONFIRM and (
+            intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
+        ):
+            lines.append(
+                "Customer confirmed final order summary. Call place_order() now. "
+                "Do NOT speak again except tool result if needed."
+            )
         elif self.state.phase == OrderPhase.CONFIRMING and (
             intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
         ):
@@ -324,10 +345,23 @@ class OrderFlowController:
         if p == OrderPhase.CUSTOMER_PHONE:
             return [
                 "Ask for phone number. Read back digits in ENGLISH. "
-                "Call set_customer_info only after name AND phone confirmed.",
+                "Call set_customer_info when name AND phone are confirmed.",
+            ]
+        if p == OrderPhase.FINAL_CONFIRM:
+            if self.state.final_confirmed:
+                return [
+                    "Customer confirmed final summary. Call place_order() now.",
+                    "Do NOT speak goodbye — place_order() speaks it once.",
+                ]
+            final_line = format_final_order_confirm(cart, include_price=not self.is_phone)
+            return [
+                "FINAL PLACEMENT CONFIRM — call get_order_summary() first.",
+                "Read back items, pickup/delivery, customer name, and phone.",
+                "Do NOT call place_order() until customer says yes to this summary.",
+                f'SAY EXACTLY: "{final_line}"',
             ]
         if p == OrderPhase.CONFIRMING:
-            if self.state.readback_confirmed:
+            if self.state.readback_confirmed and not cart.customer_name:
                 q = phrase_name_for_order(self.state.preferred_language)
                 return [
                     "Read-back already confirmed — do NOT repeat the order.",
@@ -335,7 +369,7 @@ class OrderFlowController:
                 ]
             readback = format_order_readback(cart, include_price=not self.is_phone)
             out = [
-                "FINAL CONFIRMATION — call get_order_summary() first.",
+                "CART READ-BACK — call get_order_summary() first; do not invent items.",
                 "Read back items and pickup/delivery only — English one/two, then All good?",
                 "Do NOT mention price, dollars, or totals on phone.",
                 "Do NOT use Punjabi quantities (ਇੱਕ/ਦੋ) or rupees on this step.",
@@ -343,14 +377,8 @@ class OrderFlowController:
                 f'Close with "{CONFIRM_CLOSE}" only — not ਸਾਰਾ ਠੀਕ or permission questions.',
                 "After customer says yes / all good / ਆਲ ਗੁੱਡ — ask for name ONCE. Do NOT repeat read-back.",
             ]
-            if (
-                self.state.readback_confirmed
-                and cart.customer_name
-                and cart.customer_phone
-            ):
-                out.append("Contact info collected. Call place_order() now.")
-            elif self.state.readback_confirmed:
-                out.append("After read-back yes → collect name, then phone, then place_order().")
+            if self.state.readback_confirmed:
+                out.append("After read-back yes → collect name, then phone, then final confirm.")
             return out
         if p == OrderPhase.COLLECTING_ITEMS and cart.is_empty:
             return ["Help customer browse or add first item — use menu tools."]

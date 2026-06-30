@@ -180,8 +180,8 @@ class RestaurantAgent(Agent):
         if intent != UserIntent.ADD_ITEM or is_want_to_order_only(user_text):
             return
 
-        lines = parse_order_lines(user_text)
-        if not can_auto_add_lines(lines):
+        lines = parse_order_lines(user_text, strict=True)
+        if not can_auto_add_lines(lines, user_text):
             return
 
         entries: list[tuple[int, str]] = []
@@ -360,7 +360,7 @@ class RestaurantAgent(Agent):
         self.cart.customer_phone = phone
         self._flow.sync_from_cart(self.cart)
         await self._sync_web()
-        return f"Saved: {name}, {phone}."
+        return f"Saved: {name}, {phone}. Read back full order and ask Shall I place this order? before place_order()."
 
     @function_tool
     async def set_delivery_address(
@@ -397,6 +397,11 @@ class RestaurantAgent(Agent):
         ready, reason = self.cart.ready_to_place()
         if not ready:
             return f"Cannot place order: {reason}"
+        if not self._flow.state.final_confirmed:
+            return (
+                "Cannot place order: read back full order with name and phone, "
+                "get explicit yes (Shall I place this order?), then call place_order()."
+            )
 
         order_data = {
             "items": [
@@ -432,6 +437,7 @@ class RestaurantAgent(Agent):
             speech_handle = await self._session.say(
                 spoken,
                 allow_interruptions=False,
+                add_to_chat_ctx=False,
             )
             self.note_agent_speech(spoken)
             if self._recorder is not None:

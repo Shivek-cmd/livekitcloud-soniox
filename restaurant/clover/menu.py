@@ -20,11 +20,45 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
 
 
+# Single-token queries that must never fuzzy-match a menu item.
+_BLOCKED_QUERY_TOKENS = frozenset({
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+    "a", "an", "of", "x",
+    "ਇੱਕ", "ਐਕ", "ਦੋ", "ਤਿੰਨ",
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+})
+
+
+def _query_blocked(q: str) -> bool:
+    if not q:
+        return True
+    if q in _BLOCKED_QUERY_TOKENS:
+        return True
+    if len(q) <= 2:
+        return True
+    return False
+
+
 def _load_voice_labels(path: Path) -> dict[str, dict]:
     if not path.is_file():
         return {}
     data = json.loads(path.read_text(encoding="utf-8"))
     return {item["clover_item_id"]: item for item in data.get("items", [])}
+
+
+def _overlay_voice_labels(items: list[CachedMenuItem], labels_path: Path) -> None:
+    """Merge latest voice_labels aliases without a full Clover resync."""
+    by_id = {i.clover_item_id: i for i in items}
+    for entry in _load_voice_labels(labels_path).values():
+        iid = entry.get("clover_item_id")
+        if not iid:
+            continue
+        item = by_id.get(iid)
+        if not item:
+            continue
+        extra = entry.get("aliases") or []
+        if extra:
+            item.aliases = list(dict.fromkeys(list(item.aliases) + extra))
 
 
 def _voice_modifier_groups(voice_item: dict | None) -> list[CachedModifierGroup]:
@@ -168,6 +202,7 @@ class MenuCache:
                     modifier_groups=mod_groups,
                 )
             )
+        _overlay_voice_labels(items, path.parent / "clover_voice_labels.json")
         return cls(
             items,
             tenant_id=data.get("tenant_id", ""),
@@ -220,9 +255,10 @@ class MenuCache:
         }
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def find_item(self, query: str) -> CachedMenuItem | None:
+    def find_item_strict(self, query: str) -> CachedMenuItem | None:
+        """Exact menu match only — safe for auto-add (no fuzzy token scoring)."""
         q = _norm(query)
-        if not q:
+        if _query_blocked(q):
             return None
 
         for item in self._items:
@@ -230,13 +266,36 @@ class MenuCache:
                 return item
 
         for item in self._items:
+            for alias in item.aliases:
+                a = _norm(alias)
+                if not a or _query_blocked(a):
+                    continue
+                if a == q or q == a:
+                    return item
+                if len(a) >= 4 and (a in q or q in a):
+                    return item
+        return None
+
+    def find_item(self, query: str) -> CachedMenuItem | None:
+        q = _norm(query)
+        if _query_blocked(q):
+            return None
+
+        strict = self.find_item_strict(query)
+        if strict:
+            return strict
+
+        for item in self._items:
             if q in _norm(item.name) or q in _norm(item.speak_as) or q in _norm(item.voice_line):
                 return item
             for alias in item.aliases:
-                if q in _norm(alias) or _norm(alias) in q:
+                a = _norm(alias)
+                if len(q) >= 4 and (q in a or a in q):
                     return item
 
-        tokens = q.split()
+        tokens = [t for t in q.split() if t not in _BLOCKED_QUERY_TOKENS and len(t) > 2]
+        if not tokens:
+            return None
         best: CachedMenuItem | None = None
         best_score = 0
         for item in self._items:
@@ -253,7 +312,10 @@ class MenuCache:
             if score > best_score:
                 best_score = score
                 best = item
-        return best if best_score > 0 else None
+        # Require majority of meaningful tokens to match (avoids single-token false positives).
+        if best_score < max(2, len(tokens)):
+            return None
+        return best
 
     def search(self, query: str, *, limit: int = 8) -> list[CachedMenuItem]:
         q = _norm(query)

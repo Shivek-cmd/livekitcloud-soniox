@@ -31,8 +31,9 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 025 | `pr_025_pickup-confirm-no-price-readback` | Pickup STT, all-good, no price, greeting, ambient 0.2 | ✅ #56–57 |
 | 026 | `pr_026_handoff-doc-sync` | HANDOFF + PR index sync post 023–025 | ✅ |
 | 027 | `pr_027_admin-analytics-platform` | Admin analytics: Supabase + session capture + admin.bizbull.ai | ✅ |
-| 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting (no Bizbull in intro) | ⬜ open |
-| 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order (phone + web) | ⬜ open |
+| 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting (no Bizbull in intro) | ✅ |
+| 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order (phone + web) | ✅ |
+| 030 | `pr_030_order-flow-quality` | Strict auto-add, final confirm gate, cart truth, shikanji alias | ⬜ open |
 
 ---
 

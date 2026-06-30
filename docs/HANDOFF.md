@@ -117,8 +117,9 @@ Full index: **`pr/README.md`**.
 ```
 Greet → browse/add items → "Anything else?" → allergies (English)
   → pickup/delivery → read-back + "All good?" (NO price on phone)
-  → name → phone → place_order() [log only until 8c]
-  → Punjabi goodbye → call ends automatically (PR 029)
+  → name → phone → final summary + "Shall I place this order?" (PR 030)
+  → place_order() [log only until 8c]
+  → Punjabi goodbye (once, code-owned) → call ends automatically (PR 029)
 ```
 
 Phase enum: `restaurant/order_flow.py` → `OrderPhase`.

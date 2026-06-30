@@ -526,6 +526,40 @@ def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str
     return f"Okay — {items_str}, {order_type}. {CONFIRM_CLOSE}"
 
 
+def format_final_order_confirm(cart: OrderCart, *, include_price: bool = True) -> str:
+    """Full summary before place_order — items, type, name, phone."""
+    if cart.is_empty:
+        return ""
+
+    item_parts: list[str] = []
+    for item in cart.items:
+        qty = _qty_word(item.quantity)
+        name = item.voice_line or item.name
+        item_parts.append(f"{qty} {name}")
+
+    if len(item_parts) == 1:
+        items_str = item_parts[0]
+    elif len(item_parts) == 2:
+        items_str = f"{item_parts[0]} and {item_parts[1]}"
+    else:
+        items_str = ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
+
+    order_type = cart.order_type or "pickup"
+    name = cart.customer_name or "there"
+    phone = cart.customer_phone or ""
+
+    if include_price:
+        total = _format_dollars(cart.total)
+        return (
+            f"Okay {name} ji — {items_str}, {order_type}, phone {phone}, "
+            f"total about {total} dollars. Shall I place this order?"
+        )
+    return (
+        f"Okay {name} ji — {items_str}, {order_type}, phone {phone}. "
+        "Shall I place this order?"
+    )
+
+
 def spice_question_allowed(*, has_spice_modifier: bool) -> bool:
     return has_spice_modifier
 

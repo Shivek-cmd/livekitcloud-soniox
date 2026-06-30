@@ -4874,7 +4874,9 @@
       "aliases": [
         "chole bhature combo",
         "chole bhature",
-        "bhatura combo"
+        "bhatura combo",
+        "ਛੋਲੇ ਭਟੂਰੇ ਕੌਂਬੋ",
+        "ਛੋਲੇ-ਭਟੂਰੇ ਕੌਮਬੋ"
       ],
       "veg": true,
       "category_key": "combos",
@@ -6627,7 +6629,15 @@
       "speak_as": "ਨਿੰਬੂ ਪਾਣੀ",
       "aliases": [
         "nimbu pani",
-        "lemonade"
+        "lemonade",
+        "shikanji",
+        "shikanjee",
+        "shamjiir",
+        "shamjir",
+        "sikanji",
+        "ਸ਼ਿਕੰਜੀ",
+        "ਸ਼ਮਜੀਰ",
+        "nimbo pani"
       ],
       "veg": true,
       "category_key": "drinks",

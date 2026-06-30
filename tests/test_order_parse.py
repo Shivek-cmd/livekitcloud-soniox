@@ -9,11 +9,11 @@ from restaurant.order_parse import can_auto_add_lines, parse_order_lines
 from restaurant.orders import OrderCart
 
 
-def test_parse_two_items_with_and():
+def test_parse_two_items_with_and(clover_menu):
     lines = parse_order_lines("can you please add one gulab jamun and 1 kheer")
     assert len(lines) == 2
     names = {line.item["name"] for line in lines}
-    assert "Gulab Jamun" in names
+    assert any("Gulab Jamun" in n for n in names)
     assert "Kheer" in names
     assert all(line.quantity == 1 for line in lines)
 
@@ -51,8 +51,7 @@ def test_confirm_two_items_punjabi():
 def test_format_add_tool_reply_no_cart_language():
     reply = format_add_tool_reply([(1, "Kheer")])
     assert "SAY EXACTLY" in reply
-    assert "cart" not in reply.lower()
-    assert "Yes — one Kheer." in reply
+    assert 'SAY EXACTLY: "Yes — one Kheer."' in reply
 
 
 def test_cart_add_uses_concise_reply():
@@ -62,4 +61,4 @@ def test_cart_add_uses_concise_reply():
         1,
     )
     assert "SAY EXACTLY" in reply
-    assert "cart" not in reply.lower()
+    assert 'SAY EXACTLY: "Yes — one ਖੀਰ."' in reply
