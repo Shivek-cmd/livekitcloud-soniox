@@ -97,6 +97,11 @@ Full index: **`pr/README.md`**.
 - Read-back yes: `ਆਲ ਗੁੱਡ`, `ਹਾਂ ਜੀ, all good` → name step (no repeat loop)
 - **No price/dollars/totals on phone** unless customer asks (`ASK_PRICE`); read-back has items + pickup only
 
+**PR 029 — auto hang-up after order:**
+- After successful `place_order()`, Sierra speaks Punjabi goodbye then **`delete_room`** (phone + web)
+- Kill switch: `AUTO_HANGUP_AFTER_ORDER=0`
+- Module: **`restaurant/call_control.py`**
+
 ### Ambient audio (PR 020–022, 024–025) ✅
 - **`restaurant/ambient_audio.py`** — web **and** phone loop (`restaurant_ambience.mp3` or builtin)
 - **Default volume: 0.2** web + phone (code default; override via env)
@@ -113,6 +118,7 @@ Full index: **`pr/README.md`**.
 Greet → browse/add items → "Anything else?" → allergies (English)
   → pickup/delivery → read-back + "All good?" (NO price on phone)
   → name → phone → place_order() [log only until 8c]
+  → Punjabi goodbye → call ends automatically (PR 029)
 ```
 
 Phase enum: `restaurant/order_flow.py` → `OrderPhase`.
@@ -217,6 +223,8 @@ curl -s https://voice.bizbull.ai/health
 | `PHONE_BVC_ENABLED` | 1 | Krisp BVC on inbound audio |
 | `PHONE_BACKGROUND_FILTER_ENABLED` | 1 | Drop background transcripts |
 | `PHONE_INTERRUPTION_MIN_WORDS` | 2 | Barge-in threshold (phone) |
+| `AUTO_HANGUP_AFTER_ORDER` | 1 | End call after successful order |
+| `AUTO_HANGUP_GRACE_SEC` | 1.0 | Pause after goodbye before disconnect |
 
 Full list: **`docs/vps-config.md`**.
 

@@ -31,6 +31,7 @@ from restaurant.conversation import (
     echo_recovery_phrase,
     is_confirm_yes,
     is_want_to_order_only,
+    order_placed_goodbye,
     phrase_anything_else,
     resolve_intent,
     sanitize_assistant_speech,
@@ -46,6 +47,7 @@ from restaurant.web_sync import WebSync
 from restaurant.ambient_audio import build_ambient_player, start_ambient, stop_ambient
 from restaurant.session_recorder import SessionRecorder
 from restaurant.analytics_store import persist_session
+from restaurant.call_control import hangup_after_order_enabled, schedule_call_hangup
 
 load_dotenv()
 
@@ -72,6 +74,8 @@ class RestaurantAgent(Agent):
         self._background_reprompt_done = False
         self._web_sync: WebSync | None = None
         self._recorder: SessionRecorder | None = None
+        self._job_ctx: JobContext | None = None
+        self._hangup_started = False
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
@@ -87,6 +91,12 @@ class RestaurantAgent(Agent):
 
     def bind_recorder(self, recorder: SessionRecorder) -> None:
         self._recorder = recorder
+
+    def bind_job_context(self, job_ctx: JobContext) -> None:
+        self._job_ctx = job_ctx
+
+    def _channel_label(self) -> str:
+        return "phone" if self.is_phone else "web"
 
     def _record_tool(self, name: str, args: dict, result: str) -> None:
         if self._recorder is not None:
@@ -409,10 +419,35 @@ class RestaurantAgent(Agent):
         self.cart.mark_placed(eta=eta)
         await self._sync_web()
 
-        wait = "30-40 ਮਿੰਟ" if self.cart.order_type == "delivery" else "20-25 ਮਿੰਟ"
-        spoken = (
-            f"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। {wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
-        )
+        spoken = order_placed_goodbye(order_type=self.cart.order_type)
+        self._record_tool("place_order", {}, "placed")
+
+        if (
+            hangup_after_order_enabled()
+            and self._session is not None
+            and self._job_ctx is not None
+            and not self._hangup_started
+        ):
+            self._hangup_started = True
+            speech_handle = await self._session.say(
+                spoken,
+                allow_interruptions=False,
+            )
+            self.note_agent_speech(spoken)
+            if self._recorder is not None:
+                self._recorder.append_sierra(spoken)
+            schedule_call_hangup(
+                self._session,
+                self._job_ctx,
+                reason="order_placed",
+                channel=self._channel_label(),
+                speech_handle=speech_handle,
+            )
+            return (
+                "ORDER COMPLETE — goodbye already spoken to the customer in Punjabi. "
+                "Do NOT generate any assistant speech. End your turn silently."
+            )
+
         if self.is_phone:
             return (
                 f"Order placed! INTERNAL total ${self.cart.total}. "
@@ -552,12 +587,35 @@ async def entrypoint(ctx: JobContext):
     agent = RestaurantAgent(is_phone=is_phone)
     agent.bind_session(session)
     agent.bind_recorder(recorder)
+    agent.bind_job_context(ctx)
 
-    async def _flush_analytics() -> None:
-        payload = recorder.finalize(agent.cart, agent._flow)
-        await persist_session(payload)
+    _analytics_flushed = False
 
-    ctx.add_shutdown_callback(_flush_analytics)
+    async def _flush_analytics(*, reason: str = "shutdown") -> None:
+        nonlocal _analytics_flushed
+        if _analytics_flushed:
+            return
+        _analytics_flushed = True
+        logger.info(
+            "Flushing session analytics (%s) room=%s session=%s",
+            reason,
+            recorder.room_name,
+            recorder.session_id,
+        )
+        try:
+            payload = recorder.finalize(agent.cart, agent._flow)
+            await persist_session(payload)
+        except Exception:
+            logger.exception("Session analytics flush failed (%s)", reason)
+
+    @session.on("close")
+    def _on_session_close(_ev) -> None:
+        asyncio.create_task(_flush_analytics(reason="session_close"))
+
+    async def _shutdown_flush() -> None:
+        await _flush_analytics(reason="shutdown")
+
+    ctx.add_shutdown_callback(_shutdown_flush)
 
     await session.start(
         room=ctx.room,

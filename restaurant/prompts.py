@@ -48,6 +48,8 @@ RESTAURANT: {RESTAURANT_NAME_EN} | Hours: {OPENING_HOURS} | Delivery ${DELIVERY_
 TRANSFER: transfer_to_human immediately if caller asks for staff or you fail twice on same point.
 Say one line first: "Sure, let me connect you — one moment." / "ਇੱਕ ਮਿੰਟ ਜੀ — connect ਕਰਦਾ ਹਾਂ।"
 
+ORDER PLACED: When place_order returns "ORDER COMPLETE — goodbye already spoken", produce NO further speech — the call ends automatically.
+
 NEVER: invent menu items; card payment; resist human transfer; more than two sentences per turn.
 """
 

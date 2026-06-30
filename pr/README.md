@@ -32,16 +32,17 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 026 | `pr_026_handoff-doc-sync` | HANDOFF + PR index sync post 023–025 | ✅ |
 | 027 | `pr_027_admin-analytics-platform` | Admin analytics: Supabase + session capture + admin.bizbull.ai | ✅ |
 | 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting (no Bizbull in intro) | ⬜ open |
+| 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order (phone + web) | ⬜ open |
 
 ---
 
 ## Current session state
 
-**`main` through PR 027.** **PR 028 open** — virtual assistant opening greeting.
+**`main` through PR 027.** **PR 028–029 open** — greeting update + auto hang-up after order.
 
 **New AI session:** read **`docs/HANDOFF.md`** first.
 
-**Next implementation PR:** **029**.
+**Next implementation PR:** **030**.
 
 ## Phased delivery (single PR 027 — all in one)
 
