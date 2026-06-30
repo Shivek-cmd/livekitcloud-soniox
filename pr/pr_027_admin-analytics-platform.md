@@ -43,6 +43,9 @@ Async Supabase persist + `data/sessions/` JSON fallback.
 ### `admin/.env.example`
 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 
+### `admin/src/vite-env.d.ts`
+Vite `import.meta.env` TypeScript types (fixes `npm run build` on VPS).
+
 ### `tests/test_session_recorder.py`
 Unit tests for recorder finalize and echo filter.
 
