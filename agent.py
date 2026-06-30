@@ -553,11 +553,33 @@ async def entrypoint(ctx: JobContext):
     agent.bind_session(session)
     agent.bind_recorder(recorder)
 
-    async def _flush_analytics() -> None:
-        payload = recorder.finalize(agent.cart, agent._flow)
-        await persist_session(payload)
+    _analytics_flushed = False
 
-    ctx.add_shutdown_callback(_flush_analytics)
+    async def _flush_analytics(*, reason: str = "shutdown") -> None:
+        nonlocal _analytics_flushed
+        if _analytics_flushed:
+            return
+        _analytics_flushed = True
+        logger.info(
+            "Flushing session analytics (%s) room=%s session=%s",
+            reason,
+            recorder.room_name,
+            recorder.session_id,
+        )
+        try:
+            payload = recorder.finalize(agent.cart, agent._flow)
+            await persist_session(payload)
+        except Exception:
+            logger.exception("Session analytics flush failed (%s)", reason)
+
+    @session.on("close")
+    def _on_session_close(_ev) -> None:
+        asyncio.create_task(_flush_analytics(reason="session_close"))
+
+    async def _shutdown_flush() -> None:
+        await _flush_analytics(reason="shutdown")
+
+    ctx.add_shutdown_callback(_shutdown_flush)
 
     await session.start(
         room=ctx.room,
