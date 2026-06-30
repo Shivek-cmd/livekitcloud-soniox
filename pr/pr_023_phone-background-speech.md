@@ -4,7 +4,7 @@
 `pr_023_phone-background-speech`
 
 ## Status
-⬜ **Open** — merge to `main` then deploy and test on inbound phone.
+✅ **Merged** — GitHub PR #52–53 → `main` (2026-06-29).
 
 ## What This PR Does
 

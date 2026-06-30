@@ -3,6 +3,9 @@
 ## Branch
 `pr_024_natural-concise-multi-item`
 
+## Status
+✅ **Merged** — GitHub PR #54–55 → `main` (2026-06-29).
+
 ## What This PR Does
 
 Fixes two live-call issues when a caller says e.g. *"add one rasmalai and one kheer"*:
@@ -12,8 +15,10 @@ Fixes two live-call issues when a caller says e.g. *"add one rasmalai and one kh
 
 Also in this PR:
 
-3. **Web ambient quieter** — default `WEB_AMBIENT_VOLUME` `0.4` → **`0.2`** (phone stays `0.4`).
+3. **Web ambient quieter** — default `WEB_AMBIENT_VOLUME` `0.4` → **`0.2`**.
 4. **Soft drink TTS** — `speak_as` / `voice_line` `ਸੋਫਟ ਪੀਅ` → **`ਸਾਫਟ ਡਰਿੰਕ`**.
+
+(Post-merge: phone ambient lowered to **0.2** in PR 025.)
 
 ## Files Added
 

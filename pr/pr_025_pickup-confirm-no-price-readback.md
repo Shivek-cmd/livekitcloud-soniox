@@ -3,6 +3,9 @@
 ## Branch
 `pr_025_pickup-confirm-no-price-readback`
 
+## Status
+✅ **Merged** — GitHub PR #56–57 → `main` (2026-06-29).
+
 ## What This PR Does
 
 Fixes three phone-call issues from live testing:
@@ -11,6 +14,7 @@ Fixes three phone-call issues from live testing:
 2. **“All good / ਆਲ ਗੁੱਡ” loop** — recognize code-mix yes after read-back → ask name once (no repeat read-back).
 3. **No price in speech** — phone never mentions dollars/totals unless customer asks price (`ASK_PRICE` intent).
 4. **Shorter greeting** — `Hi! Sierra from Bizbull here. I speak English, Hindi, and Punjabi. How can I help?`
+5. **Phone ambient 0.2** — `_DEFAULT_PHONE_VOLUME` **0.4 → 0.2** (matches web)
 
 ## Files Modified
 
@@ -30,8 +34,14 @@ Fixes three phone-call issues from live testing:
 ### `restaurant/prompts.py`
 - Phone: never state price unless customer asked
 
+### `restaurant/ambient_audio.py`
+- Phone default volume **0.4 → 0.2** (matches web)
+
 ### `tests/test_conversation.py`
 - Tests for pickup STT, confirm yes, read-back without price
+
+### `tests/test_language.py`
+- Greeting test updated for new copy
 
 ## How to Test
 

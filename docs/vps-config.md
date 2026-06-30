@@ -81,7 +81,7 @@ WEB_AMBIENT_VOLUME=0.2
 WEB_AMBIENT_FADE_IN=1.0
 
 PHONE_AMBIENT_ENABLED=1
-PHONE_AMBIENT_VOLUME=0.4       # same default as web
+PHONE_AMBIENT_VOLUME=0.2
 PHONE_AMBIENT_FADE_IN=1.0
 
 # AMBIENT_AUDIO_PATH=/opt/livekit-sarvam/data/audio/restaurant_ambience.mp3
