@@ -44,6 +44,8 @@ from restaurant.prompts import build_system_prompt
 from restaurant import reservations as res_store
 from restaurant.web_sync import WebSync
 from restaurant.ambient_audio import build_ambient_player, start_ambient, stop_ambient
+from restaurant.session_recorder import SessionRecorder
+from restaurant.analytics_store import persist_session
 
 load_dotenv()
 
@@ -69,6 +71,7 @@ class RestaurantAgent(Agent):
         self._background_ignore_streak = 0
         self._background_reprompt_done = False
         self._web_sync: WebSync | None = None
+        self._recorder: SessionRecorder | None = None
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
@@ -81,6 +84,16 @@ class RestaurantAgent(Agent):
 
     def bind_web_sync(self, web_sync: WebSync) -> None:
         self._web_sync = web_sync
+
+    def bind_recorder(self, recorder: SessionRecorder) -> None:
+        self._recorder = recorder
+
+    def _record_tool(self, name: str, args: dict, result: str) -> None:
+        if self._recorder is not None:
+            self._recorder.log_tool(name, args, result)
+
+    def _cart_snapshot(self) -> dict:
+        return self.cart.to_state_dict()
 
     async def _sync_web(self) -> None:
         """Push the current cart to the web UI (no-op on phone)."""
@@ -188,6 +201,14 @@ class RestaurantAgent(Agent):
         )
         logger.info("AUTO_ADD items=%s", [e[1] for e in entries])
 
+        if self._recorder is not None:
+            self._recorder.complete_turn(
+                intent=intent.value,
+                phase=self._flow.state.phase.value,
+                auto_add=True,
+                cart_snapshot=self._cart_snapshot(),
+            )
+
         if self._session:
             await self._session.say(say_line, allow_interruptions=True)
             self.note_agent_speech(say_line)
@@ -213,6 +234,10 @@ class RestaurantAgent(Agent):
                 user_text, self._recent_agent_lines, intent=intent
             ):
                 logger.info("Ignoring phone echo turn: %s", user_text)
+                if self._recorder is not None:
+                    if self._recorder.current_turn is None:
+                        self._recorder.begin_user_turn(user_text)
+                    self._recorder.mark_filtered("echo")
                 # Only one post-greeting reprompt — never speak again on echo (avoids loop).
                 if (
                     is_greeting_tail_echo(user_text)
@@ -228,6 +253,10 @@ class RestaurantAgent(Agent):
                 enabled=phone_background_filter_enabled(),
             ):
                 logger.info("Ignoring phone background turn: %s", user_text)
+                if self._recorder is not None:
+                    if self._recorder.current_turn is None:
+                        self._recorder.begin_user_turn(user_text)
+                    self._recorder.mark_filtered("background")
                 self._background_ignore_streak += 1
                 if self._background_ignore_streak >= 3:
                     self._schedule_background_reprompt()
@@ -252,6 +281,13 @@ class RestaurantAgent(Agent):
 
         self._inject_turn_guidance(turn_ctx, user_text)
 
+        if self._recorder is not None:
+            self._recorder.complete_turn(
+                intent=intent.value,
+                phase=self._flow.state.phase.value,
+                cart_snapshot=self._cart_snapshot(),
+            )
+
     # ── ORDER TOOLS ──────────────────────────────────────────────────────────
 
     @function_tool
@@ -269,6 +305,7 @@ class RestaurantAgent(Agent):
         self._flow.on_item_added()
         self._flow.note_discussed_item(item["name"], float(item.get("price") or 0))
         await self._sync_web()
+        self._record_tool("add_to_order", {"item_name": item_name, "quantity": quantity, "note": note}, result)
         return result
 
     @function_tool
@@ -364,6 +401,9 @@ class RestaurantAgent(Agent):
             "address": self.cart.delivery_address,
         }
         logger.info(f"ORDER_PLACED: {json.dumps(order_data, ensure_ascii=False)}")
+        if self._recorder is not None:
+            self._recorder.set_outcome("placed")
+            self._recorder.add_event("order_placed", order_data)
 
         eta = "30-40 min" if self.cart.order_type == "delivery" else "20-25 min"
         self.cart.mark_placed(eta=eta)
@@ -395,7 +435,9 @@ class RestaurantAgent(Agent):
         if item and not item.get("unavailable"):
             price = menu_provider.item_price_dollars(item["name"])
             self._flow.note_discussed_item(item["name"], price)
-        return menu_provider.check_item(item_name)
+        result = menu_provider.check_item(item_name)
+        self._record_tool("check_menu_item", {"item_name": item_name}, result)
+        return result
 
     @function_tool
     async def search_menu_items(
@@ -403,7 +445,11 @@ class RestaurantAgent(Agent):
         query: Annotated[str, "Search term e.g. 'paneer', 'combo', 'biryani', 'vegetarian starters'"],
     ) -> str:
         """Search the menu by keyword or category. Use for 'what X dishes do you have?' questions."""
-        return menu_provider.search_menu(query)
+        result = menu_provider.search_menu(query)
+        self._record_tool("search_menu_items", {"query": query}, result)
+        if self._recorder is not None and "no items found" in result.lower():
+            self._recorder.add_event("menu_search_empty", {"query": query})
+        return result
 
     # ── TRANSFER ─────────────────────────────────────────────────────────────
 
@@ -414,6 +460,8 @@ class RestaurantAgent(Agent):
     ) -> str:
         """Transfer the call to a human staff member."""
         logger.info(f"TRANSFER_TO_HUMAN: {reason}")
+        if self._recorder is not None:
+            self._recorder.set_transfer(reason or "unspecified")
         return (
             "Transfer logged. Tell the customer to please hold, then stay quiet. "
             "A staff member will take over."
@@ -448,6 +496,8 @@ class RestaurantAgent(Agent):
 
         record = res_store.book(date, time, party_size, customer_name, customer_phone)
         logger.info(f"RESERVATION_BOOKED: {json.dumps(record, ensure_ascii=False)}")
+        if self._recorder is not None:
+            self._recorder.add_event("reservation_booked", record)
 
         return (
             f"Reservation confirmed! Ref: {record['ref']}. "
@@ -456,28 +506,58 @@ class RestaurantAgent(Agent):
         )
 
 
+def _sip_caller_phone(attrs: dict) -> str | None:
+    for key in ("sip.phoneNumber", "sip.callerNumber", "sip.from"):
+        value = attrs.get(key)
+        if value:
+            return str(value)
+    return None
+
+
 async def entrypoint(ctx: JobContext):
     await ctx.connect()
 
     participant = await ctx.wait_for_participant()
+    sip_attrs = dict(participant.attributes or {})
 
     is_phone = (
         participant.identity.startswith("sip_")
-        or participant.attributes.get("sip.callStatus") is not None
+        or sip_attrs.get("sip.callStatus") is not None
     )
+    channel = "phone" if is_phone else "web"
 
     logger.info(
         f"Session started | room={ctx.room.name} | "
-        f"channel={'phone' if is_phone else 'web'} | "
+        f"channel={channel} | "
         f"participant={participant.identity}"
     )
 
+    recorder = SessionRecorder(
+        metadata={"git_sha": os.getenv("DEPLOY_GIT_SHA", "")},
+    )
+    recorder.start(
+        room_name=ctx.room.name,
+        channel=channel,
+        participant_identity=participant.identity,
+        caller_phone=_sip_caller_phone(sip_attrs),
+    )
+
     session = build_agent_session(is_phone=is_phone)
-    channel = "phone" if is_phone else "web"
-    TurnLatencyTracker(channel=channel).attach(session)
+
+    def _on_turn_latency(latency: dict) -> None:
+        recorder.attach_latency(latency)
+
+    TurnLatencyTracker(channel=channel, on_turn_latency=_on_turn_latency).attach(session)
 
     agent = RestaurantAgent(is_phone=is_phone)
     agent.bind_session(session)
+    agent.bind_recorder(recorder)
+
+    async def _flush_analytics() -> None:
+        payload = recorder.finalize(agent.cart, agent._flow)
+        await persist_session(payload)
+
+    ctx.add_shutdown_callback(_flush_analytics)
 
     await session.start(
         room=ctx.room,
@@ -510,6 +590,8 @@ async def entrypoint(ctx: JobContext):
     def _on_user_transcript(ev) -> None:
         if ev.is_final:
             logger.info(f"USER: {ev.transcript}")
+            lang = getattr(ev, "language", None)
+            recorder.begin_user_turn(ev.transcript or "", stt_language=lang)
 
     @session.on("conversation_item_added")
     def _on_conv_item(ev) -> None:
@@ -525,6 +607,7 @@ async def entrypoint(ctx: JobContext):
                 if cleaned != text:
                     logger.warning("Mid-call re-greeting blocked in log: %s", text[:80])
                 agent.note_agent_speech(text)
+                recorder.append_sierra(text)
                 logger.info(f"SIERRA: {text}")
 
     await session.say(
