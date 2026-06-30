@@ -1,5 +1,8 @@
 # PR 029 — Auto hang-up after order placed
 
+## Status
+✅ **Merged to `main`** — PR #62 · **`main` @ `f4837c3`**
+
 ## Branch
 `pr_029_auto-hangup-after-order`
 

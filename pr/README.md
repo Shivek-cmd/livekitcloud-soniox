@@ -30,28 +30,45 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 024 | `pr_024_natural-concise-multi-item` | Concise confirms + multi-item parse + soft drink TTS | ✅ #54–55 |
 | 025 | `pr_025_pickup-confirm-no-price-readback` | Pickup STT, all-good, no price, greeting, ambient 0.2 | ✅ #56–57 |
 | 026 | `pr_026_handoff-doc-sync` | HANDOFF + PR index sync post 023–025 | ✅ |
-| 027 | `pr_027_admin-analytics-platform` | Admin analytics: Supabase + session capture + admin.bizbull.ai | ✅ |
-| 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting (no Bizbull in intro) | ⬜ open |
-| 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order (phone + web) | ⬜ open |
+| 027 | `pr_027_admin-analytics-platform` | Admin analytics: Supabase + session capture + admin.bizbull.ai | ✅ #60 |
+| 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting | ✅ #61 |
+| 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order | ✅ #62 |
+| 030 | `pr_030_order-flow-quality` | Strict auto-add, final confirm, phase guards | ❌ **Reverted** — see doc |
 
 ---
 
-## Current session state
+## Current session state (2026-06-30)
 
-**`main` through PR 027.** **PR 028–029 open** — greeting update + auto hang-up after order.
+| Item | Value |
+|------|--------|
+| **`main` commit** | `f4837c3` — Merge PR #62 (PR 029) |
+| **Deploy branch** | **`main` only** — never deploy feature branches on VPS |
+| **VPS path** | `/opt/livekit-sarvam` @ `89.117.18.192` |
+| **Deploy command** | `bash scripts/vps_deploy.sh` or `git reset --hard origin/main` + restart agent |
 
-**New AI session:** read **`docs/HANDOFF.md`** first.
+### New AI session checklist
 
-**Next implementation PR:** **030**.
+1. Read **`docs/HANDOFF.md`** first (primary source of truth).
+2. Confirm `git log -1 --oneline` on VPS matches **`f4837c3`** (or newer if PRs merged since this doc).
+3. Do **not** re-implement PR 030 without reading **`pr/pr_030_order-flow-quality.md`** (reverted — lessons inside).
+4. Prefer **small PRs** — one ladder step or one data fix per PR.
 
-## Phased delivery (single PR 027 — all in one)
+### Next PR numbers (suggested, not started)
 
-| Component | Status in PR 027 |
-|-----------|------------------|
-| Supabase `sierra-bizbull` + schema | ✅ migration in repo + applied |
-| Agent `SessionRecorder` + Supabase writer | ✅ |
-| Admin app `admin.bizbull.ai` | ✅ |
-| Recordings | ⬜ deferred |
-| Quality rubric UI | ⬜ deferred (table ready) |
+| PR | Suggested scope |
+|----|-----------------|
+| **031** | Code-owned allergies step (speak + phase advance in `agent.py`) |
+| **032** | Menu aliases batch (shikanji, common STT typos) |
+| **033** | Strict auto-add only (`find_item_strict` — isolated, no phase changes) |
 
-**Deploy after pull:** `bash /opt/livekit-sarvam/scripts/vps_deploy.sh`
+Adjust numbering when opening the doc — follow `pr_rules.md`.
+
+### PR 027 components
+
+| Component | Status |
+|-----------|--------|
+| Supabase schema + migration | ✅ |
+| Agent `SessionRecorder` + flush on close/shutdown | ✅ |
+| Admin `admin.bizbull.ai` | ✅ |
+| Call recordings | ⬜ deferred |
+| Quality rubric UI | ⬜ deferred |

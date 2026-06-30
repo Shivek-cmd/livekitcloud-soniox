@@ -1,5 +1,8 @@
 # PR 028 — Virtual assistant opening greeting
 
+## Status
+✅ **Merged to `main`** — PR #61
+
 ## Branch
 `pr_028_virtual-assistant-greeting`
 
