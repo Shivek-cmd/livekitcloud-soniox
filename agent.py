@@ -35,6 +35,7 @@ from restaurant.conversation import (
     echo_recovery_phrase,
     extract_customer_name,
     extract_phone_digits,
+    format_final_confirm,
     format_order_readback,
     is_allergies_step_answer,
     is_confirm_yes,
@@ -232,9 +233,19 @@ class RestaurantAgent(Agent):
             )
 
         if self._session:
+            await self._cancel_agent_speech()
             await self._session.say(say_line, allow_interruptions=True)
             self.note_agent_speech(say_line)
         raise StopResponse()
+
+    async def _cancel_agent_speech(self) -> None:
+        """Cancel preemptive LLM/TTS so code-owned lines are not duplicated."""
+        if not self._session:
+            return
+        try:
+            await self._session.interrupt(force=True)
+        except Exception:
+            logger.exception("Agent interrupt failed")
 
     async def _speak_filler(self, line: str) -> None:
         if not self._session:
@@ -276,6 +287,7 @@ class RestaurantAgent(Agent):
         )
         logger.info("LADDER %s text=%s", tag, line)
         if self._session:
+            await self._cancel_agent_speech()
             await self._session.say(line, allow_interruptions=True)
             self.note_agent_speech(line)
         if self._recorder is not None:
@@ -387,14 +399,29 @@ class RestaurantAgent(Agent):
             phone = extract_phone_digits(user_text)
             if phone:
                 cart.customer_phone = phone
+                self._flow.state.final_confirm_pending = True
                 self._flow.sync_from_cart(cart)
                 await self._sync_web()
-                result = await self.place_order()
-                turn_ctx.add_message(
-                    role="system",
-                    content=f"[LADDER:placed] {result}",
-                )
+                line = format_final_confirm(cart)
+                if line:
+                    await self._ladder_speak(turn_ctx, line, "final_confirm")
                 raise StopResponse()
+
+        if (
+            phase == OrderPhase.FINAL_CONFIRM
+            and self._flow.state.final_confirm_pending
+            and cart.customer_name
+            and cart.customer_phone
+            and (intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text))
+        ):
+            self._flow.state.final_confirm_pending = False
+            await self._cancel_agent_speech()
+            result = await self.place_order()
+            turn_ctx.add_message(
+                role="system",
+                content=f"[LADDER:placed] {result}",
+            )
+            raise StopResponse()
 
     def _inject_turn_guidance(self, turn_ctx, user_text: str) -> None:
         intent = resolve_intent(user_text, phase=self._flow.state.phase.value)
@@ -459,6 +486,7 @@ class RestaurantAgent(Agent):
         self._background_ignore_streak = 0
 
         self._flow.note_customer_language(user_text)
+        await self._cancel_agent_speech()
         await self._try_auto_add_multi(turn_ctx, user_text, intent)
 
         await self._try_ladder_step(turn_ctx, user_text, intent)
@@ -604,6 +632,7 @@ class RestaurantAgent(Agent):
             and not self._hangup_started
         ):
             self._hangup_started = True
+            await self._cancel_agent_speech()
             speech_handle = await self._session.say(
                 spoken,
                 allow_interruptions=False,

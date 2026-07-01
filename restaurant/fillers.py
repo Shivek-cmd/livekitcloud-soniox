@@ -18,6 +18,7 @@ _BLOCKED_PHASES = frozenset({
     OrderPhase.DELIVERY_ADDRESS,
     OrderPhase.CUSTOMER_NAME,
     OrderPhase.CUSTOMER_PHONE,
+    OrderPhase.FINAL_CONFIRM,
     OrderPhase.CONFIRMING,
     OrderPhase.PLACED,
 })

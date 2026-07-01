@@ -35,7 +35,8 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order | ✅ #62 |
 | 030 | `pr_030_order-flow-quality` | Strict auto-add, final confirm, phase guards | ❌ **Reverted** — see doc |
 | 031 | `pr_031_voice-fillers` | Intent-based voice fillers (phone + web) | ✅ #64 |
-| 032 | `pr_032_order-ladder-concise` | Code-owned ladder — no repeat read-back, no phone price | ⬜ **Open** |
+| 032 | `pr_032_order-ladder-concise` | Code-owned ladder — no repeat read-back, no phone price | ✅ |
+| 033 | `pr_033_ladder-single-speak` | Interrupt preemptive dupes + final confirm after phone | ⬜ **Open** |
 
 ---
 
