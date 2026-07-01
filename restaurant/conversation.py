@@ -122,6 +122,18 @@ def phrase_name_for_order(lang: CustomerLanguage) -> str:
     }.get(lang, "Can I get a name for the order?")
 
 
+def phrase_phone_for_order(lang: CustomerLanguage) -> str:
+    return {
+        CustomerLanguage.ENGLISH: "What's the best phone number for the order?",
+        CustomerLanguage.PUNJABI: "ਆਰਡਰ ਲਈ ਫੋਨ ਨੰਬਰ ਦੱਸੋ ਜੀ?",
+        CustomerLanguage.HINDI: "ऑर्डर के लिए phone number बता सकते हैं?",
+        CustomerLanguage.MIXED: "Phone number for the order ji?",
+    }.get(lang, "What's the best phone number for the order?")
+
+
+DELIVERY_ADDRESS_QUESTION = "What's the full delivery address?"
+
+
 def phrase_repeat_request(lang: CustomerLanguage) -> str:
     return {
         CustomerLanguage.ENGLISH: "Sorry, could you say that again?",
@@ -379,6 +391,26 @@ def resolve_intent(text: str, *, phase: str | None = None) -> UserIntent:
             return UserIntent.PICKUP
         if _DELIVERY_RE.search(text):
             return UserIntent.DELIVERY
+    if phase == "special_instructions":
+        if _I_SAID_RE.search(text) and (_NO_RE.search(text) or re.search(r"\bno\b", text, re.I)):
+            return UserIntent.CONFIRM_NO
+        if intent == UserIntent.ADD_ITEM and (
+            _NO_RE.search(text) or _DONE_RE.search(text)
+        ):
+            return UserIntent.CONFIRM_NO
+        if intent == UserIntent.ORDER_DONE:
+            return UserIntent.CONFIRM_NO
+        if intent == UserIntent.GENERAL and (
+            _NO_RE.search(text)
+            or _ALLERGY_NO_RE.search(text)
+            or _DONE_RE.search(text)
+        ):
+            return UserIntent.CONFIRM_NO
+    if phase == "confirming" and is_confirm_yes(text):
+        return UserIntent.CONFIRM_YES
+    if phase in ("customer_name", "customer_phone") and _I_SAID_RE.search(text):
+        if intent == UserIntent.ADD_ITEM:
+            return UserIntent.GENERAL
     return intent
 
 
@@ -386,11 +418,41 @@ def is_add_intent(text: str) -> bool:
     return detect_intent(text) == UserIntent.ADD_ITEM
 
 
+def extract_customer_name(text: str) -> str | None:
+    """Best-effort name from a customer_name phase utterance."""
+    t = (text or "").strip()
+    if not t:
+        return None
+    m = re.search(
+        r"(?:name is|my name is|naam (?:hai|eh)|ਨਾਮ)\s+([A-Za-z][A-Za-z\s'-]{0,30})",
+        t,
+        re.I,
+    )
+    if m:
+        return m.group(1).strip().split()[0]
+    if re.match(r"^[A-Za-z][A-Za-z'-]{1,24}$", t):
+        return t
+    m = re.search(r"\b([A-Za-z][A-Za-z'-]{1,24})\s*$", t)
+    if m and not re.search(r"\d{5,}", t):
+        return m.group(1)
+    return None
+
+
+def extract_phone_digits(text: str) -> str | None:
+    """Extract a 10-digit phone from speech/transcript."""
+    digits = re.sub(r"\D", "", text or "")
+    if len(digits) >= 10:
+        return digits[-10:]
+    return None
+
+
 def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
     """Caller answered the allergies / special-instructions question."""
     if intent in (UserIntent.CONFIRM_NO, UserIntent.PICKUP, UserIntent.DELIVERY):
         return True
     t = (text or "").lower()
+    if len(re.findall(r"\bno\b", t, re.I)) >= 2:
+        return True
     if _ALLERGY_NO_RE.search(text):
         return True
     if "allerg" in t or "ਐਲਰਜੀ" in text:
