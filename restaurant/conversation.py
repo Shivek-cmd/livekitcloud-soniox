@@ -351,9 +351,6 @@ def is_confirm_yes(text: str) -> bool:
         return True
     if re.search(r"ਹਾਂ", t) and (_ALL_GOOD_RE.search(t) or re.search(r"\bgood\b", t, re.I)):
         return True
-    if not _NO_RE.search(text) and not re.search(r"ਨਹੀਂ|nahin|nahi", text, re.I):
-        if len(re.findall(r"ਹਾਂ|haan|han|yes|yeah|yep", text, re.I)) >= 2:
-            return True
     return False
 
 

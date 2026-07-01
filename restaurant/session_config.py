@@ -85,11 +85,7 @@ def _turn_handling(*, is_phone: bool) -> TurnHandlingOptions:
         },
         preemptive_generation={
             "enabled": _env_bool("PHONE_PREEMPTIVE_GENERATION", True),
-            # Default off on phone — preemptive TTS duplicates checkout code-owned speech (PR 034).
-            "preemptive_tts": _env_bool(
-                "PHONE_PREEMPTIVE_TTS",
-                False if is_phone else True,
-            ),
+            "preemptive_tts": _env_bool("PHONE_PREEMPTIVE_TTS", True),
             "max_speech_duration": 10.0,
             "max_retries": 2,
         },
