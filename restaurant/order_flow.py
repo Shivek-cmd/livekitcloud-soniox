@@ -39,6 +39,7 @@ class OrderPhase(str, Enum):
     DELIVERY_ADDRESS = "delivery_address"
     CUSTOMER_NAME = "customer_name"
     CUSTOMER_PHONE = "customer_phone"
+    FINAL_CONFIRM = "final_confirm"
     CONFIRMING = "confirming"
     PLACED = "placed"
 
@@ -51,6 +52,7 @@ class OrderFlowState:
     allergies_asked: bool = False
     readback_confirmed: bool = False
     readback_spoken: bool = False
+    final_confirm_pending: bool = False
     preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
     last_discussed_item: str | None = None
     last_discussed_price: float | None = None
@@ -93,6 +95,9 @@ class OrderFlowController:
             return
         if cart.order_type == "delivery" and not cart.delivery_address:
             self.state.phase = OrderPhase.DELIVERY_ADDRESS
+            return
+        if self.state.final_confirm_pending and cart.customer_name and cart.customer_phone:
+            self.state.phase = OrderPhase.FINAL_CONFIRM
             return
         if not self.state.readback_confirmed:
             self.state.phase = OrderPhase.CONFIRMING
@@ -322,9 +327,19 @@ class OrderFlowController:
             return ["Ask for full delivery address, then call set_delivery_address."]
         if p == OrderPhase.CUSTOMER_NAME:
             q = phrase_name_for_order(self.state.preferred_language)
+            if cart.customer_name:
+                return [
+                    "Name already collected — do NOT read the order or mention price.",
+                    "Ask for phone number only.",
+                ]
             return [
                 f'Ask: "{q}"',
-                "Only ask name AFTER customer confirmed the read-back (All good? → yes).",
+                "Do NOT read the order again. Do NOT mention price or totals.",
+            ]
+        if p == OrderPhase.FINAL_CONFIRM:
+            return [
+                "Final summary already spoken — wait for yes / all good, then place order.",
+                "Do NOT repeat name, phone, items, or price.",
             ]
         if p == OrderPhase.CUSTOMER_PHONE:
             return [

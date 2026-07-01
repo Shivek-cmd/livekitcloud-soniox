@@ -94,3 +94,44 @@ def test_extract_name_and_phone():
 
 def test_confirm_yes_at_confirming_phase():
     assert resolve_intent("Yes", phase="confirming") == UserIntent.CONFIRM_YES
+
+
+def test_gurmukhi_name_extract():
+    assert extract_customer_name("ਨਾਮ ਹੈ ਸ਼ਿਵੇਕ") == "ਸ਼ਿਵੇਕ"
+
+
+def test_punjabi_pickup_phrase():
+    from restaurant.conversation import is_likely_pickup_stt
+
+    assert is_likely_pickup_stt("ਪਿਕਅੱਪ ਲਈ ਕਰਨਾ ਹੈ?") is True
+
+
+def test_final_confirm_no_price():
+    from restaurant.conversation import format_final_confirm
+
+    cart = OrderCart()
+    cart.add_item({"name": "Naan", "voice_line": "Butter Naan", "price": 4}, 1)
+    cart.order_type = "pickup"
+    cart.customer_name = "Shivek"
+    cart.customer_phone = "9413752688"
+    line = format_final_confirm(cart)
+    assert "Shivek" in line
+    assert "9 4 1 3 7" in line
+    assert "dollar" not in line.lower()
+    assert "All good?" in line
+
+
+def test_final_confirm_phase():
+    cart = OrderCart()
+    cart.add_item({"name": "Naan", "voice_line": "Butter Naan", "price": 4}, 1)
+    cart.order_type = "pickup"
+    cart.customer_name = "Shivek"
+    cart.customer_phone = "9413752688"
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_special_instructions_done()
+    flow.mark_readback_spoken()
+    flow.mark_readback_confirmed()
+    flow.state.final_confirm_pending = True
+    flow.sync_from_cart(cart)
+    assert flow.state.phase == OrderPhase.FINAL_CONFIRM

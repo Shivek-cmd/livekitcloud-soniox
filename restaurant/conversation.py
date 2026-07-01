@@ -330,6 +330,8 @@ def is_likely_pickup_stt(text: str) -> bool:
         re.I,
     ):
         return True
+    if re.search(r"ਪਿਕ(?:ਅੱਪ|ਅਪ)|pikap|pickup|pick\s*up", t, re.I):
+        return True
     return False
 
 
@@ -408,6 +410,8 @@ def resolve_intent(text: str, *, phase: str | None = None) -> UserIntent:
             return UserIntent.CONFIRM_NO
     if phase == "confirming" and is_confirm_yes(text):
         return UserIntent.CONFIRM_YES
+    if phase == "final_confirm" and is_confirm_yes(text):
+        return UserIntent.CONFIRM_YES
     if phase in ("customer_name", "customer_phone") and _I_SAID_RE.search(text):
         if intent == UserIntent.ADD_ITEM:
             return UserIntent.GENERAL
@@ -424,14 +428,19 @@ def extract_customer_name(text: str) -> str | None:
     if not t:
         return None
     m = re.search(
-        r"(?:name is|my name is|naam (?:hai|eh)|ਨਾਮ)\s+([A-Za-z][A-Za-z\s'-]{0,30})",
+        r"(?:name is|my name is|naam (?:hai|eh)|ਨਾਮ\s*(?:ਹੈ|hai)?)\s*"
+        r"([A-Za-z\u0A00-\u0A7F][A-Za-z\u0A00-\u0A7F\s'-]{0,30})",
         t,
         re.I,
     )
     if m:
-        return m.group(1).strip().split()[0]
+        name = m.group(1).strip().strip(".,!?")
+        return name.split()[0] if name else None
     if re.match(r"^[A-Za-z][A-Za-z'-]{1,24}$", t):
         return t
+    m = re.search(r"([\u0A00-\u0A7F]{2,20})\s*$", t)
+    if m and not re.search(r"\d{5,}", t):
+        return m.group(1)
     m = re.search(r"\b([A-Za-z][A-Za-z'-]{1,24})\s*$", t)
     if m and not re.search(r"\d{5,}", t):
         return m.group(1)
@@ -550,11 +559,7 @@ def format_remove_tool_reply(voice_line: str) -> str:
     )
 
 
-def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str:
-    """Exact spoken read-back line for final confirmation (Step E)."""
-    if cart.is_empty:
-        return ""
-
+def _format_order_items(cart: OrderCart) -> str:
     item_parts: list[str] = []
     for item in cart.items:
         qty = _qty_word(item.quantity)
@@ -565,12 +570,18 @@ def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str
             item_parts.append(f"{qty} {name}")
 
     if len(item_parts) == 1:
-        items_str = item_parts[0]
-    elif len(item_parts) == 2:
-        items_str = f"{item_parts[0]} and {item_parts[1]}"
-    else:
-        items_str = ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
+        return item_parts[0]
+    if len(item_parts) == 2:
+        return f"{item_parts[0]} and {item_parts[1]}"
+    return ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
 
+
+def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str:
+    """Exact spoken read-back line for final confirmation (Step E)."""
+    if cart.is_empty:
+        return ""
+
+    items_str = _format_order_items(cart)
     order_type = cart.order_type or "pickup"
     name = cart.customer_name or ""
 
@@ -586,6 +597,19 @@ def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str
     if name:
         return f"Okay {name} ji — {items_str}, {order_type}. {CONFIRM_CLOSE}"
     return f"Okay — {items_str}, {order_type}. {CONFIRM_CLOSE}"
+
+
+def format_final_confirm(cart: OrderCart) -> str:
+    """After name + phone — one summary before place_order (phone: no price)."""
+    if cart.is_empty or not cart.customer_name or not cart.customer_phone:
+        return ""
+    items_str = _format_order_items(cart)
+    order_type = cart.order_type or "pickup"
+    digits = " ".join(list(cart.customer_phone))
+    return (
+        f"Okay {cart.customer_name} ji — phone {digits} — "
+        f"{items_str}, {order_type}. {CONFIRM_CLOSE}"
+    )
 
 
 def spice_question_allowed(*, has_spice_modifier: bool) -> bool:
