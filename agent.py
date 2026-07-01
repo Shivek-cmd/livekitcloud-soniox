@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+from collections import deque
 from typing import Annotated
 
 from dotenv import load_dotenv
@@ -48,6 +49,7 @@ from restaurant.ambient_audio import build_ambient_player, start_ambient, stop_a
 from restaurant.session_recorder import SessionRecorder
 from restaurant.analytics_store import persist_session
 from restaurant.call_control import hangup_after_order_enabled, schedule_call_hangup
+from restaurant.fillers import agent_session_busy, pick_filler
 
 load_dotenv()
 
@@ -76,6 +78,7 @@ class RestaurantAgent(Agent):
         self._recorder: SessionRecorder | None = None
         self._job_ctx: JobContext | None = None
         self._hangup_started = False
+        self._recent_fillers: deque[str] = deque(maxlen=3)
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
@@ -224,6 +227,39 @@ class RestaurantAgent(Agent):
             self.note_agent_speech(say_line)
         raise StopResponse()
 
+    async def _speak_filler(self, line: str) -> None:
+        if not self._session:
+            return
+        try:
+            await self._session.say(line, allow_interruptions=True)
+            self.note_agent_speech(line)
+        except Exception:
+            logger.exception("Filler speech failed")
+
+    def _maybe_speak_filler(self, intent: UserIntent) -> None:
+        """Fire-and-forget filler TTS — does not block LLM / turn guidance."""
+        if not self._session:
+            return
+        line = pick_filler(
+            intent=intent,
+            phase=self._flow.state.phase,
+            lang=self._flow.state.preferred_language,
+            recent=self._recent_fillers,
+            hangup_started=self._hangup_started,
+            agent_busy=agent_session_busy(self._session),
+        )
+        if not line:
+            return
+        self._recent_fillers.append(line)
+        logger.info(
+            "FILLER intent=%s phase=%s lang=%s text=%s",
+            intent.value,
+            self._flow.state.phase.value,
+            self._flow.state.preferred_language.value,
+            line,
+        )
+        asyncio.create_task(self._speak_filler(line))
+
     def _inject_turn_guidance(self, turn_ctx, user_text: str) -> None:
         intent = resolve_intent(user_text, phase=self._flow.state.phase.value)
         plan = self._flow.build_turn_plan(user_text, intent, self.cart)
@@ -289,6 +325,7 @@ class RestaurantAgent(Agent):
         self._flow.note_customer_language(user_text)
         await self._try_auto_add_multi(turn_ctx, user_text, intent)
 
+        self._maybe_speak_filler(intent)
         self._inject_turn_guidance(turn_ctx, user_text)
 
         if self._recorder is not None:

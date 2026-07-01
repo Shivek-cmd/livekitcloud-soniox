@@ -34,6 +34,7 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting | ✅ #61 |
 | 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order | ✅ #62 |
 | 030 | `pr_030_order-flow-quality` | Strict auto-add, final confirm, phase guards | ❌ **Reverted** — see doc |
+| 031 | `pr_031_voice-fillers` | Intent-based voice fillers (phone + web) | ⬜ **Open** |
 
 ---
 
@@ -53,15 +54,14 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 3. Do **not** re-implement PR 030 without reading **`pr/pr_030_order-flow-quality.md`** (reverted — lessons inside).
 4. Prefer **small PRs** — one ladder step or one data fix per PR.
 
-### Next PR numbers (suggested, not started)
+### Next PR numbers
 
-| PR | Suggested scope |
-|----|-----------------|
-| **031** | Code-owned allergies step (speak + phase advance in `agent.py`) |
-| **032** | Menu aliases batch (shikanji, common STT typos) |
-| **033** | Strict auto-add only (`find_item_strict` — isolated, no phase changes) |
-
-Adjust numbering when opening the doc — follow `pr_rules.md`.
+| PR | Scope | Status |
+|----|--------|--------|
+| **031** | Voice fillers — intent-based, phone + web | ⬜ doc ready — `pr_031_voice-fillers.md` |
+| **032** | Code-owned allergies ladder step | ⬜ suggested |
+| **033** | Menu aliases batch (shikanji, STT typos) | ⬜ suggested |
+| **034** | Strict auto-add only (`find_item_strict`) | ⬜ suggested |
 
 ### PR 027 components
 
