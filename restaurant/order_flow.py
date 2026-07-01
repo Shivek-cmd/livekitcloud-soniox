@@ -50,6 +50,7 @@ class OrderFlowState:
     special_instructions_done: bool = False
     allergies_asked: bool = False
     readback_confirmed: bool = False
+    readback_spoken: bool = False
     preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
     last_discussed_item: str | None = None
     last_discussed_price: float | None = None
@@ -116,6 +117,9 @@ class OrderFlowController:
 
     def mark_readback_confirmed(self) -> None:
         self.state.readback_confirmed = True
+
+    def mark_readback_spoken(self) -> None:
+        self.state.readback_spoken = True
 
     def on_item_added(self) -> None:
         self.state.quantity_allowed = False
@@ -216,7 +220,7 @@ class OrderFlowController:
                     )
             self.state.quantity_allowed = True
         elif intent == UserIntent.ORDER_DONE:
-            if not cart.is_empty:
+            if not cart.is_empty and not self.state.allergies_asked:
                 self.mark_items_complete()
                 self.sync_from_cart(cart)
                 lines.append(
@@ -305,7 +309,8 @@ class OrderFlowController:
                     "(keep special instructions in English)."
                 ]
             return [
-                f'If not asked yet, SAY EXACTLY: "{ALLERGIES_QUESTION}"',
+                "Allergies question already asked — do NOT repeat it. "
+                "Wait for customer answer or advance to pickup/delivery."
             ]
         if p == OrderPhase.ORDER_TYPE:
             return [
@@ -327,6 +332,11 @@ class OrderFlowController:
                 "Call set_customer_info only after name AND phone confirmed.",
             ]
         if p == OrderPhase.CONFIRMING:
+            if self.state.readback_spoken and not self.state.readback_confirmed:
+                return [
+                    "Read-back already spoken — do NOT repeat items, price, or totals.",
+                    f'Wait for yes / all good, then ask name. Close with "{CONFIRM_CLOSE}" only if still needed.',
+                ]
             if self.state.readback_confirmed:
                 q = phrase_name_for_order(self.state.preferred_language)
                 return [

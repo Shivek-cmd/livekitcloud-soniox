@@ -34,7 +34,8 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 028 | `pr_028_virtual-assistant-greeting` | Virtual assistant opening greeting | ✅ #61 |
 | 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order | ✅ #62 |
 | 030 | `pr_030_order-flow-quality` | Strict auto-add, final confirm, phase guards | ❌ **Reverted** — see doc |
-| 031 | `pr_031_voice-fillers` | Intent-based voice fillers (phone + web) | ⬜ **Open** |
+| 031 | `pr_031_voice-fillers` | Intent-based voice fillers (phone + web) | ✅ #64 |
+| 032 | `pr_032_order-ladder-concise` | Code-owned ladder — no repeat read-back, no phone price | ⬜ **Open** |
 
 ---
 
@@ -58,10 +59,11 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 
 | PR | Scope | Status |
 |----|--------|--------|
-| **031** | Voice fillers — intent-based, phone + web | ⬜ doc ready — `pr_031_voice-fillers.md` |
-| **032** | Code-owned allergies ladder step | ⬜ suggested |
+| **031** | Voice fillers — intent-based, phone + web | ✅ #64 |
+| **032** | Code-owned order ladder — concise, no repeat read-back | ⬜ doc ready — `pr_032_order-ladder-concise.md` |
 | **033** | Menu aliases batch (shikanji, STT typos) | ⬜ suggested |
 | **034** | Strict auto-add only (`find_item_strict`) | ⬜ suggested |
+| **035** | Punjabi multi-item parse (`te`/`) for auto-add | ⬜ suggested |
 
 ### PR 027 components
 
