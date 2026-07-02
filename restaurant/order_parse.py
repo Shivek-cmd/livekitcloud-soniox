@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 
 from restaurant import menu_provider
+from restaurant.text_match import word_bounded
 
 _DEFAULT_AUTO_ADD_MIN_CONF = 0.8
 
@@ -59,12 +60,12 @@ _QTY_WORDS = {
 }
 
 _QTY_RE = re.compile(
-    r"\b("
-    r"one|two|three|four|five|six|seven|eight|nine|ten|"
-    r"a|an|"
-    r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
-    r"(\d+)"
-    r")\b",
+    word_bounded(
+        r"one|two|three|four|five|six|seven|eight|nine|ten|"
+        r"a|an|"
+        r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
+        r"(\d+)"
+    ),
     re.I,
 )
 
@@ -91,11 +92,11 @@ def _extract_qty(segment: str) -> tuple[int, str]:
     match = _QTY_RE.search(segment)
     if not match:
         return 1, segment
-    token = match.group(1).lower()
-    if match.group(2):
-        qty = int(match.group(2))
+    token = match.group(0)
+    if token.isdigit():
+        qty = int(token)
     else:
-        qty = _QTY_WORDS.get(token, 1)
+        qty = _QTY_WORDS.get(token.lower(), 1)
     rest = (segment[: match.start()] + segment[match.end() :]).strip()
     rest = re.sub(r"^(?:of|x)\s+", "", rest, flags=re.I)
     return max(1, qty), rest

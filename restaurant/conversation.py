@@ -6,6 +6,7 @@ import re
 from enum import Enum
 
 from restaurant.orders import OrderCart
+from restaurant.text_match import indic_word_re, word_bounded
 
 # ── Fixed spoken lines (Canadian Punjabi restaurant code-mix) ─────────────────
 
@@ -146,27 +147,22 @@ class UserIntent(str, Enum):
     UNCLEAR = "unclear"
 
 
-_PRICE_RE = re.compile(
-    r"\b("
+# NOTE (PR 034): plain \b is broken for Gurmukhi/Devanagari — matras and bindi
+# are not \w, so \bਨਹੀਂ\b never matches. Multi-script patterns use indic_word_re.
+_PRICE_RE = indic_word_re(
     r"price|prices|cost|how much|kithe da|kitna|kina|kine da|"
     r"ਕੀਮਤ|ਕਿਨਾ|ਕਿੰਨੇ|ਦਾਮ|rate|"
     r"how many dollars|what.?s the price"
-    r")\b",
-    re.I,
 )
 
-_AVAIL_RE = re.compile(
-    r"("
-    r"\b(do you have|have you got|is there|available|hai\??|hain\??|"
-    r"mil.?ega|mil.?egi|kya hai|kya hain)\b|"
+_AVAIL_RE = indic_word_re(
+    r"do you have|have you got|is there|available|hai\??|hain\??|"
+    r"mil.?ega|mil.?egi|kya hai|kya hain|"
     r"ਕੀ\s*ਹੈ|ਕੀ\s*ਹਨ|ਮਿਲੇਗ|ਚ\s*ਕੀ\s*ਹੈ"
-    r")",
-    re.I,
 )
 
-_PICKUP_RE = re.compile(
-    r"\b(pickup|pick up|pick-up|takeaway|take away|ਪਿਕਅੱਪ|ਪਿਕ ਅੱਪ)\b",
-    re.I,
+_PICKUP_RE = indic_word_re(
+    r"pickup|pick up|pick-up|takeaway|take away|ਪਿਕਅੱਪ|ਪਿਕ ਅੱਪ"
 )
 
 # Phone STT often hears "pickup" as "one cup" / "one up" (Gurmukhi or English).
@@ -186,31 +182,28 @@ _ALL_GOOD_RE = re.compile(
     re.I,
 )
 
-_DELIVERY_RE = re.compile(
-    r"\b(delivery|deliver|home delivery|ਡਿਲਿਵਰੀ|ਘਰ.*ਡਿਲਿਵਰ)\b",
-    re.I,
+_DELIVERY_RE = indic_word_re(
+    r"delivery|deliver|home delivery|ਡਿਲਿਵਰੀ|ਘਰ.*ਡਿਲਿਵਰ"
 )
 
-_ADD_RE = re.compile(
-    r"\b("
+_ADD_RE = indic_word_re(
     r"add|order|want|need|get me|give me|i.?ll take|i want|"
     r"i'd like|chahiye|dedo|de do|lao|"
     r"order karo|order kar|add karo|add kar|"
     r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ"
-    r")\b",
-    re.I,
 )
 
 _QTY_ITEM_RE = re.compile(
-    r"\b("
-    r"one|two|three|four|five|six|seven|eight|nine|ten|"
-    r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
-    r"\d+"
-    r")\s+\w+",
+    word_bounded(
+        r"one|two|three|four|five|six|seven|eight|nine|ten|"
+        r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
+        r"\d+"
+    )
+    + r"\s+\w+",
     re.I,
 )
 
-_I_SAID_RE = re.compile(r"\b(i said|ਕਿਹਾ)\b", re.I)
+_I_SAID_RE = indic_word_re(r"i said|ਕਿਹਾ")
 
 _ALLERGY_NO_RE = re.compile(
     r"\b("
@@ -221,48 +214,39 @@ _ALLERGY_NO_RE = re.compile(
     re.I,
 )
 
-_WANT_ORDER_ONLY_RE = re.compile(
-    r"\b("
+_WANT_ORDER_ONLY_RE = indic_word_re(
     r"i want to order|want to order|order karna|order kar|"
     r"ਆਰਡਰ ਕਰ|ਕੁਝ ਆਰਡਰ"
-    r")\b",
-    re.I,
 )
 
-_DONE_RE = re.compile(
-    r"\b("
+_DONE_RE = indic_word_re(
     r"that.?s it|that.?s all|nothing else|no more|bas|bus|"
     r"done ordering|i.?m done|finish|"
-    r"ਬਸ|ਹੋ ਗਿਆ|ਔਰ ਨਹੀ|ਕੁਝ ਨਹੀ|ਨਹੀਂ.*ਬਸ"
-    r")\b",
-    re.I,
+    r"ਬਸ|ਹੋ ਗਿਆ|ਔਰ ਨਹੀ|ਕੁਝ ਨਹੀ|ਨਹੀਂ.*ਬਸ|"
+    r"बस|हो गया"
 )
 
 _YES_RE = re.compile(
     r"^(yes|yeah|yep|yup|correct|right|ok|okay|all good|"
     r"haan|han|ha ji|ji|"
-    r"ਹਾਂ|ਠੀਕ|ਬਿਲਕੁਲ|ਜੀ)"
-    r"(?:\s+(ji|ਜੀ|hai|ਹੈ))?"
+    r"ਹਾਂ|ਠੀਕ|ਬਿਲਕੁਲ|ਜੀ|"
+    r"हाँ|ठीक|बिल्कुल|जी)"
+    r"(?:\s+(ji|ਜੀ|hai|ਹੈ|जी))?"
     r"[\s\.।,!?]*$",
     re.I,
 )
 
-_NO_RE = re.compile(
-    r"\b("
+_NO_RE = indic_word_re(
     r"^no\.?$|nope|nah|nothing|none|"
     r"nahi|nahin|na|"
-    r"ਨਹੀਂ|ਨਹੀ|ਕੋਈ.*ਨਹੀਂ|ਕੁਝ ਨਹੀ"
-    r")\b",
-    re.I,
+    r"ਨਹੀਂ|ਨਹੀ|ਕੋਈ.*ਨਹੀਂ|ਕੁਝ ਨਹੀ|"
+    r"नहीं|नही"
 )
 
-_HUMAN_RE = re.compile(
-    r"\b("
+_HUMAN_RE = indic_word_re(
     r"human|person|staff|manager|someone else|real person|"
     r"operator|agent|connect me|talk to someone|"
     r"ਬੰਦਾ|ਆਦਮੀ|manager|staff"
-    r")\b",
-    re.I,
 )
 
 _GREETING_RE = re.compile(

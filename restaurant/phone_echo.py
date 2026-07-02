@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Sequence
 
+from restaurant.text_match import indic_word_re, word_bounded
+
 if TYPE_CHECKING:
     from restaurant.conversation import UserIntent
 
@@ -58,19 +60,19 @@ _BYPASS_INTENTS: frozenset[str] = frozenset(
     }
 )
 
-_PRICE_SIGNAL_RE = re.compile(
-    r"\b(price|prices|cost|how much|kitna|kina|rate|ਕੀਮਤ|ਕਿਨਾ|ਦਾਮ)\b",
-    re.I,
+_PRICE_SIGNAL_RE = indic_word_re(
+    r"price|prices|cost|how much|kitna|kina|rate|ਕੀਮਤ|ਕਿਨਾ|ਦਾਮ"
 )
 
 _ORDER_SIGNAL_RE = re.compile(
-    r"\b("
-    r"pickup|pick up|delivery|order|add|want|need|"
-    r"one|two|three|four|five|"
-    r"yeah|yep|yes|haan|han|"
-    r"paneer|chicken|mango|shake|tikka|curry|naan|lassi|kulfi|"
-    r"ਚਾਹੀ|ਆਰਡਰ|ਪਿਕਅੱਪ|ਡਿਲਿਵਰੀ|ਕਰ ਦ|ਕਿਹਾ|ਇੱਕ|ਦੋ|ਤੇ"
-    r")\b|\d",
+    word_bounded(
+        r"pickup|pick up|delivery|order|add|want|need|"
+        r"one|two|three|four|five|"
+        r"yeah|yep|yes|haan|han|"
+        r"paneer|chicken|mango|shake|tikka|curry|naan|lassi|kulfi|"
+        r"ਚਾਹੀ|ਆਰਡਰ|ਪਿਕਅੱਪ|ਡਿਲਿਵਰੀ|ਕਰ ਦ|ਕਿਹਾ|ਇੱਕ|ਦੋ|ਤੇ"
+    )
+    + r"|\d",
     re.I,
 )
 
