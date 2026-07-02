@@ -179,6 +179,10 @@ class OrderCart:
             return False, "Order type (pickup/delivery) not set."
         if not self.customer_name:
             return False, "Customer name not provided."
+        from restaurant.customer_info import is_valid_customer_name
+
+        if not is_valid_customer_name(self.customer_name):
+            return False, "Customer name not provided."
         if not self.customer_phone:
             return False, "Customer phone not provided."
         if self.order_type == "delivery" and not self.delivery_address:

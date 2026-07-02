@@ -183,9 +183,39 @@ _NAME_PATTERNS = (
 )
 
 
+from restaurant.text_match import indic_word_re
+
+# Checkout / intent words — never valid customer names (e.g. STT "ਪਿਕਅੱਪ" alone).
+_BLOCKED_NAME_RE = indic_word_re(
+    r"pickup|pick up|pick-up|pickup|takeaway|take away|"
+    r"delivery|deliver|"
+    r"ਪਿਕਅੱਪ|ਪਿਕ ਅੱਪ|ਡਿਲਿਵਰੀ|"
+    r"डिलिवरी|डिलीवरी|"
+    r"all good|allgood|"
+    r"^(?:yes|no|ok|okay|haan|han|ji|ਜੀ|nahi|nahin|ਨਹੀਂ|हाँ)$"
+)
+
+
+def is_valid_customer_name(name: str) -> bool:
+    """False for pickup/delivery and other checkout tokens misheard as names."""
+    n = (name or "").strip()
+    if len(n) < 2 or re.search(r"\d", n):
+        return False
+    if _BLOCKED_NAME_RE.search(n):
+        # Allow longer strings that merely mention pickup in a sentence — not for names.
+        if len(n.split()) == 1:
+            return False
+    from restaurant.conversation import _DELIVERY_RE, _PICKUP_RE
+
+    if len(n.split()) == 1:
+        if _PICKUP_RE.search(n) or _DELIVERY_RE.search(n):
+            return False
+    return True
+
+
 def _clean_name_token(token: str) -> str | None:
     name = (token or "").strip(" ,.-")
-    if not name or len(name) < 2 or re.search(r"\d", name):
+    if not name or not is_valid_customer_name(name):
         return None
     from restaurant.conversation import _QTY_ITEM_RE, menu_item_hint_in_text
 
@@ -235,5 +265,7 @@ def parse_customer_name(text: str) -> str | None:
     if len(words) == 1:
         return _clean_name_token(words[0])
     if len(words) <= 3:
-        return _clean_name_token(words[-1])
+        candidate = _clean_name_token(words[-1])
+        if candidate:
+            return candidate
     return None
