@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 
 from restaurant import menu_provider
+
+_DEFAULT_AUTO_ADD_MIN_CONF = 0.8
+
+
+def _auto_add_min_confidence() -> float:
+    try:
+        return float(os.getenv("AUTO_ADD_MIN_CONFIDENCE", str(_DEFAULT_AUTO_ADD_MIN_CONF)))
+    except ValueError:
+        return _DEFAULT_AUTO_ADD_MIN_CONF
 
 _SPLIT_RE = re.compile(
     r"\s+(?:"
@@ -72,6 +82,8 @@ _QTY_ITEM_CHUNKS = re.compile(
 class ParsedOrderLine:
     quantity: int
     item: dict
+    # 1.0 = exact/static match; Clover fuzzy matches carry their real score
+    confidence: float = 1.0
 
 
 def _extract_qty(segment: str) -> tuple[int, str]:
@@ -131,7 +143,13 @@ def parse_order_lines(text: str) -> list[ParsedOrderLine]:
         if key in seen:
             continue
         seen.add(key)
-        out.append(ParsedOrderLine(quantity=qty, item=item))
+        out.append(
+            ParsedOrderLine(
+                quantity=qty,
+                item=item,
+                confidence=float(item.get("match_confidence", 1.0)),
+            )
+        )
     return out
 
 
@@ -143,7 +161,15 @@ def item_needs_modifiers(item: dict) -> bool:
 
 
 def can_auto_add_lines(lines: list[ParsedOrderLine]) -> bool:
-    """True when we can add every line in code without modifier prompts."""
+    """True when we can add every line in code without modifier prompts.
+
+    Auto-add speaks a code-owned confirm with no LLM review, so every line
+    must be a high-confidence match — weaker resolutions go through the
+    normal LLM tool path where the model confirms with the caller.
+    """
     if len(lines) < 2:
+        return False
+    min_conf = _auto_add_min_confidence()
+    if any(line.confidence < min_conf for line in lines):
         return False
     return all(not item_needs_modifiers(line.item) for line in lines)

@@ -3,15 +3,32 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
 from restaurant.clover.client import CloverClient
+from restaurant.clover.match import DEFAULT_MIN_CONF, MatchIndex
+from restaurant.clover.match import normalize as match_normalize
 from restaurant.clover.models import CachedMenuItem, CachedModifier, CachedModifierGroup
 from restaurant.clover.seed_menu import CATEGORIES
 from restaurant.clover.speech_policy import resolve_speech_from_label
 from restaurant.tenants.store import Tenant, mark_menu_synced
+
+logger = logging.getLogger("menu-match")
+
+
+def _legacy_match_enabled() -> bool:
+    return os.getenv("MENU_MATCH_LEGACY", "").strip().lower() in ("1", "true", "yes")
+
+
+def _min_match_conf() -> float:
+    try:
+        return float(os.getenv("MENU_MATCH_MIN_CONF", str(DEFAULT_MIN_CONF)))
+    except ValueError:
+        return DEFAULT_MIN_CONF
 
 _CATEGORY_KEY_NAMES = {c.key: c.name for c in CATEGORIES}
 
@@ -62,6 +79,21 @@ class MenuCache:
         self.synced_at = synced_at
         self._items = items
         self._by_id = {i.clover_item_id: i for i in items}
+        self._match_index: MatchIndex | None = None
+
+    def _get_match_index(self) -> MatchIndex:
+        if self._match_index is None:
+            self._match_index = MatchIndex(
+                [
+                    (
+                        i.clover_item_id,
+                        i.name,
+                        [i.name, i.speak_as, i.voice_line, *i.aliases],
+                    )
+                    for i in self._items
+                ]
+            )
+        return self._match_index
 
     @property
     def item_count(self) -> int:
@@ -221,6 +253,47 @@ class MenuCache:
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def find_item(self, query: str) -> CachedMenuItem | None:
+        scored = self.find_item_scored(query)
+        return scored[0] if scored else None
+
+    def find_item_scored(self, query: str) -> tuple[CachedMenuItem, float] | None:
+        """Best menu item for free-form caller text, with match confidence.
+
+        Returns None (abstains) when nothing matches confidently — callers
+        must treat that as "ask the customer", never as "pick something".
+        """
+        if _legacy_match_enabled():
+            hit = self._find_item_legacy(query)
+            return (hit, 1.0) if hit else None
+
+        q = match_normalize(query)
+        if not q:
+            return None
+
+        for item in self._items:
+            if q in (
+                match_normalize(item.name),
+                match_normalize(item.speak_as),
+                match_normalize(item.voice_line),
+            ) or any(match_normalize(a) == q for a in item.aliases):
+                return item, 1.0
+
+        match = self._get_match_index().best(q, min_conf=_min_match_conf())
+        if match is None:
+            logger.info("MENU_MATCH abstain query=%r", query)
+            return None
+        item = self._by_id[match.key]
+        logger.info(
+            "MENU_MATCH query=%r -> %r conf=%.2f label=%r",
+            query,
+            item.name,
+            match.confidence,
+            match.label,
+        )
+        return item, match.confidence
+
+    def _find_item_legacy(self, query: str) -> CachedMenuItem | None:
+        """Pre-PR-032 matcher — kept behind MENU_MATCH_LEGACY=1 for rollback."""
         q = _norm(query)
         if not q:
             return None
