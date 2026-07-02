@@ -615,10 +615,12 @@
       "key": "pakora_platter",
       "clover_item_id": "6YE95JW50VCY2",
       "clover_name": "Mixed Pakora Platter",
-      "speak_as": "ਮਿਸ਼ਰਿਤ ਪਕੋੜਾ ਪਲੇਟਰ",
+      "speak_as": "ਮਿਕਸ ਪਕੋੜਾ ਪਲੇਟਰ",
       "aliases": [
         "pakora platter",
-        "pakora"
+        "pakora",
+        "mix pakora platter",
+        "mixed pakora"
       ],
       "veg": true,
       "category_key": "starters",
@@ -759,7 +761,7 @@
           ]
         }
       ],
-      "voice_line": "ਮਿਸ਼ਰਿਤ ਪਕੋੜਾ ਪਲੇਟਰ",
+      "voice_line": "ਮਿਕਸ ਪਕੋੜਾ ਪਲੇਟਰ",
       "speech_mode": "gurmukhi"
     },
     {
@@ -988,7 +990,7 @@
           ]
         }
       ],
-      "voice_line": "Tandoori Chicken",
+      "voice_line": "Half Tandoori Chicken",
       "speech_mode": "english"
     },
     {
@@ -1139,7 +1141,7 @@
           ]
         }
       ],
-      "voice_line": "Tandoori Chicken",
+      "voice_line": "Full Tandoori Chicken",
       "speech_mode": "english"
     },
     {
@@ -3894,7 +3896,9 @@
       "speak_as": "ਬਕਰੇ ਦਾ ਮਸਾਲਾ",
       "aliases": [
         "goat curry",
-        "mutton curry"
+        "mutton curry",
+        "bakra",
+        "bakre da masala"
       ],
       "veg": false,
       "category_key": "nonveg_mains",
@@ -4100,8 +4104,8 @@
           ]
         }
       ],
-      "voice_line": "ਬਕਰੇ ਦਾ ਮਸਾਲਾ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Goat Curry",
+      "speech_mode": "english"
     },
     {
       "key": "fish_curry",
@@ -4110,7 +4114,8 @@
       "speak_as": "ਪੰਜਾਬੀ ਮੱਛੀ ਕਰੀ",
       "aliases": [
         "fish curry",
-        "machhi curry"
+        "machhi curry",
+        "machhi"
       ],
       "veg": false,
       "category_key": "nonveg_mains",
@@ -4224,8 +4229,8 @@
           ]
         }
       ],
-      "voice_line": "ਪੰਜਾਬੀ ਮੱਛੀ ਕਰੀ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Punjabi Fish Curry",
+      "speech_mode": "english"
     },
     {
       "key": "chicken_biryani",
@@ -4830,13 +4835,14 @@
       "speak_as": "ਸਾਦਾ ਚਾਵਲ",
       "aliases": [
         "plain rice",
-        "rice"
+        "rice",
+        "sada chawal"
       ],
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 499,
-      "voice_line": "ਸਾਦਾ ਚਾਵਲ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Plain Rice",
+      "speech_mode": "english"
     },
     {
       "key": "jeera_rice",
@@ -4849,8 +4855,8 @@
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 599,
-      "voice_line": "ਜੀਰਾ ਚਾਵਲ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Jeera Rice",
+      "speech_mode": "english"
     },
     {
       "key": "saffron_rice",
@@ -4858,13 +4864,14 @@
       "clover_name": "Saffron Rice",
       "speak_as": "ਕੇਸਰ ਚਾਵਲ",
       "aliases": [
-        "saffron rice"
+        "saffron rice",
+        "kesar chawal"
       ],
       "veg": true,
       "category_key": "breads_rice",
       "price_cents": 699,
-      "voice_line": "ਕੇਸਰ ਚਾਵਲ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Saffron Rice",
+      "speech_mode": "english"
     },
     {
       "key": "chole_bhature_combo",
@@ -6428,7 +6435,8 @@
       "speak_as": "ਮਿੱਠੀ ਲੱਸੀ",
       "aliases": [
         "sweet lassi",
-        "lassi"
+        "lassi",
+        "mitthi lassi"
       ],
       "veg": true,
       "category_key": "drinks",
@@ -6479,7 +6487,8 @@
       "clover_name": "Salted Lassi",
       "speak_as": "ਨਮਕੀਨ ਲੱਸੀ",
       "aliases": [
-        "salted lassi"
+        "salted lassi",
+        "namkeen lassi"
       ],
       "veg": true,
       "category_key": "drinks",
@@ -6627,7 +6636,9 @@
       "speak_as": "ਨਿੰਬੂ ਪਾਣੀ",
       "aliases": [
         "nimbu pani",
-        "lemonade"
+        "lemonade",
+        "shikanji",
+        "shikanjvi"
       ],
       "veg": true,
       "category_key": "drinks",
@@ -6726,15 +6737,16 @@
       "key": "mixed_pickle",
       "clover_item_id": "36CR8V2ZYDCD8",
       "clover_name": "Mixed Pickle",
-      "speak_as": "ਮਿਸ਼ਰਿਤ ਅਚਾਰ",
+      "speak_as": "ਮਿਕਸ ਅਚਾਰ",
       "aliases": [
         "pickle",
-        "achar"
+        "achar",
+        "mixed pickle"
       ],
       "veg": true,
       "category_key": "extras",
       "price_cents": 299,
-      "voice_line": "ਮਿਸ਼ਰਿਤ ਅਚਾਰ",
+      "voice_line": "ਮਿਕਸ ਅਚਾਰ",
       "speech_mode": "gurmukhi"
     },
     {

@@ -33,6 +33,13 @@ ENGLISH_VOICE_KEYS: frozenset[str] = frozenset(
         "tandoori_chicken_full",
         "paneer_tikka",
         "kulfi",
+        # PR 033 — voice_line was a translation (Kesar/Sada/Bakre) that customers
+        # never say; speak the menu-card name. Gurmukhi speak_as stays matchable.
+        "saffron_rice",
+        "plain_rice",
+        "jeera_rice",
+        "goat_curry",
+        "fish_curry",
     }
 )
 
@@ -43,6 +50,10 @@ VOICE_LINE_OVERRIDES: dict[str, str] = {
     "mango_lassi": "Mango Lassi",
     "mango_shake": "Mango Shake",
     "kulfi": "Mango Kulfi",
+    # PR 033 — Half and Full spoke the identical line "Tandoori Chicken";
+    # read-backs could not tell the caller which one was on the order.
+    "tandoori_chicken_half": "Half Tandoori Chicken",
+    "tandoori_chicken_full": "Full Tandoori Chicken",
 }
 
 

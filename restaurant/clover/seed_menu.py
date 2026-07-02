@@ -211,7 +211,7 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
     ),
     MenuItemSpec(
         "pakora_platter", "Mixed Pakora Platter", 12.99, "starters",
-        "ਮਿਸ਼ਰਿਤ ਪਕੋੜਾ ਪਲੇਟਰ", ("pakora platter", "pakora"), True,
+        "ਮਿਕਸ ਪਕੋੜਾ ਪਲੇਟਰ", ("pakora platter", "pakora", "mix pakora platter", "mixed pakora"), True,
         ("spice_level", "add_extras"),
     ),
     MenuItemSpec(
@@ -309,12 +309,12 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
     ),
     MenuItemSpec(
         "goat_curry", "Goat Curry", 25.99, "nonveg_mains",
-        "ਬਕਰੇ ਦਾ ਮਸਾਲਾ", ("goat curry", "mutton curry"), False,
+        "ਬਕਰੇ ਦਾ ਮਸਾਲਾ", ("goat curry", "mutton curry", "bakra", "bakre da masala"), False,
         ("spice_level", "bread_choice", "rice_side", "protein_size"),
     ),
     MenuItemSpec(
         "fish_curry", "Punjabi Fish Curry", 21.99, "nonveg_mains",
-        "ਪੰਜਾਬੀ ਮੱਛੀ ਕਰੀ", ("fish curry", "machhi curry"), False,
+        "ਪੰਜਾਬੀ ਮੱਛੀ ਕਰੀ", ("fish curry", "machhi curry", "machhi"), False,
         ("spice_level", "rice_side"),
     ),
     MenuItemSpec(
@@ -338,9 +338,9 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
     MenuItemSpec("tandoori_roti", "Tandoori Roti", 2.99, "breads_rice", "ਤੰਦੂਰੀ ਰੋਟੀ", ("tandoori roti", "roti"), True),
     MenuItemSpec("aloo_paratha", "Aloo Paratha", 5.99, "breads_rice", "ਆਲੂ ਪਰਾਠਾ", ("aloo paratha", "paratha"), True, ("spice_level",)),
     MenuItemSpec("bhatura_single", "Bhatura (single)", 3.99, "breads_rice", "ਭਟੂਰਾ", ("bhatura", "bhature"), True),
-    MenuItemSpec("plain_rice", "Plain Rice", 4.99, "breads_rice", "ਸਾਦਾ ਚਾਵਲ", ("plain rice", "rice"), True),
+    MenuItemSpec("plain_rice", "Plain Rice", 4.99, "breads_rice", "ਸਾਦਾ ਚਾਵਲ", ("plain rice", "rice", "sada chawal"), True),
     MenuItemSpec("jeera_rice", "Jeera Rice", 5.99, "breads_rice", "ਜੀਰਾ ਚਾਵਲ", ("jeera rice",), True),
-    MenuItemSpec("saffron_rice", "Saffron Rice", 6.99, "breads_rice", "ਕੇਸਰ ਚਾਵਲ", ("saffron rice",), True),
+    MenuItemSpec("saffron_rice", "Saffron Rice", 6.99, "breads_rice", "ਕੇਸਰ ਚਾਵਲ", ("saffron rice", "kesar chawal"), True),
     # --- Combos & platters ---
     MenuItemSpec(
         "chole_bhature_combo", "Chole Bhature Combo", 15.99, "combos",
@@ -391,13 +391,13 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
         "Mixed starters + 3 mains + rice + naan basket + raita + dessert.",
     ),
     # --- Drinks ---
-    MenuItemSpec("sweet_lassi", "Sweet Lassi", 5.99, "drinks", "ਮਿੱਠੀ ਲੱਸੀ", ("sweet lassi", "lassi"), True, ("lassi_size",)),
-    MenuItemSpec("salted_lassi", "Salted Lassi", 5.49, "drinks", "ਨਮਕੀਨ ਲੱਸੀ", ("salted lassi",), True, ("lassi_size",)),
+    MenuItemSpec("sweet_lassi", "Sweet Lassi", 5.99, "drinks", "ਮਿੱਠੀ ਲੱਸੀ", ("sweet lassi", "lassi", "mitthi lassi"), True, ("lassi_size",)),
+    MenuItemSpec("salted_lassi", "Salted Lassi", 5.49, "drinks", "ਨਮਕੀਨ ਲੱਸੀ", ("salted lassi", "namkeen lassi"), True, ("lassi_size",)),
     MenuItemSpec("mango_lassi", "Mango Lassi", 6.99, "drinks", "ਅੰਬ ਲੱਸੀ", ("mango lassi",), True, ("lassi_size",)),
     MenuItemSpec("masala_chai", "Masala Chai", 3.99, "drinks", "ਮਸਾਲਾ ਚਾਹ", ("masala chai", "chai"), True),
     MenuItemSpec("mango_shake", "Mango Shake", 6.49, "drinks", "ਅੰਬ ਸ਼ੇਕ", ("mango shake",), True),
     MenuItemSpec("soft_drink", "Soft Drink (can)", 2.49, "drinks", "ਸਾਫਟ ਡਰਿੰਕ", ("soft drink", "pop", "coke"), True),
-    MenuItemSpec("nimbu_pani", "Nimbu Pani", 4.49, "drinks", "ਨਿੰਬੂ ਪਾਣੀ", ("nimbu pani", "lemonade"), True),
+    MenuItemSpec("nimbu_pani", "Nimbu Pani", 4.49, "drinks", "ਨਿੰਬੂ ਪਾਣੀ", ("nimbu pani", "lemonade", "shikanji", "shikanjvi"), True),
     # --- Desserts ---
     MenuItemSpec("gulab_jamun", "Gulab Jamun (2 pcs)", 5.99, "desserts", "ਗੁਲਾਬ ਜਾਮੁਨ", ("gulab jamun",), True),
     MenuItemSpec("kheer", "Kheer", 5.99, "desserts", "ਖੀਰ", ("kheer", "rice pudding"), True),
@@ -406,7 +406,7 @@ MENU_ITEMS: tuple[MenuItemSpec, ...] = (
     MenuItemSpec("kulfi", "Mango Kulfi", 5.49, "desserts", "ਅੰਬ ਕੁਲਫੀ", ("kulfi", "mango kulfi"), True),
     # --- Extras ---
     MenuItemSpec("raita", "Raita", 3.99, "extras", "ਰਾਇਤਾ", ("raita",), True),
-    MenuItemSpec("mixed_pickle", "Mixed Pickle", 2.99, "extras", "ਮਿਸ਼ਰਿਤ ਅਚਾਰ", ("pickle", "achar"), True),
+    MenuItemSpec("mixed_pickle", "Mixed Pickle", 2.99, "extras", "ਮਿਕਸ ਅਚਾਰ", ("pickle", "achar", "mixed pickle"), True),
     MenuItemSpec("papad", "Papad (2 pcs)", 2.49, "extras", "ਪਪੜ", ("papad", "papadum"), True),
     MenuItemSpec("extra_gravy_side", "Extra Gravy (side)", 2.99, "extras", "ਐਕਸਟਰਾ ਗ੍ਰੇਵੀ", ("extra gravy",), True),
 )

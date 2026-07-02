@@ -35,7 +35,8 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 029 | `pr_029_auto-hangup-after-order` | Auto hang-up after successful place_order | ✅ #62 |
 | 030 | `pr_030_order-flow-quality` | Strict auto-add, final confirm, phase guards | ❌ **Reverted** — see doc |
 | 031 | `pr_031_voice-fillers` | Intent-based voice fillers (phone + web) | ✅ #64 |
-| 032 | `pr_032_menu-match-confidence` | Cross-script confidence menu matcher + auto-add gate | ⬜ **Open** |
+| 032 | `pr_032_menu-match-confidence` | Cross-script confidence menu matcher + auto-add gate | ✅ #69 |
+| 033 | `pr_033_voice-lines-and-aliases` | Voice lines speak customer's word + slang aliases (shikanji etc.) | ⬜ **Open** |
 
 ---
 
