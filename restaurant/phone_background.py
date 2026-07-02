@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from restaurant.clover.match import phonetic_key
 from restaurant.conversation import UserIntent
 from restaurant.phone_echo import _ORDER_SIGNAL_RE, should_bypass_phone_echo_filter
 
@@ -35,6 +36,19 @@ _SHORT_MEANINGFUL: frozenset[str] = frozenset(
     }
 )
 
+# Phonetic keys for the Latin allowlist — matches Gurmukhi/Devanagari equivalents.
+_SHORT_MEANINGFUL_KEYS: frozenset[str] = frozenset(
+    phonetic_key(w) for w in _SHORT_MEANINGFUL if phonetic_key(w)
+)
+
+
+def _token_is_meaningful(token: str) -> bool:
+    if token in _SHORT_MEANINGFUL:
+        return True
+    key = phonetic_key(token)
+    return bool(key) and key in _SHORT_MEANINGFUL_KEYS
+
+
 # Common background / side-conversation fragments (not order-related).
 _BACKGROUND_FRAGMENT_RE = re.compile(
     r"\b("
@@ -51,7 +65,10 @@ def _normalize(text: str) -> str:
 
 
 def _tokens(text: str) -> list[str]:
-    cleaned = re.sub(r"[^\w\s]", " ", _normalize(text))
+    # Do not use [^\w\s] — Gurmukhi/Devanagari matras are not \w and would
+    # split words like ਹੈਲੋ into meaningless single-letter tokens.
+    cleaned = re.sub(r"[.,!?;:\"]+", " ", _normalize(text))
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return [t for t in cleaned.split() if t]
 
 
@@ -86,9 +103,9 @@ def is_likely_background_speech(
         return True
 
     if len(tokens) == 1:
-        return tokens[0] not in _SHORT_MEANINGFUL
+        return not _token_is_meaningful(tokens[0])
 
-    if len(tokens) == 2 and all(t in _SHORT_MEANINGFUL for t in tokens):
+    if len(tokens) == 2 and all(_token_is_meaningful(t) for t in tokens):
         return False
 
     # Very short side speech with no order/menu signal.
