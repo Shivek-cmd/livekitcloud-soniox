@@ -59,6 +59,15 @@ def test_parse_customer_name_exact():
     assert parse_customer_name("94137 52688") is None
 
 
+def test_pickup_not_a_customer_name():
+    assert parse_customer_name("ਪਿਕਅੱਪ") is None
+    assert parse_customer_name("pickup") is None
+    from restaurant.customer_info import is_valid_customer_name
+
+    assert not is_valid_customer_name("ਪਿਕਅੱਪ")
+    assert is_valid_customer_name("ਸ਼ਿਵੇਕ")
+
+
 def test_parse_punjabi_name_mera():
     name = parse_customer_name("ਨਾਮ ਮera ਸ਼ਿਵੇਕ ਹੈ")
     assert name

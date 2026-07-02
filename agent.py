@@ -36,6 +36,7 @@ from restaurant.conversation import (
     format_order_readback,
     is_allergies_step_answer,
     is_confirm_yes,
+    is_likely_pickup_stt,
     is_want_to_order_only,
     order_placed_goodbye,
     phrase_anything_else,
@@ -48,6 +49,7 @@ from restaurant.conversation import (
 from restaurant.customer_info import (
     extract_phone_digits,
     format_phone_spoken,
+    is_valid_customer_name,
     looks_like_phone_utterance,
     parse_customer_name,
 )
@@ -290,9 +292,8 @@ class RestaurantAgent(Agent):
             and phase != OrderPhase.CUSTOMER_PHONE
             and not cart.customer_name
         ):
-            self._fast_forward_checkout()
-            if cart.order_type:
-                self._flow.mark_readback_confirmed()
+            if not self._flow.state.readback_confirmed:
+                return
             self._flow.sync_from_cart(cart)
             await self._sync_web()
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
@@ -327,16 +328,15 @@ class RestaurantAgent(Agent):
         if (
             phase
             in (
-                OrderPhase.SPECIAL_INSTRUCTIONS,
                 OrderPhase.ORDER_TYPE,
                 OrderPhase.CONFIRMING,
             )
             and self._flow.state.items_complete
             and cart.order_type
+            and self._flow.state.readback_spoken
             and not self._flow.state.readback_confirmed
             and (intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text))
         ):
-            self._flow.mark_readback_spoken()
             self._flow.mark_readback_confirmed()
             self._flow.sync_from_cart(cart)
             await self._sync_web()
@@ -344,11 +344,15 @@ class RestaurantAgent(Agent):
             raise StopResponse()
 
         # Pickup/delivery → read-back.
-        if phase == OrderPhase.ORDER_TYPE and intent in (
-            UserIntent.PICKUP,
-            UserIntent.DELIVERY,
+        if phase == OrderPhase.ORDER_TYPE and (
+            intent == UserIntent.DELIVERY
+            or intent == UserIntent.PICKUP
+            or is_likely_pickup_stt(user_text)
         ):
-            cart.order_type = "pickup" if intent == UserIntent.PICKUP else "delivery"
+            if intent == UserIntent.DELIVERY:
+                cart.order_type = "delivery"
+            else:
+                cart.order_type = "pickup"
             self._flow.sync_from_cart(cart)
             await self._sync_web()
             if cart.order_type == "delivery" and not cart.delivery_address:
@@ -419,13 +423,18 @@ class RestaurantAgent(Agent):
         if not self._ready_for_contact_capture():
             return
 
+        if intent in (UserIntent.PICKUP, UserIntent.DELIVERY):
+            return
+
         lang = self._flow.state.preferred_language
 
         if not self.cart.customer_name:
+            if not self._flow.state.readback_confirmed:
+                return
+
             name = parse_customer_name(user_text)
-            if name:
+            if name and is_valid_customer_name(name):
                 self.cart.customer_name = name
-                self._flow.mark_readback_confirmed()
                 self._flow.sync_from_cart(self.cart)
                 await self._sync_web()
                 ask_phone = phrase_ask_phone(lang, name)
@@ -443,20 +452,7 @@ class RestaurantAgent(Agent):
                 raise StopResponse()
 
             digits_only = extract_phone_digits(user_text)
-            if digits_only and (
-                self._flow.state.readback_spoken
-                or self._flow.state.readback_confirmed
-                or self._flow.state.phase
-                in (
-                    OrderPhase.CONFIRMING,
-                    OrderPhase.CUSTOMER_NAME,
-                    OrderPhase.CUSTOMER_PHONE,
-                )
-            ):
-                self._fast_forward_checkout()
-                self._flow.mark_readback_confirmed()
-                self._flow.sync_from_cart(self.cart)
-                await self._sync_web()
+            if digits_only:
                 await self._ladder_say(
                     turn_ctx,
                     phrase_name_for_order(lang),
@@ -464,6 +460,17 @@ class RestaurantAgent(Agent):
                 )
                 raise StopResponse()
             return
+
+        if not is_valid_customer_name(self.cart.customer_name or ""):
+            self.cart.customer_name = ""
+            self._flow.sync_from_cart(self.cart)
+            await self._sync_web()
+            await self._ladder_say(
+                turn_ctx,
+                phrase_name_for_order(lang),
+                tag="CAPTURE",
+            )
+            raise StopResponse()
 
         if not self.cart.customer_phone:
             digits = extract_phone_digits(user_text)
@@ -663,6 +670,8 @@ class RestaurantAgent(Agent):
     ) -> str:
         """Save the customer's name and phone number."""
         self.cart.customer_name = name.strip()
+        if not is_valid_customer_name(self.cart.customer_name):
+            return "Need the customer's real name — not pickup/delivery."
         digits = extract_phone_digits(phone) or re.sub(r"\D", "", phone or "")
         if len(digits) != 10:
             return "Need a valid 10-digit phone number."
