@@ -322,8 +322,8 @@ class OrderFlowController:
             ]
         if p == OrderPhase.CUSTOMER_PHONE:
             return [
-                "Ask for phone number once.",
-                "Read back ONLY as English ASCII digits separated by spaces (9 4 1 3 7 5 2 6 8 8).",
+                "Ask for phone number once — ONLY after name is saved.",
+                "Read back ONLY as English word digits (nine, four, one, three, seven, …).",
                 "NEVER use Punjabi/Hindi number words or Indic numerals for phone.",
                 "Call set_customer_info when digits confirmed — do NOT ask again if already saved.",
             ]

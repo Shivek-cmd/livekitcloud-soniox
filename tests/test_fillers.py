@@ -84,6 +84,19 @@ def test_blocked_when_disabled():
     )
 
 
+def test_blocked_chitchat_browsing(monkeypatch):
+    monkeypatch.setenv("FILLERS_ENABLED", "1")
+    assert (
+        pick_filler(
+            intent=UserIntent.GENERAL,
+            phase=OrderPhase.BROWSING,
+            lang=CustomerLanguage.ENGLISH,
+            user_text="Hey Sheera, how are you?",
+        )
+        is None
+    )
+
+
 def test_blocked_hangup_started(monkeypatch):
     monkeypatch.setenv("FILLERS_ENABLED", "1")
     assert (
@@ -157,9 +170,14 @@ def test_hindi_processing(monkeypatch):
 
 def test_should_use_filler_general_browsing(monkeypatch):
     monkeypatch.setenv("FILLERS_ENABLED", "1")
-    assert should_use_filler(
+    assert not should_use_filler(
         intent=UserIntent.GENERAL,
         phase=OrderPhase.BROWSING,
+    )
+    assert should_use_filler(
+        intent=UserIntent.GENERAL,
+        phase=OrderPhase.COLLECTING_ITEMS,
+        user_text="what desserts do you have",
     )
 
 

@@ -40,6 +40,9 @@ _SPLIT_RE = re.compile(
     re.I,
 )
 
+# Punjabi/Hindi often use danda or period between dishes in one breath.
+_SENTENCE_SPLIT_RE = re.compile(r"[.।]\s*")
+
 _STRIP_LEADING = re.compile(
     r"^(?:"
     r"please\s+|"
@@ -178,8 +181,12 @@ def parse_order_lines(text: str) -> list[ParsedOrderLine]:
 
     parts = [p.strip() for p in _SPLIT_RE.split(raw) if p.strip()]
     if len(parts) <= 1:
-        chunks = _QTY_ITEM_CHUNKS.findall(raw)
-        parts = chunks if len(chunks) >= 2 else [raw]
+        sent_parts = [p.strip() for p in _SENTENCE_SPLIT_RE.split(raw) if p.strip()]
+        if len(sent_parts) >= 2:
+            parts = sent_parts
+        else:
+            chunks = _QTY_ITEM_CHUNKS.findall(raw)
+            parts = chunks if len(chunks) >= 2 else [raw]
 
     out: list[ParsedOrderLine] = []
     seen: set[str] = set()

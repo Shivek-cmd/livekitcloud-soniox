@@ -92,7 +92,8 @@ def language_turn_guidance(lang: CustomerLanguage) -> str:
     """Per-turn LLM hint: conversational language vs fixed English order steps."""
     fixed = (
         "Fixed SAY EXACTLY order steps (allergies, pickup, quantity, read-back) stay English. "
-        "Phone numbers ALWAYS English ASCII digits (9 4 1 3 7 …) — NEVER Punjabi/Hindi number words."
+        "Never say ਪੁਸ਼ਟੀ/push confirm — use English confirm/read-back lines only. "
+        "Phone numbers ALWAYS spoken as English words (nine, four, one, …) — NEVER Punjabi/Hindi digits."
     )
     guides = {
         CustomerLanguage.PUNJABI: (
@@ -252,6 +253,11 @@ _DONE_RE = indic_word_re(
     r"बस|हो गया"
 )
 
+_ENOUGH_RE = indic_word_re(
+    r"enough|that.?s enough|bahut|bohot|"
+    r"ਬਹੁਤ|काफी|bahut hai"
+)
+
 _YES_RE = re.compile(
     r"^(yes|yeah|yep|yup|correct|right|ok|okay|all good|"
     r"haan|han|ha ji|ji|"
@@ -331,6 +337,20 @@ def is_likely_pickup_stt(text: str) -> bool:
     return False
 
 
+def is_done_ordering(text: str) -> bool:
+    """Caller finished adding items — including Punjabi 'ਨਹੀਂ ਨਹੀਂ, ਬਹੁਤ ਹੈ'."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    if _DONE_RE.search(t):
+        return True
+    if _ENOUGH_RE.search(t) and _NO_RE.search(t):
+        return True
+    if re.search(r"ਨਹੀਂ\s+ਨਹੀਂ", t) and (_ENOUGH_RE.search(t) or "ਬਸ" in t):
+        return True
+    return False
+
+
 def is_confirm_yes(text: str) -> bool:
     """Short affirmative — haan ji / ਹਾਂ ਜੀ / yes / ok / all good."""
     t = re.sub(r"[\s\.।,!?]+$", "", (text or "").strip())
@@ -395,6 +415,12 @@ def resolve_intent(text: str, *, phase: str | None = None) -> UserIntent:
             return UserIntent.GENERAL
     if phase == "customer_phone":
         return UserIntent.GENERAL
+
+    if phase == "awaiting_more":
+        if is_done_ordering(text):
+            return UserIntent.ORDER_DONE
+        if intent == UserIntent.CONFIRM_NO:
+            return UserIntent.ORDER_DONE
 
     if phase == "order_type":
         if is_likely_pickup_stt(text):
@@ -594,9 +620,15 @@ _PRICE_SPEECH_RE = re.compile(
 
 _LLM_JUNK_RE = re.compile(
     r"(?:"
-    r"ਪੁਸ਼ਟੀ|push\s*confirm|confirm\s*push|"
+    r"ਪ[uu]?[sś][h]?[tṭ][iī]|push\s*confirm|confirm\s*push|"
+    r"confirm(?:ing)?\s+(?:the\s+)?order|"
     r"ਚੇਲਾ|chela"
     r")",
+    re.I,
+)
+
+_PUNJABI_CONFIRM_RE = re.compile(
+    r"ਪ[uu]?[sś][h]?[tṭ][iī]\s*ਕਰ",
     re.I,
 )
 
@@ -641,6 +673,9 @@ def sanitize_assistant_speech(
         if _LLM_JUNK_RE.search(out):
             out = _LLM_JUNK_RE.sub("", out)
             out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
+
+        if _PUNJABI_CONFIRM_RE.search(out):
+            out = _PUNJABI_CONFIRM_RE.sub("confirm", out)
 
     if customer_phone:
         out = enforce_english_phone_in_speech(out, customer_phone)

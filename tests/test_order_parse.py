@@ -75,6 +75,17 @@ def test_format_add_tool_reply_no_cart_language():
     assert "Yes — one Kheer." in reply
 
 
+def test_parse_two_items_punjabi_danda():
+    text = "1 ਦਾਲ ਮੱਖਣੀ ਕਰ ਦਿਓ। 2 ਸਰਸੋਂ ਦਾ ਸਾਗ ਕਰ ਦਿਓ।"
+    lines = parse_order_lines(text)
+    assert len(lines) == 2
+    names = {line.item["name"] for line in lines}
+    assert "Dal Makhani" in names
+    assert "Sarson da Saag" in names
+    assert lines[0].quantity == 1
+    assert lines[1].quantity == 2
+
+
 def test_cart_add_uses_concise_reply():
     cart = OrderCart()
     reply = cart.add_item(
