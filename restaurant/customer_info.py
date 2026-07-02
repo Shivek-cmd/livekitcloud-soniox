@@ -90,12 +90,26 @@ def looks_like_phone_utterance(text: str) -> bool:
     return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in raw.translate(_INDIC_NUMERAL_MAP)) >= 7)
 
 
+_DIGIT_ENGLISH = (
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+)
+
+
 def format_phone_spoken(digits: str) -> str:
-    """English ASCII digits, space-separated — never Punjabi/Hindi number words."""
+    """English word digits for TTS — Indic voices misread ASCII numerals as Hindi/Punjabi."""
     clean = re.sub(r"\D", "", digits or "")
     if not clean:
         return ""
-    return " ".join(clean)
+    return ", ".join(_DIGIT_ENGLISH[int(d)] for d in clean)
 
 
 def enforce_english_phone_in_speech(text: str, phone_digits: str | None) -> str:

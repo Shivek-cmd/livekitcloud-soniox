@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import random
+import re
 from collections import deque
 from enum import Enum
 
@@ -31,6 +32,17 @@ _BLOCKED_INTENTS = frozenset({
     UserIntent.HUMAN,
     UserIntent.UNCLEAR,
 })
+
+_CHITCHAT_RE = re.compile(
+    r"(?:"
+    r"how are you|how r u|what.?s up|good morning|good evening|"
+    r"hello|hi there|hey there|"
+    r"ki haal|kiddan|kive ho|kaise ho|"
+    r"ਕਿਵ(?:ੇ|ੇਂ)|ਕੀ ਹਾਲ|"
+    r"कैस(?:े|ी) हो"
+    r")",
+    re.I,
+)
 
 
 class FillerKind(str, Enum):
@@ -86,10 +98,21 @@ def _kind_for_intent(intent: UserIntent) -> FillerKind | None:
     return key
 
 
+def is_chitchat_turn(text: str, intent: UserIntent) -> bool:
+    """Social greeting — no latency filler needed."""
+    if intent != UserIntent.GENERAL:
+        return False
+    t = (text or "").strip()
+    if not t:
+        return False
+    return bool(_CHITCHAT_RE.search(t))
+
+
 def should_use_filler(
     *,
     intent: UserIntent,
     phase: OrderPhase,
+    user_text: str = "",
     hangup_started: bool = False,
     agent_busy: bool = False,
 ) -> bool:
@@ -99,6 +122,10 @@ def should_use_filler(
         return False
     if intent in _BLOCKED_INTENTS or phase in _BLOCKED_PHASES:
         return False
+    if is_chitchat_turn(user_text, intent):
+        return False
+    if intent == UserIntent.GENERAL and phase == OrderPhase.BROWSING:
+        return False
     return _kind_for_intent(intent) is not None
 
 
@@ -107,6 +134,7 @@ def pick_filler(
     intent: UserIntent,
     phase: OrderPhase,
     lang: CustomerLanguage,
+    user_text: str = "",
     recent: deque[str] | list[str] | None = None,
     hangup_started: bool = False,
     agent_busy: bool = False,
@@ -115,6 +143,7 @@ def pick_filler(
     if not should_use_filler(
         intent=intent,
         phase=phase,
+        user_text=user_text,
         hangup_started=hangup_started,
         agent_busy=agent_busy,
     ):

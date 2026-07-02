@@ -25,17 +25,22 @@ from restaurant.turn_latency import TurnLatencyTracker
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant import menu_provider
 from restaurant.conversation import (
+    ALLERGIES_QUESTION,
     OPENING_GREETING,
+    PICKUP_DELIVERY_QUESTION,
     UserIntent,
     background_repeat_phrase,
     confirm_items_added,
     detect_intent,
     echo_recovery_phrase,
+    format_order_readback,
+    is_allergies_step_answer,
     is_confirm_yes,
     is_want_to_order_only,
     order_placed_goodbye,
     phrase_anything_else,
     phrase_ask_phone,
+    phrase_name_for_order,
     phrase_phone_saved,
     resolve_intent,
     sanitize_assistant_speech,
@@ -43,6 +48,7 @@ from restaurant.conversation import (
 from restaurant.customer_info import (
     extract_phone_digits,
     format_phone_spoken,
+    looks_like_phone_utterance,
     parse_customer_name,
 )
 from restaurant.order_flow import OrderFlowController, OrderPhase
@@ -95,6 +101,7 @@ class RestaurantAgent(Agent):
         self._job_ctx: JobContext | None = None
         self._hangup_started = False
         self._recent_fillers: deque[str] = deque(maxlen=3)
+        self._goodbye_spoken = False
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
@@ -245,6 +252,131 @@ class RestaurantAgent(Agent):
             self.note_agent_speech(say_line)
         raise StopResponse()
 
+    async def _ladder_say(self, turn_ctx, line: str, *, tag: str = "LADDER") -> None:
+        turn_ctx.add_message(
+            role="system",
+            content=f'[{tag}] Fixed phrase already spoken: "{line}"',
+        )
+        if self._session:
+            await self._session.say(line, allow_interruptions=True)
+            self.note_agent_speech(line)
+
+    def _fast_forward_checkout(self) -> None:
+        """Recover when LLM skipped allergies/pickup but caller moved on."""
+        if not self._flow.state.items_complete:
+            self._flow.mark_items_complete()
+        if not self._flow.state.allergies_asked:
+            self._flow.mark_allergies_asked()
+        if not self._flow.state.special_instructions_done:
+            self._flow.mark_special_instructions_done()
+
+    async def _try_run_checkout_ladder(
+        self,
+        turn_ctx,
+        user_text: str,
+        intent: UserIntent,
+    ) -> None:
+        """Code-owned checkout steps — fixed English templates, no LLM improvisation."""
+        phase = self._flow.state.phase
+        lang = self._flow.state.preferred_language
+        cart = self.cart
+
+        if cart.placed:
+            return
+
+        # Phone before name — redirect to name step.
+        if (
+            looks_like_phone_utterance(user_text)
+            and phase != OrderPhase.CUSTOMER_PHONE
+            and not cart.customer_name
+        ):
+            self._fast_forward_checkout()
+            if cart.order_type:
+                self._flow.mark_readback_confirmed()
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
+            raise StopResponse()
+
+        # Done ordering → allergies (English).
+        if phase == OrderPhase.AWAITING_MORE and intent == UserIntent.ORDER_DONE:
+            if cart.is_empty:
+                return
+            self._flow.mark_items_complete()
+            self._flow.mark_allergies_asked()
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            await self._ladder_say(turn_ctx, ALLERGIES_QUESTION)
+            raise StopResponse()
+
+        # Allergies answered → pickup/delivery (English).
+        if phase == OrderPhase.SPECIAL_INSTRUCTIONS and is_allergies_step_answer(
+            user_text, intent
+        ):
+            if not self._flow.state.allergies_asked:
+                self._flow.mark_allergies_asked()
+            self._flow.mark_special_instructions_done()
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            if not cart.order_type:
+                await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
+                raise StopResponse()
+
+        # Pickup/delivery → read-back.
+        if phase == OrderPhase.ORDER_TYPE and intent in (
+            UserIntent.PICKUP,
+            UserIntent.DELIVERY,
+        ):
+            cart.order_type = "pickup" if intent == UserIntent.PICKUP else "delivery"
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            if cart.order_type == "delivery" and not cart.delivery_address:
+                return
+            readback = format_order_readback(cart, include_price=not self.is_phone)
+            if readback:
+                await self._ladder_say(turn_ctx, readback)
+                raise StopResponse()
+
+        # Recover: pickup/delivery while still collecting (LLM went off-script).
+        if (
+            phase == OrderPhase.AWAITING_MORE
+            and intent in (UserIntent.PICKUP, UserIntent.DELIVERY)
+            and not cart.is_empty
+        ):
+            self._fast_forward_checkout()
+            cart.order_type = "pickup" if intent == UserIntent.PICKUP else "delivery"
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            if cart.order_type == "delivery" and not cart.delivery_address:
+                return
+            readback = format_order_readback(cart, include_price=not self.is_phone)
+            if readback:
+                await self._ladder_say(turn_ctx, readback)
+                raise StopResponse()
+
+        # Read-back yes → ask name (never phone first).
+        if phase == OrderPhase.CONFIRMING and not self._flow.state.readback_confirmed:
+            if intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text):
+                self._flow.mark_readback_confirmed()
+                self._flow.sync_from_cart(cart)
+                await self._sync_web()
+                await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
+                raise StopResponse()
+
+        # Recover: confirm yes after off-script read-back at awaiting_more.
+        if (
+            phase == OrderPhase.AWAITING_MORE
+            and cart.order_type
+            and not cart.is_empty
+            and (intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text))
+        ):
+            self._fast_forward_checkout()
+            self._flow.mark_readback_confirmed()
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
+            raise StopResponse()
+
     async def _try_capture_customer_info(self, turn_ctx, user_text: str) -> None:
         """Code-owned name/phone capture — exact STT spelling, English digit readback."""
         phase = self._flow.state.phase
@@ -272,6 +404,10 @@ class RestaurantAgent(Agent):
             raise StopResponse()
 
         if phase == OrderPhase.CUSTOMER_PHONE:
+            if not self.cart.customer_name:
+                lang = self._flow.state.preferred_language
+                await self._ladder_say(turn_ctx, phrase_name_for_order(lang), tag="CAPTURE")
+                raise StopResponse()
             digits = extract_phone_digits(user_text)
             if not digits:
                 return
@@ -306,7 +442,7 @@ class RestaurantAgent(Agent):
         except Exception:
             logger.exception("Filler speech failed")
 
-    def _maybe_speak_filler(self, intent: UserIntent) -> None:
+    def _maybe_speak_filler(self, intent: UserIntent, user_text: str) -> None:
         """Fire-and-forget filler TTS — does not block LLM / turn guidance."""
         if not self._session:
             return
@@ -314,6 +450,7 @@ class RestaurantAgent(Agent):
             intent=intent,
             phase=self._flow.state.phase,
             lang=self._flow.state.preferred_language,
+            user_text=user_text,
             recent=self._recent_fillers,
             hangup_started=self._hangup_started,
             agent_busy=agent_session_busy(self._session),
@@ -379,13 +516,15 @@ class RestaurantAgent(Agent):
                 raise StopResponse()
 
         if intent == UserIntent.PICKUP and not self.cart.order_type:
-            self.cart.order_type = "pickup"
-            self._flow.sync_from_cart(self.cart)
-            await self._sync_web()
+            if self._flow.state.phase == OrderPhase.ORDER_TYPE:
+                self.cart.order_type = "pickup"
+                self._flow.sync_from_cart(self.cart)
+                await self._sync_web()
         elif intent == UserIntent.DELIVERY and not self.cart.order_type:
-            self.cart.order_type = "delivery"
-            self._flow.sync_from_cart(self.cart)
-            await self._sync_web()
+            if self._flow.state.phase == OrderPhase.ORDER_TYPE:
+                self.cart.order_type = "delivery"
+                self._flow.sync_from_cart(self.cart)
+                await self._sync_web()
 
         self._real_user_turns += 1
         self._greeting_echo_pending_reprompt = False
@@ -393,10 +532,11 @@ class RestaurantAgent(Agent):
         self._background_ignore_streak = 0
 
         self._flow.note_customer_language(user_text)
+        await self._try_run_checkout_ladder(turn_ctx, user_text, intent)
         await self._try_capture_customer_info(turn_ctx, user_text)
         await self._try_auto_add_multi(turn_ctx, user_text, intent)
 
-        self._maybe_speak_filler(intent)
+        self._maybe_speak_filler(intent, user_text)
         self._inject_turn_guidance(turn_ctx, user_text)
 
         if self._recorder is not None:
@@ -474,7 +614,7 @@ class RestaurantAgent(Agent):
         spoken = format_phone_spoken(digits)
         return (
             f"Saved: {name.strip()}, {digits}. "
-            f'When confirming phone, SAY EXACTLY the digits in English: "{spoken}" '
+            f'When confirming phone, SAY EXACTLY the digits in English words: "{spoken}" '
             "(never Punjabi/Hindi number words)."
         )
 
@@ -505,6 +645,12 @@ class RestaurantAgent(Agent):
 
     async def _execute_place_order(self, *, from_capture: bool = False) -> str:
         """Finalize order — shared by place_order tool and code-owned phone capture."""
+        if self.cart.placed or self._goodbye_spoken:
+            return (
+                "ORDER COMPLETE — goodbye already spoken. "
+                "Do NOT generate any assistant speech."
+            )
+
         ready, reason = self.cart.ready_to_place()
         if not ready:
             return f"Cannot place order: {reason}"
@@ -533,6 +679,7 @@ class RestaurantAgent(Agent):
 
         spoken = order_placed_goodbye(order_type=self.cart.order_type)
         self._record_tool("place_order", {}, "placed")
+        self._goodbye_spoken = True
 
         if (
             hangup_after_order_enabled()
@@ -556,15 +703,19 @@ class RestaurantAgent(Agent):
                 speech_handle=speech_handle,
             )
             return (
-                "ORDER COMPLETE — goodbye already spoken to the customer in Punjabi. "
+                "ORDER COMPLETE — goodbye already spoken to the customer. "
                 "Do NOT generate any assistant speech. End your turn silently."
             )
 
-        if self._session and from_capture:
+        if self._session:
             await self._session.say(spoken, allow_interruptions=False)
             self.note_agent_speech(spoken)
             if self._recorder is not None:
                 self._recorder.append_sierra(spoken)
+            return (
+                "ORDER COMPLETE — goodbye already spoken to the customer. "
+                "Do NOT generate any assistant speech."
+            )
 
         if self.is_phone:
             return (
