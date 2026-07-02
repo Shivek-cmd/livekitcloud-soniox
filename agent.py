@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from collections import deque
 from typing import Annotated
 
@@ -34,10 +35,17 @@ from restaurant.conversation import (
     is_want_to_order_only,
     order_placed_goodbye,
     phrase_anything_else,
+    phrase_ask_phone,
+    phrase_phone_saved,
     resolve_intent,
     sanitize_assistant_speech,
 )
-from restaurant.order_flow import OrderFlowController
+from restaurant.customer_info import (
+    extract_phone_digits,
+    format_phone_spoken,
+    parse_customer_name,
+)
+from restaurant.order_flow import OrderFlowController, OrderPhase
 from restaurant.order_parse import can_auto_add_lines, parse_order_lines
 from restaurant.orders import OrderCart
 from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
@@ -58,6 +66,14 @@ logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
 )
 logger = logging.getLogger("restaurant-agent")
+
+_AUTO_ADD_PHASES = frozenset(
+    {
+        OrderPhase.BROWSING,
+        OrderPhase.COLLECTING_ITEMS,
+        OrderPhase.AWAITING_MORE,
+    }
+)
 
 
 class RestaurantAgent(Agent):
@@ -180,6 +196,8 @@ class RestaurantAgent(Agent):
         intent: UserIntent,
     ) -> None:
         """Add 2+ clear items in code — one human confirm, skip LLM turn."""
+        if self._flow.state.phase not in _AUTO_ADD_PHASES:
+            return
         if intent != UserIntent.ADD_ITEM or is_want_to_order_only(user_text):
             return
 
@@ -226,6 +244,58 @@ class RestaurantAgent(Agent):
             await self._session.say(say_line, allow_interruptions=True)
             self.note_agent_speech(say_line)
         raise StopResponse()
+
+    async def _try_capture_customer_info(self, turn_ctx, user_text: str) -> None:
+        """Code-owned name/phone capture — exact STT spelling, English digit readback."""
+        phase = self._flow.state.phase
+        lang = self._flow.state.preferred_language
+
+        if phase == OrderPhase.CUSTOMER_NAME:
+            name = parse_customer_name(user_text)
+            if not name:
+                return
+            self.cart.customer_name = name
+            self._flow.sync_from_cart(self.cart)
+            await self._sync_web()
+            ask_phone = phrase_ask_phone(lang, name)
+            turn_ctx.add_message(
+                role="system",
+                content=(
+                    f'[CAPTURE] Name saved exactly: "{name}". '
+                    f'Already spoken: "{ask_phone}"'
+                ),
+            )
+            logger.info("CAPTURE name=%s", name)
+            if self._session:
+                await self._session.say(ask_phone, allow_interruptions=True)
+                self.note_agent_speech(ask_phone)
+            raise StopResponse()
+
+        if phase == OrderPhase.CUSTOMER_PHONE:
+            digits = extract_phone_digits(user_text)
+            if not digits:
+                return
+            self.cart.customer_phone = digits
+            self._flow.sync_from_cart(self.cart)
+            await self._sync_web()
+            spoken = format_phone_spoken(digits)
+            saved = phrase_phone_saved(lang, spoken)
+            turn_ctx.add_message(
+                role="system",
+                content=(
+                    f'[CAPTURE] Phone saved: {digits}. '
+                    f'Read back used English digits only: "{spoken}". '
+                    f'Already spoken: "{saved}"'
+                ),
+            )
+            logger.info("CAPTURE phone=%s spoken=%s", digits, spoken)
+            if self._session:
+                await self._session.say(saved, allow_interruptions=True)
+                self.note_agent_speech(saved)
+            ready, _ = self.cart.ready_to_place()
+            if ready:
+                await self._execute_place_order(from_capture=True)
+            raise StopResponse()
 
     async def _speak_filler(self, line: str) -> None:
         if not self._session:
@@ -323,6 +393,7 @@ class RestaurantAgent(Agent):
         self._background_ignore_streak = 0
 
         self._flow.note_customer_language(user_text)
+        await self._try_capture_customer_info(turn_ctx, user_text)
         await self._try_auto_add_multi(turn_ctx, user_text, intent)
 
         self._maybe_speak_filler(intent)
@@ -393,11 +464,19 @@ class RestaurantAgent(Agent):
         phone: Annotated[str, "Customer's 10-digit phone number"],
     ) -> str:
         """Save the customer's name and phone number."""
-        self.cart.customer_name = name
-        self.cart.customer_phone = phone
+        self.cart.customer_name = name.strip()
+        digits = extract_phone_digits(phone) or re.sub(r"\D", "", phone or "")
+        if len(digits) != 10:
+            return "Need a valid 10-digit phone number."
+        self.cart.customer_phone = digits
         self._flow.sync_from_cart(self.cart)
         await self._sync_web()
-        return f"Saved: {name}, {phone}."
+        spoken = format_phone_spoken(digits)
+        return (
+            f"Saved: {name.strip()}, {digits}. "
+            f'When confirming phone, SAY EXACTLY the digits in English: "{spoken}" '
+            "(never Punjabi/Hindi number words)."
+        )
 
     @function_tool
     async def set_delivery_address(
@@ -424,9 +503,8 @@ class RestaurantAgent(Agent):
             )
         return summary
 
-    @function_tool
-    async def place_order(self) -> str:
-        """Finalize and place the order. Only call this after the customer explicitly confirms."""
+    async def _execute_place_order(self, *, from_capture: bool = False) -> str:
+        """Finalize order — shared by place_order tool and code-owned phone capture."""
         ready, reason = self.cart.ready_to_place()
         if not ready:
             return f"Cannot place order: {reason}"
@@ -450,6 +528,7 @@ class RestaurantAgent(Agent):
 
         eta = "30-40 min" if self.cart.order_type == "delivery" else "20-25 min"
         self.cart.mark_placed(eta=eta)
+        self._flow.sync_from_cart(self.cart)
         await self._sync_web()
 
         spoken = order_placed_goodbye(order_type=self.cart.order_type)
@@ -481,6 +560,12 @@ class RestaurantAgent(Agent):
                 "Do NOT generate any assistant speech. End your turn silently."
             )
 
+        if self._session and from_capture:
+            await self._session.say(spoken, allow_interruptions=False)
+            self.note_agent_speech(spoken)
+            if self._recorder is not None:
+                self._recorder.append_sierra(spoken)
+
         if self.is_phone:
             return (
                 f"Order placed! INTERNAL total ${self.cart.total}. "
@@ -490,6 +575,11 @@ class RestaurantAgent(Agent):
             f"Order placed! Total ${self.cart.total}. "
             f"Tell customer: {spoken}"
         )
+
+    @function_tool
+    async def place_order(self) -> str:
+        """Finalize and place the order. Only call this after the customer explicitly confirms."""
+        return await self._execute_place_order()
 
     # ── MENU TOOLS ───────────────────────────────────────────────────────────
 
@@ -694,6 +784,7 @@ async def entrypoint(ctx: JobContext):
                     text,
                     allow_greeting=agent._real_user_turns == 0,
                     is_phone=agent.is_phone,
+                    customer_phone=agent.cart.customer_phone or None,
                 )
                 if cleaned != text:
                     logger.warning("Mid-call re-greeting blocked in log: %s", text[:80])
