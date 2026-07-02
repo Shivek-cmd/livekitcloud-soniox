@@ -209,3 +209,14 @@ def test_sanitize_strips_price_on_phone():
     out = sanitize_assistant_speech(raw, allow_greeting=False, is_phone=True)
     assert "dollar" not in out.lower()
     assert "33" not in out
+
+
+def test_sanitize_strips_price_on_web():
+    raw = (
+        "ਠੀਕ ਹੈ ਜੀ — ਇਕ ਵੈਜ ਸਪ੍ਰਿੰਗ ਰੋਲ, ਇਕ ਸਰ੍ਹੋਂ ਦਾ ਸਾਗ, "
+        "ਤੇ ਦੋ ਬਟਰ ਨਾਨ, pickup, ਕੁੱਲ ਤਕਰੀਬਨ ਤੀਹ ਡਾਲਰ। ਬਿਲਕੁਲ ਠੀਕ?"
+    )
+    out = sanitize_assistant_speech(raw, allow_greeting=False, is_phone=False)
+    assert "ਡਾਲਰ" not in out
+    assert "dollar" not in out.lower()
+    assert "ਵੈਜ ਸਪ੍ਰਿੰਗ ਰੋਲ" in out

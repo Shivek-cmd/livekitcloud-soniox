@@ -69,7 +69,7 @@ def _web_channel_prompt() -> str:
     return """
 CHANNEL: WEB — customer sees live menu, prices, and order panel on screen.
 - English UI on screen does NOT set reply language — follow [TURN GUIDANCE] customer language like phone.
-- You MAY mention prices when helpful — they are visible on screen.
+- Prices are visible on screen — do NOT speak dollars, totals, or ਡਾਲਰ amounts unless customer asks (how much / price / kitna / kina).
 - Reference the menu/panel in the customer's language when natural; dish names still use voice_line from tools.
 - If customer taps Add, acknowledge briefly in their language (see [TURN GUIDANCE]).
 - Hybrid ordering: voice + tap share the same cart — always trust get_order_summary / cart tools.

@@ -165,11 +165,10 @@ class OrderFlowController:
             f'If unclear audio, prefer: "{phrase_repeat_request(lang)}"',
         ]
 
-        if self.is_phone:
-            lines.append(
-                "PHONE: Do NOT mention price, dollars, or totals in speech unless "
-                "customer asked price this turn (ASK_PRICE intent)."
-            )
+        lines.append(
+            "Do NOT mention price, dollars, totals, or ਡਾਲਰ in speech unless "
+            "customer asked price this turn (ASK_PRICE intent)."
+        )
 
         if is_add_intent(user_text) or intent == UserIntent.ADD_ITEM:
             self.state.quantity_allowed = True

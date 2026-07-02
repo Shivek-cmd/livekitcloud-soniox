@@ -10,6 +10,7 @@ from restaurant import menu_provider
 from restaurant.text_match import word_bounded
 
 _DEFAULT_AUTO_ADD_MIN_CONF = 0.8
+_DEFAULT_AUTO_ADD_MULTI_MIN_CONF = 0.72
 
 
 def _auto_add_min_confidence() -> float:
@@ -17,6 +18,18 @@ def _auto_add_min_confidence() -> float:
         return float(os.getenv("AUTO_ADD_MIN_CONFIDENCE", str(_DEFAULT_AUTO_ADD_MIN_CONF)))
     except ValueError:
         return _DEFAULT_AUTO_ADD_MIN_CONF
+
+
+def _auto_add_multi_min_confidence() -> float:
+    try:
+        return float(
+            os.getenv(
+                "AUTO_ADD_MULTI_MIN_CONFIDENCE",
+                str(_DEFAULT_AUTO_ADD_MULTI_MIN_CONF),
+            )
+        )
+    except ValueError:
+        return _DEFAULT_AUTO_ADD_MULTI_MIN_CONF
 
 _SPLIT_RE = re.compile(
     r"\s+(?:"
@@ -37,6 +50,28 @@ _STRIP_LEADING = re.compile(
     r"add karo|order karo|order kar|dedo|de do|"
     r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਜੋੜ|ਆਰਡਰ"
     r")\s+",
+    re.I,
+)
+
+# Punjabi STT: "ਆਪਣੇ … ਕਰ ਦਿਓ" — strip before menu match (PR 036).
+_STRIP_SEGMENT_PREFIX = re.compile(
+    r"^(?:"
+    r"please\s+|"
+    r"(?:yeah|yes|yep|yup|ok|okay)\s*,?\s*|"
+    r"(?:haan|han|ha)\s*(?:ji|ਜੀ)?\s*,?\s*|"
+    r"[\u0a39\u0a3e\u0a02\s\u0a1c\u0a40,]+|"
+    r"\u0a06\u0a2a\u0a23\u0a47\s+|"
+    r"(?:te|aur|and|plus)\s+"
+    r")+",
+    re.I,
+)
+
+_STRIP_SEGMENT_SUFFIX = re.compile(
+    r"(?:"
+    r"\s+(?:"
+    r"\u0a15\u0a30\s+\u0a26(?:\u0a3f\u0a4b|\u0a47)|"
+    r"kar\s+d(?:e|o)|dedo|de\s+do|add\s+karo|order\s+karo"
+    r"))+\s*$",
     re.I,
 )
 
@@ -102,8 +137,15 @@ def _extract_qty(segment: str) -> tuple[int, str]:
     return max(1, qty), rest
 
 
-def _resolve_item(text: str) -> dict | None:
+def _clean_order_segment(text: str) -> str:
     cleaned = _STRIP_LEADING.sub("", (text or "").strip()).strip()
+    cleaned = _STRIP_SEGMENT_PREFIX.sub("", cleaned).strip()
+    cleaned = _STRIP_SEGMENT_SUFFIX.sub("", cleaned).strip()
+    return cleaned
+
+
+def _resolve_item(text: str) -> dict | None:
+    cleaned = _clean_order_segment(text)
     if not cleaned:
         return None
 
@@ -170,7 +212,7 @@ def can_auto_add_lines(lines: list[ParsedOrderLine]) -> bool:
     """
     if len(lines) < 2:
         return False
-    min_conf = _auto_add_min_confidence()
-    if any(line.confidence < min_conf for line in lines):
+    threshold = min(_auto_add_min_confidence(), _auto_add_multi_min_confidence())
+    if any(line.confidence < threshold for line in lines):
         return False
     return all(not item_needs_modifiers(line.item) for line in lines)
