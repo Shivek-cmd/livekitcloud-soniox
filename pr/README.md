@@ -36,7 +36,9 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 030 | `pr_030_order-flow-quality` | Strict auto-add, final confirm, phase guards | ❌ **Reverted** — see doc |
 | 031 | `pr_031_voice-fillers` | Intent-based voice fillers (phone + web) | ✅ #64 |
 | 032 | `pr_032_menu-match-confidence` | Cross-script confidence menu matcher + auto-add gate | ✅ #69 |
-| 033 | `pr_033_voice-lines-and-aliases` | Voice lines speak customer's word + slang aliases (shikanji etc.) | ⬜ **Open** |
+| 033 | `pr_033_voice-lines-and-aliases` | Voice lines speak customer's word + slang aliases (shikanji etc.) | ✅ #70 |
+| 034 | `pr_034_indic-safe-word-matching` | Indic-safe word boundaries (allergies stuck fix) | ✅ #71 |
+| 035 | `pr_035_respectful-punjabi-register` | Formal ਤੁਸੀਂ/आप register guard + prompt rules | ⬜ **Open** |
 
 ---
 

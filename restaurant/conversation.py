@@ -6,6 +6,7 @@ import re
 from enum import Enum
 
 from restaurant.orders import OrderCart
+from restaurant.respect_speech import apply_respectful_register
 from restaurant.text_match import indic_word_re, word_bounded
 
 # ── Fixed spoken lines (Canadian Punjabi restaurant code-mix) ─────────────────
@@ -85,21 +86,27 @@ def update_preferred_language(
 
 def language_turn_guidance(lang: CustomerLanguage) -> str:
     """Per-turn LLM hint: conversational language vs fixed English order steps."""
-    fixed = "Fixed SAY EXACTLY order steps (allergies, pickup, quantity, read-back) stay English."
+    fixed = (
+        "Fixed SAY EXACTLY order steps (allergies, pickup, quantity, read-back) stay English. "
+        "Always use formal respectful address (ਤੁਸੀਂ/ਤੁਹਾਡਾ or आप/आपका) — never informal ਤੂੰ/तू."
+    )
     guides = {
         CustomerLanguage.PUNJABI: (
             "Customer language: Punjabi — conversational reply in natural Gurmukhi code-mix. "
             "Use English only for voice_line dish names, prices, digits. "
+            "Formal register only: \u0a24\u0a41\u0a38\u0a40\u0a02 / \u0a24\u0a41\u0a39\u0a3e\u0a21\u0a3e / \u0a1c\u0a40 \u2014 never \u0a24\u0a42\u0a02 / \u0a24\u0a47\u0a30\u0a3e. "
         ),
         CustomerLanguage.HINDI: (
             "Customer language: Hindi — conversational reply in Devanagari code-mix. "
             "Use English only for voice_line dish names, prices, digits. "
+            "Formal register only: \u0906\u092a / \u0906\u092a\u0915\u093e \u2014 never \u0924\u0942 / \u0924\u0947\u0930\u093e / \u0924\u0941\u092e. "
         ),
         CustomerLanguage.ENGLISH: (
             "Customer language: English — conversational reply in English. "
         ),
         CustomerLanguage.MIXED: (
             "Customer language: code-mix — match their Punjabi/Hindi/English mix naturally. "
+            "Formal register in Indic parts: ਤੁਸੀਂ/ਤੁਹਾਡਾ or आप/आपका — never informal second person. "
         ),
     }
     return guides.get(lang, guides[CustomerLanguage.ENGLISH]) + fixed
@@ -581,5 +588,7 @@ def sanitize_assistant_speech(text: str, *, allow_greeting: bool, is_phone: bool
     }
     for bad, good in replacements.items():
         out = out.replace(bad, good)
+
+    out = apply_respectful_register(out)
 
     return out.strip()
