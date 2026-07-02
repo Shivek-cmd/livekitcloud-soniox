@@ -310,8 +310,9 @@ class RestaurantAgent(Agent):
             raise StopResponse()
 
         # Allergies answered → pickup/delivery (English).
-        if phase == OrderPhase.SPECIAL_INSTRUCTIONS and is_allergies_step_answer(
-            user_text, intent
+        if phase == OrderPhase.SPECIAL_INSTRUCTIONS and (
+            is_allergies_step_answer(user_text, intent)
+            or (intent == UserIntent.CONFIRM_YES and is_confirm_yes(user_text))
         ):
             if not self._flow.state.allergies_asked:
                 self._flow.mark_allergies_asked()
@@ -321,6 +322,26 @@ class RestaurantAgent(Agent):
             if not cart.order_type:
                 await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
                 raise StopResponse()
+
+        # LLM read-back early — caller confirms → ask name (skip re-read).
+        if (
+            phase
+            in (
+                OrderPhase.SPECIAL_INSTRUCTIONS,
+                OrderPhase.ORDER_TYPE,
+                OrderPhase.CONFIRMING,
+            )
+            and self._flow.state.items_complete
+            and cart.order_type
+            and not self._flow.state.readback_confirmed
+            and (intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text))
+        ):
+            self._flow.mark_readback_spoken()
+            self._flow.mark_readback_confirmed()
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
+            raise StopResponse()
 
         # Pickup/delivery → read-back.
         if phase == OrderPhase.ORDER_TYPE and intent in (
@@ -334,6 +355,7 @@ class RestaurantAgent(Agent):
                 return
             readback = format_order_readback(cart, include_price=not self.is_phone)
             if readback:
+                self._flow.mark_readback_spoken()
                 await self._ladder_say(turn_ctx, readback)
                 raise StopResponse()
 
@@ -351,12 +373,14 @@ class RestaurantAgent(Agent):
                 return
             readback = format_order_readback(cart, include_price=not self.is_phone)
             if readback:
+                self._flow.mark_readback_spoken()
                 await self._ladder_say(turn_ctx, readback)
                 raise StopResponse()
 
         # Read-back yes → ask name (never phone first).
         if phase == OrderPhase.CONFIRMING and not self._flow.state.readback_confirmed:
             if intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text):
+                self._flow.mark_readback_spoken()
                 self._flow.mark_readback_confirmed()
                 self._flow.sync_from_cart(cart)
                 await self._sync_web()
@@ -371,43 +395,77 @@ class RestaurantAgent(Agent):
             and (intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text))
         ):
             self._fast_forward_checkout()
+            self._flow.mark_readback_spoken()
             self._flow.mark_readback_confirmed()
             self._flow.sync_from_cart(cart)
             await self._sync_web()
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
             raise StopResponse()
 
-    async def _try_capture_customer_info(self, turn_ctx, user_text: str) -> None:
-        """Code-owned name/phone capture — exact STT spelling, English digit readback."""
-        phase = self._flow.state.phase
+    def _ready_for_contact_capture(self) -> bool:
+        return (
+            self._flow.state.items_complete
+            and not self.cart.is_empty
+            and not self.cart.placed
+        )
+
+    async def _try_capture_customer_info(
+        self,
+        turn_ctx,
+        user_text: str,
+        intent: UserIntent,
+    ) -> None:
+        """Code-owned name/phone capture — works regardless of phase label."""
+        if not self._ready_for_contact_capture():
+            return
+
         lang = self._flow.state.preferred_language
 
-        if phase == OrderPhase.CUSTOMER_NAME:
+        if not self.cart.customer_name:
             name = parse_customer_name(user_text)
-            if not name:
-                return
-            self.cart.customer_name = name
-            self._flow.sync_from_cart(self.cart)
-            await self._sync_web()
-            ask_phone = phrase_ask_phone(lang, name)
-            turn_ctx.add_message(
-                role="system",
-                content=(
-                    f'[CAPTURE] Name saved exactly: "{name}". '
-                    f'Already spoken: "{ask_phone}"'
-                ),
-            )
-            logger.info("CAPTURE name=%s", name)
-            if self._session:
-                await self._session.say(ask_phone, allow_interruptions=True)
-                self.note_agent_speech(ask_phone)
-            raise StopResponse()
-
-        if phase == OrderPhase.CUSTOMER_PHONE:
-            if not self.cart.customer_name:
-                lang = self._flow.state.preferred_language
-                await self._ladder_say(turn_ctx, phrase_name_for_order(lang), tag="CAPTURE")
+            if name:
+                self.cart.customer_name = name
+                self._flow.mark_readback_confirmed()
+                self._flow.sync_from_cart(self.cart)
+                await self._sync_web()
+                ask_phone = phrase_ask_phone(lang, name)
+                turn_ctx.add_message(
+                    role="system",
+                    content=(
+                        f'[CAPTURE] Name saved exactly: "{name}". '
+                        f'Already spoken: "{ask_phone}"'
+                    ),
+                )
+                logger.info("CAPTURE name=%s", name)
+                if self._session:
+                    await self._session.say(ask_phone, allow_interruptions=True)
+                    self.note_agent_speech(ask_phone)
                 raise StopResponse()
+
+            digits_only = extract_phone_digits(user_text)
+            if digits_only and (
+                self._flow.state.readback_spoken
+                or self._flow.state.readback_confirmed
+                or self._flow.state.phase
+                in (
+                    OrderPhase.CONFIRMING,
+                    OrderPhase.CUSTOMER_NAME,
+                    OrderPhase.CUSTOMER_PHONE,
+                )
+            ):
+                self._fast_forward_checkout()
+                self._flow.mark_readback_confirmed()
+                self._flow.sync_from_cart(self.cart)
+                await self._sync_web()
+                await self._ladder_say(
+                    turn_ctx,
+                    phrase_name_for_order(lang),
+                    tag="CAPTURE",
+                )
+                raise StopResponse()
+            return
+
+        if not self.cart.customer_phone:
             digits = extract_phone_digits(user_text)
             if not digits:
                 return
@@ -533,7 +591,7 @@ class RestaurantAgent(Agent):
 
         self._flow.note_customer_language(user_text)
         await self._try_run_checkout_ladder(turn_ctx, user_text, intent)
-        await self._try_capture_customer_info(turn_ctx, user_text)
+        await self._try_capture_customer_info(turn_ctx, user_text, intent)
         await self._try_auto_add_multi(turn_ctx, user_text, intent)
 
         self._maybe_speak_filler(intent, user_text)

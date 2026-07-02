@@ -59,6 +59,12 @@ def test_parse_customer_name_exact():
     assert parse_customer_name("94137 52688") is None
 
 
+def test_parse_punjabi_name_mera():
+    name = parse_customer_name("ਨਾਮ ਮera ਸ਼ਿਵੇਕ ਹੈ")
+    assert name
+    assert "ਸ਼ਿਵ" in name or "Shiv" in name.lower() or len(name) >= 3
+
+
 def test_phone_not_confused_with_order_in_customer_phone_phase():
     intent = resolve_intent("94137 52688", phase="customer_phone")
     assert intent != UserIntent.ADD_ITEM

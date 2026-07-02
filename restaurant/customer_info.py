@@ -166,19 +166,65 @@ _NAME_FILLER_RE = re.compile(
     re.I,
 )
 
+_NAME_PATTERNS = (
+    re.compile(
+        r"(?:naam|name|\u0a28\u0a3e\u0a02)\s+"
+        r"(?:mera|my|\u0a2e\u0a47\u0a30\u0a3e)\s+"
+        r"([\u0900-\u097F\u0A00-\u0A7F\u0A01-\u0A4Da-zA-Z]+)",
+        re.I,
+    ),
+    re.compile(
+        r"(?:mera|my|\u0a2e\u0a47\u0a30\u0a3e)\s+"
+        r"(?:naam|name|\u0a28\u0a3e\u0a02)\s+"
+        r"(?:hai\s+|\u0a39\u0a48\s+)?"
+        r"([\u0900-\u097F\u0A00-\u0A7F\u0A01-\u0A4Da-zA-Z]+)",
+        re.I,
+    ),
+)
+
+
+def _clean_name_token(token: str) -> str | None:
+    name = (token or "").strip(" ,.-")
+    if not name or len(name) < 2 or re.search(r"\d", name):
+        return None
+    from restaurant.conversation import _QTY_ITEM_RE, menu_item_hint_in_text
+
+    if _QTY_ITEM_RE.search(name) or menu_item_hint_in_text(name):
+        return None
+    return name
+
 
 def parse_customer_name(text: str) -> str | None:
     """Best-effort name from a short utterance — keep STT spelling exactly."""
     raw = (text or "").strip()
     if not raw or looks_like_phone_utterance(raw):
         return None
-    if len(raw) > 48:
+    if len(raw) > 64:
         return None
+
+    for pattern in _NAME_PATTERNS:
+        match = pattern.search(raw)
+        if match:
+            parsed = _clean_name_token(match.group(1))
+            if parsed:
+                return parsed
+
+    if extract_phone_digits(raw) and not re.search(
+        r"[\u0900-\u097F\u0A00-\u0A7F]", raw
+    ):
+        return None
+
     cleaned = _NAME_FILLER_RE.sub("", raw).strip(" ,.")
+    cleaned = re.sub(
+        r"(?:\s+(?:hai|ha|ਹੈ|haan|han))[\s\.।,!?]*$",
+        "",
+        cleaned,
+        flags=re.I,
+    ).strip(" ,.")
     if not cleaned or looks_like_phone_utterance(cleaned):
         return None
     words = cleaned.split()
-    if len(words) > 3 or len(cleaned) < 2:
+    if len(words) > 4 or len(cleaned) < 2:
         return None
     if re.search(r"\d", cleaned):
         return None
@@ -186,4 +232,8 @@ def parse_customer_name(text: str) -> str | None:
 
     if _QTY_ITEM_RE.search(cleaned) or menu_item_hint_in_text(cleaned):
         return None
-    return cleaned
+    if len(words) == 1:
+        return _clean_name_token(words[0])
+    if len(words) <= 3:
+        return _clean_name_token(words[-1])
+    return None
