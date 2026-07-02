@@ -66,6 +66,7 @@ from restaurant.session_recorder import SessionRecorder
 from restaurant.analytics_store import persist_session
 from restaurant.call_control import hangup_after_order_enabled, schedule_call_hangup
 from restaurant.fillers import agent_session_busy, pick_filler
+from restaurant.clover.order_submit import clover_submit_enabled
 
 load_dotenv()
 
@@ -722,6 +723,41 @@ class RestaurantAgent(Agent):
         if not ready:
             return f"Cannot place order: {reason}"
 
+        clover_order_id: str | None = None
+        clover_meta: dict = {}
+        if clover_submit_enabled():
+            try:
+                from restaurant.clover.order_submit import (
+                    CloverOrderSubmitError,
+                    submit_cart_to_clover,
+                )
+                from restaurant.tenants.config import get_default_tenant
+
+                result = submit_cart_to_clover(
+                    self.cart,
+                    tenant=get_default_tenant(),
+                    session_id=(
+                        self._recorder.session_id if self._recorder is not None else None
+                    ),
+                    channel=self._channel_label(),
+                )
+                clover_order_id = result.clover_order_id
+                clover_meta = {
+                    "clover_order_id": result.clover_order_id,
+                    "clover_total_cents": result.total_cents,
+                    "clover_customer_id": result.customer_id,
+                    "clover_printed": result.printed,
+                }
+            except CloverOrderSubmitError as e:
+                logger.error("Clover submit failed: %s", e)
+                return f"Cannot place order: {e}"
+            except Exception:
+                logger.exception("Clover submit unexpected error")
+                return (
+                    "Cannot place order: could not reach the restaurant POS. "
+                    "Please try again in a moment."
+                )
+
         order_data = {
             "items": [
                 {"name": i.name, "qty": i.quantity, "price": i.price, "note": i.note}
@@ -733,6 +769,7 @@ class RestaurantAgent(Agent):
             "customer": self.cart.customer_name,
             "phone": self.cart.customer_phone,
             "address": self.cart.delivery_address,
+            **clover_meta,
         }
         logger.info(f"ORDER_PLACED: {json.dumps(order_data, ensure_ascii=False)}")
         if self._recorder is not None:
@@ -740,7 +777,7 @@ class RestaurantAgent(Agent):
             self._recorder.add_event("order_placed", order_data)
 
         eta = "30-40 min" if self.cart.order_type == "delivery" else "20-25 min"
-        self.cart.mark_placed(eta=eta)
+        self.cart.mark_placed(order_id=clover_order_id, eta=eta)
         self._flow.sync_from_cart(self.cart)
         await self._sync_web()
 
