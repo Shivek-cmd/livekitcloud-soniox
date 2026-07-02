@@ -1,0 +1,62 @@
+"""Tests for customer name/phone parsing and English-only phone readback."""
+
+from restaurant.conversation import (
+    UserIntent,
+    resolve_intent,
+    sanitize_assistant_speech,
+)
+from restaurant.customer_info import (
+    enforce_english_phone_in_speech,
+    extract_phone_digits,
+    format_phone_spoken,
+    looks_like_phone_utterance,
+    parse_customer_name,
+)
+
+
+def test_extract_phone_digits():
+    assert extract_phone_digits("94137 52688") == "9413752688"
+    assert extract_phone_digits("+1 941-375-2688") == "9413752688"
+    assert extract_phone_digits("9413752688") == "9413752688"
+
+
+def test_looks_like_phone_not_add_item():
+    assert looks_like_phone_utterance("94137 52688")
+    assert resolve_intent("94137 52688", phase="customer_phone") == UserIntent.GENERAL
+    assert resolve_intent("94137 52688") == UserIntent.GENERAL
+
+
+def test_format_phone_spoken_english_ascii_only():
+    spoken = format_phone_spoken("9413752688")
+    assert spoken == "9 4 1 3 7 5 2 6 8 8"
+    assert all(c.isascii() for c in spoken if c != " ")
+
+
+def test_enforce_english_phone_replaces_indic_numerals():
+    phone = "9413752688"
+    garbled = "ਧੰਨਵਾਦ — ੯੪੧੩੭ ੫੨੬੮੮."
+    out = enforce_english_phone_in_speech(garbled, phone)
+    assert "9 4 1 3 7 5 2 6 8 8" in out
+    assert "੯" not in out
+
+
+def test_sanitize_rewrites_phone_to_english_digits():
+    phone = "9413752688"
+    raw = "Your number is 94137 52688, correct?"
+    out = sanitize_assistant_speech(
+        raw,
+        allow_greeting=True,
+        customer_phone=phone,
+    )
+    assert "9 4 1 3 7 5 2 6 8 8" in out
+
+
+def test_parse_customer_name_exact():
+    assert parse_customer_name("ਸ਼ਿਵੇਕ") == "ਸ਼ਿਵੇਕ"
+    assert parse_customer_name("my name is Shivek") == "Shivek"
+    assert parse_customer_name("94137 52688") is None
+
+
+def test_phone_not_confused_with_order_in_customer_phone_phase():
+    intent = resolve_intent("94137 52688", phase="customer_phone")
+    assert intent != UserIntent.ADD_ITEM

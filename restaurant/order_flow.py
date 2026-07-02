@@ -322,8 +322,10 @@ class OrderFlowController:
             ]
         if p == OrderPhase.CUSTOMER_PHONE:
             return [
-                "Ask for phone number. Read back digits in ENGLISH. "
-                "Call set_customer_info only after name AND phone confirmed.",
+                "Ask for phone number once.",
+                "Read back ONLY as English ASCII digits separated by spaces (9 4 1 3 7 5 2 6 8 8).",
+                "NEVER use Punjabi/Hindi number words or Indic numerals for phone.",
+                "Call set_customer_info when digits confirmed — do NOT ask again if already saved.",
             ]
         if p == OrderPhase.CONFIRMING:
             if self.state.readback_confirmed:

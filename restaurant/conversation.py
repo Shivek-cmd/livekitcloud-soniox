@@ -5,6 +5,11 @@ from __future__ import annotations
 import re
 from enum import Enum
 
+from restaurant.customer_info import (
+    enforce_english_phone_in_speech,
+    looks_like_phone_utterance,
+    parse_customer_name,
+)
 from restaurant.orders import OrderCart
 from restaurant.text_match import indic_word_re, word_bounded
 
@@ -85,7 +90,10 @@ def update_preferred_language(
 
 def language_turn_guidance(lang: CustomerLanguage) -> str:
     """Per-turn LLM hint: conversational language vs fixed English order steps."""
-    fixed = "Fixed SAY EXACTLY order steps (allergies, pickup, quantity, read-back) stay English."
+    fixed = (
+        "Fixed SAY EXACTLY order steps (allergies, pickup, quantity, read-back) stay English. "
+        "Phone numbers ALWAYS English ASCII digits (9 4 1 3 7 …) — NEVER Punjabi/Hindi number words."
+    )
     guides = {
         CustomerLanguage.PUNJABI: (
             "Customer language: Punjabi — conversational reply in natural Gurmukhi code-mix. "
@@ -130,6 +138,24 @@ def phrase_repeat_request(lang: CustomerLanguage) -> str:
         CustomerLanguage.HINDI: "Sorry ji — phir se bol sakte hain?",
         CustomerLanguage.MIXED: "Sorry, could you say that again?",
     }.get(lang, "Sorry, could you say that again?")
+
+
+def phrase_ask_phone(lang: CustomerLanguage, name: str) -> str:
+    """After name saved — ask for phone; preserve exact name spelling."""
+    if lang == CustomerLanguage.PUNJABI:
+        return f"{name} ਜੀ — ਫੋਨ ਨੰਬਰ ਦੱਸੋ ਜੀ?"
+    if lang == CustomerLanguage.HINDI:
+        return f"{name} ji — phone number bata sakte hain?"
+    return f"Thanks {name} ji — what's the phone number?"
+
+
+def phrase_phone_saved(lang: CustomerLanguage, phone_spoken: str) -> str:
+    """Phone readback — English digits only in the spoken part."""
+    if lang == CustomerLanguage.PUNJABI:
+        return f"ਧੰਨਵਾਦ ਜੀ — {phone_spoken}."
+    if lang == CustomerLanguage.HINDI:
+        return f"Dhanyavaad ji — {phone_spoken}."
+    return f"Got it — {phone_spoken}."
 
 
 
@@ -357,7 +383,19 @@ def detect_intent(text: str) -> UserIntent:
 
 def resolve_intent(text: str, *, phase: str | None = None) -> UserIntent:
     """Phase-aware intent — e.g. pickup STT at order_type before qty-add false positive."""
+    if looks_like_phone_utterance(text):
+        return UserIntent.GENERAL
+
     intent = detect_intent(text)
+
+    if phase == "customer_name":
+        if parse_customer_name(text):
+            return UserIntent.GENERAL
+        if intent == UserIntent.ADD_ITEM:
+            return UserIntent.GENERAL
+    if phase == "customer_phone":
+        return UserIntent.GENERAL
+
     if phase == "order_type":
         if is_likely_pickup_stt(text):
             return UserIntent.PICKUP
@@ -554,35 +592,57 @@ _PRICE_SPEECH_RE = re.compile(
     re.I,
 )
 
+_LLM_JUNK_RE = re.compile(
+    r"(?:"
+    r"ਪੁਸ਼ਟੀ|push\s*confirm|confirm\s*push|"
+    r"ਚੇਲਾ|chela"
+    r")",
+    re.I,
+)
 
-def sanitize_assistant_speech(text: str, *, allow_greeting: bool, is_phone: bool = True) -> str:
+
+def sanitize_assistant_speech(
+    text: str,
+    *,
+    allow_greeting: bool,
+    is_phone: bool = True,
+    customer_phone: str | None = None,
+) -> str:
     """Strip mid-call re-greetings; normalize common script slips."""
-    if not text or allow_greeting:
+    if not text:
         return text
 
     out = text
-    if _GREETING_RE.search(out):
-        out = _GREETING_RE.sub("", out).strip()
-        if not out or len(out) < 8:
-            out = recovery_phrase(is_phone=True)
+    if not allow_greeting:
+        if _GREETING_RE.search(out):
+            out = _GREETING_RE.sub("", out).strip()
+            if not out or len(out) < 8:
+                out = recovery_phrase(is_phone=True)
 
-    if _META_SPEECH_RE.search(out):
-        out = _META_SPEECH_RE.sub("", out)
-        out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
-        if not out or len(out) < 6:
-            out = "Sure."
+        if _META_SPEECH_RE.search(out):
+            out = _META_SPEECH_RE.sub("", out)
+            out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
+            if not out or len(out) < 6:
+                out = "Sure."
 
-    if _PRICE_SPEECH_RE.search(out):
-        out = _PRICE_SPEECH_RE.sub("", out)
-        out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
-        if not out or len(out) < 8:
-            out = "Sure."
+        if _PRICE_SPEECH_RE.search(out):
+            out = _PRICE_SPEECH_RE.sub("", out)
+            out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
+            if not out or len(out) < 8:
+                out = "Sure."
 
-    replacements = {
-        "ਸوری": "ਮਾਫ ਕਰਨਾ",
-        "سوری": "ਮਾਫ ਕਰਨਾ",
-    }
-    for bad, good in replacements.items():
-        out = out.replace(bad, good)
+        replacements = {
+            "ਸوری": "ਮਾਫ ਕਰਨਾ",
+            "سوری": "ਮਾਫ ਕਰਨਾ",
+        }
+        for bad, good in replacements.items():
+            out = out.replace(bad, good)
+
+        if _LLM_JUNK_RE.search(out):
+            out = _LLM_JUNK_RE.sub("", out)
+            out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
+
+    if customer_phone:
+        out = enforce_english_phone_in_speech(out, customer_phone)
 
     return out.strip()

@@ -35,7 +35,7 @@ _SPLIT_RE = re.compile(
     r"\s+(?:"
     r"and|&|,|"
     r"aur|te|plus|"
-    r"ਅਤੇ|ਤੇ"
+    r"ਅਤੇ|ਤੇ|ਐਂਡ"
     r")\s+",
     re.I,
 )
@@ -70,10 +70,15 @@ _STRIP_SEGMENT_SUFFIX = re.compile(
     r"(?:"
     r"\s+(?:"
     r"\u0a15\u0a30\s+\u0a26(?:\u0a3f\u0a4b|\u0a47)|"
-    r"kar\s+d(?:e|o)|dedo|de\s+do|add\s+karo|order\s+karo"
+    r"\u0a32\u0a3e\s+\u0a26(?:\u0a3f\u0a4b|\u0a47)|"
+    r"kar\s+d(?:e|o)|la\s+d(?:o|e)|"
+    r"dedo|de\s+do|add\s+karo|order\s+karo"
     r"))+\s*$",
     re.I,
 )
+
+# STT sometimes inserts "ਤੁਸੀਂ" mid-phrase — "ਇੱਕ ਤੁਸੀਂ ਰਸਮਲਾਈ".
+_STRIP_INLINE_NOISE = re.compile(r"\s+\u0a24\u0a41\u0a38\u0a40\u0a02\s+")
 
 _QTY_WORDS = {
     "one": 1,
@@ -140,6 +145,7 @@ def _extract_qty(segment: str) -> tuple[int, str]:
 def _clean_order_segment(text: str) -> str:
     cleaned = _STRIP_LEADING.sub("", (text or "").strip()).strip()
     cleaned = _STRIP_SEGMENT_PREFIX.sub("", cleaned).strip()
+    cleaned = _STRIP_INLINE_NOISE.sub(" ", cleaned).strip()
     cleaned = _STRIP_SEGMENT_SUFFIX.sub("", cleaned).strip()
     return cleaned
 

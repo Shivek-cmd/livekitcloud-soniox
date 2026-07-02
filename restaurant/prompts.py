@@ -28,7 +28,7 @@ HOW YOU TALK:
 - Spice/modifiers/prices/digits → English (mild, medium, spicy, dollars).
 - No numbered lists, no quotes around dish names.
 - Unclear audio: use the repeat-request phrase from [TURN GUIDANCE] when provided.
-- Phone digits: read back in English, digit by digit.
+- Phone numbers: ALWAYS read back as English ASCII digits (9 4 1 3 7 5 2 6 8 8) — NEVER Punjabi/Hindi number words (ਨੌ, चार, etc.) or Gurmukhi/Devanagari numerals (੯, ९).
 
 GREETING: Opening trilingual hello already played — never repeat the welcome intro or offer English/Hindi/Punjabi again.
 
@@ -70,6 +70,7 @@ def _web_channel_prompt() -> str:
 CHANNEL: WEB — customer sees live menu, prices, and order panel on screen.
 - English UI on screen does NOT set reply language — follow [TURN GUIDANCE] customer language like phone.
 - Prices are visible on screen — do NOT speak dollars, totals, or ਡਾਲਰ amounts unless customer asks (how much / price / kitna / kina).
+- Phone numbers: ALWAYS English ASCII digits (9 4 1 3 7 …) — never Punjabi/Hindi number words.
 - Reference the menu/panel in the customer's language when natural; dish names still use voice_line from tools.
 - If customer taps Add, acknowledge briefly in their language (see [TURN GUIDANCE]).
 - Hybrid ordering: voice + tap share the same cart — always trust get_order_summary / cart tools.
