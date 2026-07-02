@@ -48,11 +48,13 @@ def _get_cache():
 def find_item(name: str) -> dict | None:
     cache = _get_cache()
     if cache:
-        hit = cache.find_item(name)
-        if hit:
+        scored = cache.find_item_scored(name)
+        if scored:
+            hit, confidence = scored
+            out = {**hit.to_cart_dict(), "match_confidence": confidence}
             if not hit.available:
-                return {**hit.to_cart_dict(), "unavailable": True}
-            return hit.to_cart_dict()
+                out["unavailable"] = True
+            return out
         return None
     item = static_find_item(name)
     return item
@@ -163,7 +165,9 @@ def resolve_item_in_text(text: str) -> dict | None:
     if cache:
         hits = cache.search(t, limit=1)
         if hits and hits[0].available:
-            return hits[0].to_cart_dict()
+            # substring search is weak evidence — confidence capped below the
+            # auto-add gate so this path can never speak a code-owned confirm
+            return {**hits[0].to_cart_dict(), "match_confidence": 0.5}
     # Try longest token runs (3+ chars) for dish names in mixed sentences
     import re
 
