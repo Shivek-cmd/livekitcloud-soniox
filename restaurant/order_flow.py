@@ -50,6 +50,7 @@ class OrderFlowState:
     special_instructions_done: bool = False
     allergies_asked: bool = False
     readback_confirmed: bool = False
+    readback_spoken: bool = False
     preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
     last_discussed_item: str | None = None
     last_discussed_price: float | None = None
@@ -116,6 +117,9 @@ class OrderFlowController:
 
     def mark_readback_confirmed(self) -> None:
         self.state.readback_confirmed = True
+
+    def mark_readback_spoken(self) -> None:
+        self.state.readback_spoken = True
 
     def on_item_added(self) -> None:
         self.state.quantity_allowed = False
@@ -259,6 +263,16 @@ class OrderFlowController:
         lines.append("Reply in ONE short sentence. ONE question only.")
         lines.append("Never ask permission to read the order — just read it when at confirming step.")
 
+        if (
+            cart.customer_name
+            or cart.customer_phone
+            or self.state.readback_confirmed
+            or self.state.readback_spoken
+        ):
+            lines.append(
+                "Do NOT repeat the order read-back — collect remaining contact info or call place_order()."
+            )
+
         return TurnPlan(
             guidance="\n".join(lines),
             quantity_allowed=self.state.quantity_allowed,
@@ -328,11 +342,24 @@ class OrderFlowController:
                 "Call set_customer_info when digits confirmed — do NOT ask again if already saved.",
             ]
         if p == OrderPhase.CONFIRMING:
+            if cart.customer_name and not cart.customer_phone:
+                return [
+                    "Name saved — ask for phone number once.",
+                    "Read back phone as English word digits (nine, four, one, …).",
+                    "Do NOT repeat the order.",
+                ]
+            if cart.customer_name and cart.customer_phone:
+                return ["Contact info complete. Call place_order() — do NOT repeat the order."]
             if self.state.readback_confirmed:
                 q = phrase_name_for_order(self.state.preferred_language)
                 return [
-                    "Read-back already confirmed — do NOT repeat the order.",
+                    "Read-back confirmed — do NOT repeat the order.",
                     f'Ask: "{q}"',
+                ]
+            if self.state.readback_spoken:
+                return [
+                    "Read-back already spoken — do NOT repeat the order.",
+                    'Wait for customer yes / all good, then ask for name once.',
                 ]
             readback = format_order_readback(cart, include_price=not self.is_phone)
             out = [
