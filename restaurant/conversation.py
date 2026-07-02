@@ -546,7 +546,10 @@ _PRICE_SPEECH_RE = re.compile(
     r"(?:"
     r",?\s*total about [\d.]+\s*dollars?|"
     r"\$\s*[\d.]+|"
-    r"about \d+(?:\.\d+)?\s*dollars?"
+    r"about \d+(?:\.\d+)?\s*dollars?|"
+    r"(?:,\s*)?(?:\u0a15\u0a41\u0a71?\s*)?(?:total|\u0a15\u0a41\u0a71?|\u0a24\u0a15\u0a30\u0a40\u0a2c(?:\u0a28)?)"
+    r"[^.?!]*(?:dollars?|\u0a21\u0a3e\u0a32\u0a30)|"
+    r"[\d.]+\s*(?:\u0a21\u0a3e\u0a32\u0a30|dollars?)"
     r")",
     re.I,
 )
@@ -569,7 +572,7 @@ def sanitize_assistant_speech(text: str, *, allow_greeting: bool, is_phone: bool
         if not out or len(out) < 6:
             out = "Sure."
 
-    if is_phone and _PRICE_SPEECH_RE.search(out):
+    if _PRICE_SPEECH_RE.search(out):
         out = _PRICE_SPEECH_RE.sub("", out)
         out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
         if not out or len(out) < 8:

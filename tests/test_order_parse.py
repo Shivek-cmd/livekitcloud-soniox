@@ -30,6 +30,26 @@ def test_can_auto_add_simple_desserts():
     assert can_auto_add_lines(lines) is True
 
 
+def test_live_web_turn2_punjabi_multi_auto_add():
+    """Web transcript turn 2 — spring roll + sarson in one sentence."""
+    text = (
+        "ਹਾਂ ਜੀ, ਆਪਣੇ ਇੱਕ ਵੈਜ ਸਪ੍ਰਿੰਗ ਰੋਲ ਕਰ ਦਿਓ, "
+        "ਤੇ ਆਪਣੇ ਇੱਕ ਸਰਸੋਂ ਦਾ ਸਾਗ ਕਰ ਦਿਓ।"
+    )
+    lines = parse_order_lines(text)
+    assert len(lines) == 2
+    names = {line.item["name"] for line in lines}
+    assert "Veg Spring Rolls (6 pcs)" in names
+    assert "Sarson da Saag" in names
+    assert can_auto_add_lines(lines) is True
+
+
+def test_clean_segment_strips_kar_dio():
+    lines = parse_order_lines("ਆਪਣੇ ਇੱਕ ਵੈਜ ਸਪ੍ਰਿੰਗ ਰੋਲ ਕਰ ਦਿਓ")
+    assert len(lines) == 1
+    assert lines[0].item["name"] == "Veg Spring Rolls (6 pcs)"
+
+
 def test_confirm_two_items_english():
     line = confirm_items_added(
         [(1, "Rasmalai"), (1, "Kheer")],

@@ -416,13 +416,9 @@ class RestaurantAgent(Agent):
         from restaurant.conversation import format_order_readback
 
         summary = self.cart.summary()
-        readback = format_order_readback(self.cart, include_price=not self.is_phone)
+        readback = format_order_readback(self.cart, include_price=False)
         if readback:
-            price_note = (
-                " Do NOT mention price or totals in speech."
-                if self.is_phone
-                else ""
-            )
+            price_note = " Do NOT mention price or totals in speech unless customer asked."
             return (
                 f"{summary}\n\nSPOKEN READ-BACK (say exactly):\n{readback}{price_note}"
             )
