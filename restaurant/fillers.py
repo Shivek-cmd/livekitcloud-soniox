@@ -54,7 +54,7 @@ class FillerKind(str, Enum):
 _INTENT_KIND: dict[UserIntent, FillerKind] = {
     UserIntent.ASK_PRICE: FillerKind.PROCESSING,
     UserIntent.ASK_AVAILABILITY: FillerKind.PROCESSING,
-    UserIntent.ADD_ITEM: FillerKind.ACK,
+    UserIntent.ADD_ITEM: FillerKind.PROCESSING,
     UserIntent.GENERAL: FillerKind.PROCESSING,
 }
 

@@ -217,15 +217,33 @@ def item_needs_modifiers(item: dict) -> bool:
 
 
 def can_auto_add_lines(lines: list[ParsedOrderLine]) -> bool:
-    """True when we can add every line in code without modifier prompts.
-
-    Auto-add speaks a code-owned confirm with no LLM review, so every line
-    must be a high-confidence match — weaker resolutions go through the
-    normal LLM tool path where the model confirms with the caller.
-    """
+    """True when we can add every line in code without modifier prompts."""
     if len(lines) < 2:
         return False
     threshold = min(_auto_add_min_confidence(), _auto_add_multi_min_confidence())
     if any(line.confidence < threshold for line in lines):
         return False
     return all(not item_needs_modifiers(line.item) for line in lines)
+
+
+def can_auto_add_single(line: ParsedOrderLine) -> bool:
+    """High-confidence single item with quantity already in speech."""
+    if line.confidence < _auto_add_min_confidence():
+        return False
+    return not item_needs_modifiers(line.item)
+
+
+def auto_add_candidates(text: str) -> list[ParsedOrderLine] | None:
+    """Lines safe for code-owned add, or None to fall through to LLM."""
+    from restaurant.stt_noise import is_likely_stt_noise
+
+    if is_likely_stt_noise(text):
+        return None
+    lines = parse_order_lines(text)
+    if not lines:
+        return None
+    if len(lines) == 1 and can_auto_add_single(lines[0]):
+        return lines
+    if len(lines) >= 2 and can_auto_add_lines(lines):
+        return lines
+    return None

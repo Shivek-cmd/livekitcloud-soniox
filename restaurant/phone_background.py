@@ -7,6 +7,7 @@ import re
 from restaurant.clover.match import phonetic_key
 from restaurant.conversation import UserIntent
 from restaurant.phone_echo import _ORDER_SIGNAL_RE, should_bypass_phone_echo_filter
+from restaurant.stt_noise import is_likely_stt_noise, parse_standalone_quantity
 
 # Short replies that are valid even when intent stays GENERAL.
 _SHORT_MEANINGFUL: frozenset[str] = frozenset(
@@ -33,6 +34,13 @@ _SHORT_MEANINGFUL: frozenset[str] = frozenset(
         "person",
         "operator",
         "menu",
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "van",
+        "wan",
     }
 )
 
@@ -83,13 +91,18 @@ def is_likely_background_speech(
     if not enabled:
         return False
 
+    text = user_text.strip()
+    if not text:
+        return True
+
     # Never drop short replies during checkout contact capture.
     if phase in ("customer_name", "customer_phone", "readback"):
         return False
 
-    text = user_text.strip()
-    if not text:
-        return True
+    # Quantity answers while collecting (one, van, ਇੱਕ).
+    if phase in ("awaiting_more", "collecting_items", "browsing"):
+        if parse_standalone_quantity(text) is not None:
+            return False
 
     if should_bypass_phone_echo_filter(text, intent):
         return False
@@ -101,6 +114,9 @@ def is_likely_background_speech(
         return False
 
     if _BACKGROUND_FRAGMENT_RE.search(text):
+        return True
+
+    if is_likely_stt_noise(text) and intent in (UserIntent.GENERAL, UserIntent.UNCLEAR):
         return True
 
     tokens = _tokens(text)

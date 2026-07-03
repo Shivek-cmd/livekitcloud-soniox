@@ -135,9 +135,21 @@ def test_quantity_gate_on_availability():
 def test_quantity_allowed_on_add():
     cart = OrderCart()
     flow = OrderFlowController(is_phone=True)
-    plan = flow.build_turn_plan("add one mango kulfi", UserIntent.ADD_ITEM, cart)
+    plan = flow.build_turn_plan("add mango kulfi", UserIntent.ADD_ITEM, cart)
     assert plan.quantity_allowed is True
     assert "SAY EXACTLY" in plan.guidance or "add_to_order" in plan.guidance
+
+
+def test_quantity_not_allowed_when_explicit_in_utterance():
+    cart = OrderCart()
+    flow = OrderFlowController(is_phone=True)
+    plan = flow.build_turn_plan(
+        "ਮੈਨੂੰ ਇੱਕ ਚਿਕਨ ਟਿੱਕਾ ਚਾਹੀਦਾ",
+        UserIntent.ADD_ITEM,
+        cart,
+    )
+    assert plan.quantity_allowed is False
+    assert "How many" not in plan.guidance
 
 
 def test_multi_item_add_guidance():

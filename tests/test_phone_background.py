@@ -38,3 +38,11 @@ def test_customer_name_phase_never_filters_single_word():
         UserIntent.GENERAL,
         phase="customer_name",
     )
+
+
+def test_quantity_van_not_background_while_collecting():
+    assert not is_likely_background_speech(
+        "ਵਨ।",
+        UserIntent.GENERAL,
+        phase="awaiting_more",
+    )

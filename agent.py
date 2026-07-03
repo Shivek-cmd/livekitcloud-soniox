@@ -44,6 +44,7 @@ from restaurant.conversation import (
     phrase_ask_phone,
     phrase_name_for_order,
     phrase_phone_saved,
+    phrase_repeat_request,
     resolve_intent,
     sanitize_assistant_speech,
 )
@@ -54,8 +55,13 @@ from restaurant.customer_info import (
     looks_like_phone_utterance,
     parse_customer_name,
 )
-from restaurant.order_flow import OrderFlowController, OrderPhase
-from restaurant.order_parse import can_auto_add_lines, parse_order_lines
+from restaurant.order_flow import OrderFlowController, OrderPhase, is_collecting_phase
+from restaurant.order_parse import auto_add_candidates, parse_order_lines
+from restaurant.stt_noise import (
+    agent_recently_asked_quantity,
+    is_likely_stt_noise,
+    parse_standalone_quantity,
+)
 from restaurant.orders import OrderCart
 from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
 from restaurant.phone_background import is_likely_background_speech
@@ -211,20 +217,20 @@ class RestaurantAgent(Agent):
             if not greeting_only:
                 self._echo_recovery_scheduled = False
 
-    async def _try_auto_add_multi(
+    async def _try_auto_add(
         self,
         turn_ctx,
         user_text: str,
         intent: UserIntent,
     ) -> None:
-        """Add 2+ clear items in code — one human confirm, skip LLM turn."""
+        """Code-owned add when speech parses cleanly — single or multi item."""
         if self._flow.state.phase not in _AUTO_ADD_PHASES:
             return
         if intent != UserIntent.ADD_ITEM or is_want_to_order_only(user_text):
             return
 
-        lines = parse_order_lines(user_text)
-        if not can_auto_add_lines(lines):
+        lines = auto_add_candidates(user_text)
+        if not lines:
             return
 
         entries: list[tuple[int, str]] = []
@@ -252,7 +258,7 @@ class RestaurantAgent(Agent):
             role="system",
             content=f'[AUTO-ADD] Items saved. Already spoken: "{say_line}"',
         )
-        logger.info("AUTO_ADD items=%s", [e[1] for e in entries])
+        logger.info("AUTO_ADD items=%s qty=%s", [e[1] for e in entries], [e[0] for e in entries])
 
         if self._recorder is not None:
             self._recorder.complete_turn(
@@ -265,6 +271,70 @@ class RestaurantAgent(Agent):
         if self._session:
             await self._session.say(say_line, allow_interruptions=True)
             self.note_agent_speech(say_line)
+        raise StopResponse()
+
+    async def _try_quantity_reply(
+        self,
+        turn_ctx,
+        user_text: str,
+    ) -> None:
+        """Set quantity when caller answers a prior 'how many' — never additive."""
+        if self._flow.state.phase not in _AUTO_ADD_PHASES:
+            return
+        qty = parse_standalone_quantity(user_text)
+        if qty is None:
+            return
+        if not agent_recently_asked_quantity(self._recent_agent_lines):
+            return
+        if not self.cart.items:
+            return
+
+        item = self.cart.items[-1]
+        self.cart.update_item_quantity(item.name, qty)
+        self._flow.sync_from_cart(self.cart)
+        await self._sync_web()
+
+        lang = self._flow.state.preferred_language
+        voice = item.voice_line or item.name
+        confirm = confirm_items_added([(qty, voice)], lang)
+        follow = phrase_anything_else(lang)
+        say_line = f"{confirm} {follow}"
+
+        turn_ctx.add_message(
+            role="system",
+            content=f'[QTY-REPLY] Set {item.name} qty={qty}. Already spoken: "{say_line}"',
+        )
+        logger.info("QTY_REPLY item=%s qty=%s", item.name, qty)
+
+        if self._session:
+            await self._session.say(say_line, allow_interruptions=True)
+            self.note_agent_speech(say_line)
+        raise StopResponse()
+
+    async def _try_reject_stt_noise(
+        self,
+        turn_ctx,
+        user_text: str,
+        intent: UserIntent,
+    ) -> None:
+        """Ignore TV/background transcripts — ask caller to repeat."""
+        if self._flow.state.phase not in _AUTO_ADD_PHASES:
+            return
+        if intent not in (UserIntent.ADD_ITEM, UserIntent.GENERAL, UserIntent.UNCLEAR):
+            return
+        if not is_likely_stt_noise(user_text):
+            return
+        if auto_add_candidates(user_text):
+            return
+
+        lang = self._flow.state.preferred_language
+        line = phrase_repeat_request(lang)
+        turn_ctx.add_message(
+            role="system",
+            content=f'[STT_NOISE] Ignored background-like transcript. Already spoken: "{line}"',
+        )
+        logger.info("STT_NOISE rejected turn: %s", user_text[:80])
+        await self._ladder_say(turn_ctx, line, tag="STT_NOISE")
         raise StopResponse()
 
     async def _ladder_say(self, turn_ctx, line: str, *, tag: str = "LADDER") -> None:
@@ -631,7 +701,9 @@ class RestaurantAgent(Agent):
         await self._try_answer_order_status(turn_ctx, user_text, intent)
         await self._try_run_checkout_ladder(turn_ctx, user_text, intent)
         await self._try_capture_customer_info(turn_ctx, user_text, intent)
-        await self._try_auto_add_multi(turn_ctx, user_text, intent)
+        await self._try_reject_stt_noise(turn_ctx, user_text, intent)
+        await self._try_quantity_reply(turn_ctx, user_text)
+        await self._try_auto_add(turn_ctx, user_text, intent)
 
         self._maybe_speak_filler(intent, user_text)
         self._inject_turn_guidance(turn_ctx, user_text)
@@ -653,6 +725,11 @@ class RestaurantAgent(Agent):
         note: Annotated[str, "Modifier choices and special instructions e.g. 'medium spicy, butter naan'"] = "",
     ) -> str:
         """Add one menu item. If customer listed several dishes, call once per item in the same turn."""
+        if not is_collecting_phase(self._flow.state.phase):
+            return (
+                "Cannot add items during checkout. If the customer wants to change "
+                "the order, use update_item_quantity or remove_from_order."
+            )
         item = menu_provider.find_item(item_name)
         if not item:
             return f"'{item_name}' is not on our menu. Ask the customer to clarify or call search_menu_items."

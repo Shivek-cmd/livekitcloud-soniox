@@ -25,6 +25,7 @@ from restaurant.conversation import (
     phrase_repeat_request,
     update_preferred_language,
 )
+from restaurant.stt_noise import utterance_has_explicit_quantity
 from restaurant import menu_provider
 from restaurant.order_parse import parse_order_lines
 from restaurant.orders import OrderCart
@@ -246,12 +247,19 @@ class OrderFlowController:
                         f'SAY EXACTLY after all added: "{confirm} {follow}"'
                     )
                 else:
+                    qty_note = (
+                        " Quantity is already in the customer's words — "
+                        "call add_to_order with that qty; do NOT ask how many."
+                        if utterance_has_explicit_quantity(user_text)
+                        else ""
+                    )
                     lines.append(
                         "Customer wants to add. Call add_to_order when the dish name is clear — "
                         "do NOT call check_menu_item first unless the name is truly unclear. "
                         "If tool says item is NOT on menu: say that once, suggest search_menu_items, "
                         f'then ask: "{phrase_anything_else(lang)}" — stay on collecting step. '
-                        "Use SAY EXACTLY from the tool result. Do NOT mention price unless customer asked."
+                        f"Use SAY EXACTLY from the tool result. Do NOT mention price unless customer asked."
+                        f"{qty_note}"
                     )
         elif intent == UserIntent.ORDER_DONE:
             if not cart.is_empty:
@@ -309,8 +317,10 @@ class OrderFlowController:
             "customer asked price this turn (ASK_PRICE intent).",
         ]
 
-        quantity_allowed = is_collecting_phase(phase) and (
-            is_add_intent(user_text) or intent == UserIntent.ADD_ITEM
+        quantity_allowed = (
+            is_collecting_phase(phase)
+            and (is_add_intent(user_text) or intent == UserIntent.ADD_ITEM)
+            and not utterance_has_explicit_quantity(user_text)
         )
 
         if is_code_owned_checkout(phase):
