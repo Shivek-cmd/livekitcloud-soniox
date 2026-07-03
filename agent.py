@@ -359,7 +359,7 @@ class RestaurantAgent(Agent):
             phase
             in (
                 OrderPhase.ORDER_TYPE,
-                OrderPhase.CONFIRMING,
+                OrderPhase.READBACK,
             )
             and self._flow.state.items_complete
             and cart.order_type
@@ -412,7 +412,7 @@ class RestaurantAgent(Agent):
                 raise StopResponse()
 
         # Read-back yes → ask name (never phone first).
-        if phase == OrderPhase.CONFIRMING and not self._flow.state.readback_confirmed:
+        if phase == OrderPhase.READBACK and not self._flow.state.readback_confirmed:
             if intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text):
                 self._flow.mark_readback_spoken()
                 self._flow.mark_readback_confirmed()
@@ -599,6 +599,7 @@ class RestaurantAgent(Agent):
                 user_text,
                 intent,
                 enabled=phone_background_filter_enabled(),
+                phase=self._flow.state.phase.value,
             ):
                 logger.info("Ignoring phone background turn: %s", user_text)
                 if self._recorder is not None:
