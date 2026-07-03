@@ -152,10 +152,10 @@ def phrase_ask_phone(lang: CustomerLanguage, name: str) -> str:
 
 def phrase_phone_saved(lang: CustomerLanguage, phone_spoken: str) -> str:
     """Phone readback — English digits only in the spoken part."""
-    if lang == CustomerLanguage.PUNJABI:
+    if lang in (CustomerLanguage.PUNJABI, CustomerLanguage.MIXED):
         return f"ਧੰਨਵਾਦ ਜੀ — {phone_spoken}."
     if lang == CustomerLanguage.HINDI:
-        return f"Dhanyavaad ji — {phone_spoken}."
+        return f"ਧੰਨਵਾਦ ਜੀ — {phone_spoken}."
     return f"Got it — {phone_spoken}."
 
 
@@ -201,7 +201,22 @@ _ORDER_STATUS_RE = indic_word_re(
 )
 
 _PICKUP_RE = indic_word_re(
-    r"pickup|pick up|pick-up|takeaway|take away|ਪਿਕਅੱਪ|ਪਿਕ ਅੱਪ"
+    r"pickup|pick up|pick-up|takeaway|take away|"
+    r"ਪਿਕਅੱਪ|ਪਿਕ ਅੱਪ|ਪਿਕ.*ਕਰ|pick.*up"
+)
+
+_READBACK_ACK_RE = indic_word_re(
+    r"check|chacko|chakko|theek|thik|ok|okay|"
+    r"ਚੈਕ|ਚੈਕੋ|ਠੀਕ|ਠੀਕ\s*ਐ|ਹਾਂ\s*ਠੀਕ"
+)
+
+_READBACK_ALL_CLEAR_RE = re.compile(
+    r"(?:"
+    r"ਕੋਈ\s*ਗ(?:\u0a71)?(?:ੱ)?(?:ਾ)?ਲ\s*ਨਹੀ|"
+    r"koi gall nahi|no problem|no issues|sab thik|sab theek|"
+    r"ਨਹੀ[^\s,]*\s*ਜੀ\s*,?\s*ਕੋਈ\s*ਗ(?:\u0a71)?(?:ੱ)?(?:ਾ)?ਲ"
+    r")",
+    re.I,
 )
 
 # Phone STT often hears "pickup" as "one cup" / "one up" (Gurmukhi or English).
@@ -340,11 +355,31 @@ def is_likely_pickup_stt(text: str) -> bool:
         return False
     if _PICKUP_RE.search(t) or _PICKUP_STT_RE.search(t):
         return True
+    if re.search(r"ਪਿਕ.*(?:ਕਰ|ਲ(?:ਾ|ੈ))", t):
+        return True
     if _I_SAID_RE.search(t) and re.search(
         r"ਕ(?:ੱ?)?(?:ੱਪ|ਪ)|ਅ(?:ੱ?)?(?:ੱਪ|ਪ)|cup|pick|pickup",
         t,
         re.I,
     ):
+        return True
+    return False
+
+
+def is_readback_ack(text: str) -> bool:
+    """Short confirm at read-back — e.g. ਚੈਕੋ, check, theek."""
+    t = re.sub(r"[\s\.।,!?]+$", "", (text or "").strip())
+    if not t or len(t) > 32:
+        return False
+    return bool(_READBACK_ACK_RE.search(t))
+
+
+def is_readback_all_clear(text: str) -> bool:
+    """Caller confirms order is fine — 'no problem', 'ਕੋਈ ਗੱਲ ਨਹੀਂ'."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    if _READBACK_ALL_CLEAR_RE.search(t):
         return True
     return False
 
@@ -460,6 +495,11 @@ def resolve_intent(text: str, *, phase: str | None = None) -> UserIntent:
             return UserIntent.PICKUP
         if _DELIVERY_RE.search(text):
             return UserIntent.DELIVERY
+    if phase == "readback":
+        if is_readback_ack(text) or is_readback_all_clear(text):
+            return UserIntent.CONFIRM_YES
+        if is_confirm_yes(text):
+            return UserIntent.CONFIRM_YES
     return intent
 
 
@@ -739,6 +779,9 @@ def sanitize_assistant_speech(
 
         if _PUNJABI_CONFIRM_RE.search(out):
             out = _PUNJABI_CONFIRM_RE.sub("confirm", out)
+
+        out = re.sub(r"\bDhanyavaad\b", "ਧੰਨਵਾਦ", out, flags=re.I)
+        out = re.sub(r"\bdhanyavaad\b", "ਧੰਨਵਾਦ", out, flags=re.I)
 
     if customer_phone:
         out = enforce_english_phone_in_speech(out, customer_phone)
