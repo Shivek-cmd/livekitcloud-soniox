@@ -10,7 +10,7 @@ from restaurant.menu import (
     RESTAURANT_NAME_EN,
 )
 
-# Order flow Steps A–E live in restaurant/order_flow.py (injected per turn as [TURN GUIDANCE]).
+# Order flow — single authority in restaurant/order_flow.py (`compute_phase`).
 
 
 def _core_prompt() -> str:

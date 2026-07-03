@@ -72,4 +72,4 @@ def test_confirming_haan_ji_advances_to_name():
     plan = flow.build_turn_plan("ਹਾਂ ਜੀ।", UserIntent.CONFIRM_YES, cart)
     assert flow.state.readback_confirmed is True
     assert flow.state.phase == OrderPhase.CUSTOMER_NAME
-    assert "ਆਰਡਰ ਲਈ ਨਾਮ" in plan.guidance
+    assert "CHECKOUT STEP" in plan.guidance

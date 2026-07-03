@@ -77,9 +77,14 @@ def is_likely_background_speech(
     intent: UserIntent,
     *,
     enabled: bool = True,
+    phase: str | None = None,
 ) -> bool:
     """True when STT text is probably background TV / nearby speaker, not the customer."""
     if not enabled:
+        return False
+
+    # Never drop short replies during checkout contact capture.
+    if phase in ("customer_name", "customer_phone", "readback"):
         return False
 
     text = user_text.strip()

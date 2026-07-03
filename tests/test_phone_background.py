@@ -30,3 +30,11 @@ def test_disabled_never_filters():
     assert not is_likely_background_speech(
         "mm hmm", UserIntent.GENERAL, enabled=False
     )
+
+
+def test_customer_name_phase_never_filters_single_word():
+    assert not is_likely_background_speech(
+        "ਸੰਦੀਪ",
+        UserIntent.GENERAL,
+        phase="customer_name",
+    )

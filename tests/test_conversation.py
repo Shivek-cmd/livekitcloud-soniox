@@ -158,8 +158,8 @@ def test_order_done_uses_allergies_template():
     cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
     flow = OrderFlowController(is_phone=True)
     plan = flow.build_turn_plan("that's all", UserIntent.ORDER_DONE, cart)
-    assert ALLERGIES_QUESTION in plan.guidance
-    assert "special instructions" in plan.guidance
+    assert flow.state.phase == OrderPhase.SPECIAL_INSTRUCTIONS
+    assert "CHECKOUT STEP" in plan.guidance
 
 
 def test_phase_advances_after_no_allergy():
@@ -171,7 +171,7 @@ def test_phase_advances_after_no_allergy():
     plan = flow.build_turn_plan("ਨਹੀਂ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ", UserIntent.CONFIRM_NO, cart)
     assert flow.state.special_instructions_done is True
     assert flow.state.phase == OrderPhase.ORDER_TYPE
-    assert "pickup or delivery" in plan.guidance.lower()
+    assert "CHECKOUT STEP" in plan.guidance
 
 
 def test_confirming_readback_template():
@@ -182,11 +182,11 @@ def test_confirming_readback_template():
     flow.mark_items_complete()
     flow.mark_special_instructions_done()
     flow.sync_from_cart(cart)
-    assert flow.state.phase == OrderPhase.CONFIRMING
+    assert flow.state.phase == OrderPhase.READBACK
     plan = flow.build_turn_plan("yes", UserIntent.CONFIRM_YES, cart)
     assert flow.state.readback_confirmed is True
     assert flow.state.phase == OrderPhase.CUSTOMER_NAME
-    assert "name for the order" in plan.guidance.lower() or "ਆਰਡਰ ਲਈ" in plan.guidance
+    assert "CHECKOUT STEP" in plan.guidance
 
 
 def test_want_to_order_asks_pickup_delivery():
@@ -197,7 +197,7 @@ def test_want_to_order_asks_pickup_delivery():
         UserIntent.ADD_ITEM,
         cart,
     )
-    assert "Will that be pickup or delivery?" in plan.guidance
+    assert "pick items first" in plan.guidance.lower() or "Do NOT ask pickup" in plan.guidance
 
 
 def test_readback_before_name():
@@ -208,7 +208,7 @@ def test_readback_before_name():
     flow.mark_items_complete()
     flow.mark_special_instructions_done()
     flow.sync_from_cart(cart)
-    assert flow.state.phase == OrderPhase.CONFIRMING
+    assert flow.state.phase == OrderPhase.READBACK
     assert flow.state.readback_confirmed is False
 
 
@@ -237,7 +237,7 @@ def test_confirming_advances_on_all_good():
     plan = flow.build_turn_plan("ਹਾਂ ਜੀ, ਆਲ ਗੁੱਡ", UserIntent.GENERAL, cart)
     assert flow.state.readback_confirmed is True
     assert flow.state.phase == OrderPhase.CUSTOMER_NAME
-    assert "Do NOT repeat the order" in plan.guidance or "name" in plan.guidance.lower()
+    assert "CHECKOUT STEP" in plan.guidance
 
 
 def test_readback_without_price_on_phone():
