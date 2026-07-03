@@ -41,6 +41,16 @@ def phone_greeting_settle_seconds() -> float:
     return _env_float("PHONE_GREETING_SETTLE_SEC", 2.0)
 
 
+def min_consecutive_speech_delay_seconds() -> float:
+    """Forced gap between two queued speech handles (PR 042).
+
+    Without this, back-to-back session.say() calls (fillers, ladder lines,
+    LLM turn replies) play with zero pause and blend into one garbled,
+    run-on utterance in transcripts.
+    """
+    return _env_float("MIN_CONSECUTIVE_SPEECH_DELAY_SEC", 0.3)
+
+
 def phone_bvc_enabled() -> bool:
     """Krisp BVC voice isolation on inbound audio (phone + web)."""
     return _env_bool("PHONE_BVC_ENABLED", True)
@@ -119,6 +129,7 @@ def build_agent_session(*, is_phone: bool) -> AgentSession:
         "llm": build_llm(),
         "tts": build_tts(is_phone),
         "turn_handling": _turn_handling(is_phone=is_phone),
+        "min_consecutive_speech_delay": min_consecutive_speech_delay_seconds(),
     }
     if is_phone:
         kwargs["aec_warmup_duration"] = _env_float("PHONE_AEC_WARMUP_SEC", 1.0)

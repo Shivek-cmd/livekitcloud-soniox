@@ -139,6 +139,17 @@ class RestaurantAgent(Agent):
         if self._web_sync is not None:
             await self._web_sync.publish_order_state()
 
+    def _speech_in_flight(self) -> bool:
+        """True if the session is currently speaking/about to speak (PR 042).
+
+        Guards fire-and-forget speech (filler, echo/background reprompt) so
+        it never queues behind — and blends into — the main turn reply.
+        """
+        if not self._session:
+            return False
+        handle = self._session.current_speech
+        return handle is not None and not handle.done()
+
     def note_agent_speech(self, text: str) -> None:
         line = text.strip()
         if not line:
@@ -163,7 +174,7 @@ class RestaurantAgent(Agent):
         if not self.is_phone or not self._session:
             return
         await asyncio.sleep(0.6)
-        if not self._session:
+        if not self._session or self._speech_in_flight():
             return
         try:
             await self._session.say(
@@ -182,7 +193,7 @@ class RestaurantAgent(Agent):
     async def _echo_reprompt(self, *, greeting_only: bool = False) -> None:
         """Invite the caller to speak after echo — avoids dead air on phone."""
         await asyncio.sleep(1.2 if greeting_only else 0.8)
-        if not self._session:
+        if not self._session or self._speech_in_flight():
             return
         if greeting_only and self._real_user_turns > 0:
             return
@@ -500,7 +511,7 @@ class RestaurantAgent(Agent):
             raise StopResponse()
 
     async def _speak_filler(self, line: str) -> None:
-        if not self._session:
+        if not self._session or self._speech_in_flight():
             return
         try:
             await self._session.say(line, allow_interruptions=True)
