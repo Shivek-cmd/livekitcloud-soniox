@@ -39,14 +39,14 @@ def test_ask_availability_processing_punjabi(monkeypatch):
     assert line in ("ਇੱਕ minute.", "ਮੈਂ ਵੇਖਦੀ ਹਾਂ.", "menu check kardi haan.")
 
 
-def test_add_item_ack_english(monkeypatch):
+def test_add_item_processing_english(monkeypatch):
     monkeypatch.setenv("FILLERS_ENABLED", "1")
     line = pick_filler(
         intent=UserIntent.ADD_ITEM,
         phase=OrderPhase.COLLECTING_ITEMS,
         lang=CustomerLanguage.ENGLISH,
     )
-    assert line in ("Got it.", "Sure.", "Okay.")
+    assert line in ("Let me check.", "One moment.", "Just a sec.")
 
 
 def test_blocked_confirming_phase(monkeypatch):
