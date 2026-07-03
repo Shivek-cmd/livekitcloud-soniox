@@ -38,6 +38,8 @@ from restaurant.conversation import (
     is_allergies_step_answer,
     is_confirm_yes,
     is_likely_pickup_stt,
+    is_readback_ack,
+    is_readback_all_clear,
     is_want_to_order_only,
     order_placed_goodbye,
     phrase_anything_else,
@@ -55,7 +57,12 @@ from restaurant.customer_info import (
     looks_like_phone_utterance,
     parse_customer_name,
 )
-from restaurant.order_flow import OrderFlowController, OrderPhase, is_collecting_phase
+from restaurant.order_flow import (
+    OrderFlowController,
+    OrderPhase,
+    is_code_owned_checkout,
+    is_collecting_phase,
+)
 from restaurant.order_parse import auto_add_candidates, parse_order_lines
 from restaurant.stt_noise import (
     agent_recently_asked_quantity,
@@ -372,6 +379,19 @@ class RestaurantAgent(Agent):
         if not self._flow.state.special_instructions_done:
             self._flow.mark_special_instructions_done()
 
+    async def _speak_order_readback_if_due(self, turn_ctx) -> bool:
+        """Code-owned English read-back — returns True if spoken."""
+        if self._flow.state.readback_spoken or not self.cart.order_type:
+            return False
+        if not self._flow.state.items_complete or not self._flow.state.special_instructions_done:
+            return False
+        readback = format_order_readback(self.cart, include_price=not self.is_phone)
+        if not readback:
+            return False
+        self._flow.mark_readback_spoken()
+        await self._ladder_say(turn_ctx, readback)
+        return True
+
     async def _try_run_checkout_ladder(
         self,
         turn_ctx,
@@ -399,16 +419,22 @@ class RestaurantAgent(Agent):
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
             raise StopResponse()
 
-        # Done ordering → allergies (English).
+        # Done ordering → allergies (English) — once only.
         if phase == OrderPhase.AWAITING_MORE and intent == UserIntent.ORDER_DONE:
             if cart.is_empty:
                 return
             self._flow.mark_items_complete()
-            self._flow.mark_allergies_asked()
             self._flow.sync_from_cart(cart)
             await self._sync_web()
-            await self._ladder_say(turn_ctx, ALLERGIES_QUESTION)
-            raise StopResponse()
+            if not self._flow.state.allergies_asked:
+                self._flow.mark_allergies_asked()
+                await self._ladder_say(turn_ctx, ALLERGIES_QUESTION)
+                raise StopResponse()
+            if not self._flow.state.special_instructions_done:
+                return
+            if not cart.order_type:
+                await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
+                raise StopResponse()
 
         # Allergies answered → pickup/delivery (English).
         if phase == OrderPhase.SPECIAL_INSTRUCTIONS and (
@@ -437,6 +463,24 @@ class RestaurantAgent(Agent):
             and not self._flow.state.readback_confirmed
             and (intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text))
         ):
+            self._flow.mark_readback_confirmed()
+            self._flow.sync_from_cart(cart)
+            await self._sync_web()
+            await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
+            raise StopResponse()
+
+        # Read-back ack — ਚੈਕੋ / no problem / all clear.
+        if (
+            phase == OrderPhase.READBACK
+            and not self._flow.state.readback_confirmed
+            and (
+                is_readback_ack(user_text)
+                or is_readback_all_clear(user_text)
+            )
+        ):
+            if not self._flow.state.readback_spoken:
+                await self._speak_order_readback_if_due(turn_ctx)
+            self._flow.mark_readback_spoken()
             self._flow.mark_readback_confirmed()
             self._flow.sync_from_cart(cart)
             await self._sync_web()
@@ -483,12 +527,28 @@ class RestaurantAgent(Agent):
 
         # Read-back yes → ask name (never phone first).
         if phase == OrderPhase.READBACK and not self._flow.state.readback_confirmed:
-            if intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text):
+            if (
+                intent == UserIntent.CONFIRM_YES
+                or is_confirm_yes(user_text)
+                or is_readback_ack(user_text)
+                or is_readback_all_clear(user_text)
+            ):
+                if not self._flow.state.readback_spoken:
+                    await self._speak_order_readback_if_due(turn_ctx)
                 self._flow.mark_readback_spoken()
                 self._flow.mark_readback_confirmed()
                 self._flow.sync_from_cart(cart)
                 await self._sync_web()
                 await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
+                raise StopResponse()
+
+        # Missing read-back — LLM set pickup via tool without speaking read-back.
+        if (
+            phase == OrderPhase.READBACK
+            and cart.order_type
+            and not self._flow.state.readback_spoken
+        ):
+            if await self._speak_order_readback_if_due(turn_ctx):
                 raise StopResponse()
 
         # Recover: confirm yes after off-script read-back at awaiting_more.
@@ -705,8 +765,18 @@ class RestaurantAgent(Agent):
         await self._try_quantity_reply(turn_ctx, user_text)
         await self._try_auto_add(turn_ctx, user_text, intent)
 
-        self._maybe_speak_filler(intent, user_text)
-        self._inject_turn_guidance(turn_ctx, user_text)
+        if (
+            is_code_owned_checkout(self._flow.state.phase)
+            and intent not in (
+                UserIntent.ASK_PRICE,
+                UserIntent.ASK_AVAILABILITY,
+                UserIntent.ASK_ORDER_STATUS,
+                UserIntent.HUMAN,
+            )
+        ):
+            self._maybe_speak_filler(intent, user_text)
+            self._inject_turn_guidance(turn_ctx, user_text)
+            raise StopResponse()
 
         if self._recorder is not None:
             self._recorder.complete_turn(
@@ -789,29 +859,79 @@ class RestaurantAgent(Agent):
                     "Ask for delivery address. Do NOT mention price unless customer asked."
                 )
             return f"Set to delivery. Delivery charge ${DELIVERY_CHARGE} will be added. Ask for delivery address."
-        return "Set to pickup. Continue the order flow — read back cart before asking for name/phone."
+        if (
+            self._flow.state.items_complete
+            and self._flow.state.special_instructions_done
+            and not self._flow.state.readback_spoken
+        ):
+            readback = format_order_readback(self.cart, include_price=not self.is_phone)
+            if readback and self._session:
+                self._flow.mark_readback_spoken()
+                await self._session.say(readback, allow_interruptions=True)
+                self.note_agent_speech(readback)
+                return (
+                    "Set to pickup. Read-back already spoken — wait for customer All good?. "
+                    "Do NOT ask allergies, name, or phone."
+                )
+        return (
+            "Set to pickup. Do NOT ask name, phone, or allergies — "
+            "system handles read-back and contact capture."
+        )
 
     @function_tool
     async def set_customer_info(
         self,
-        name: Annotated[str, "Customer's name"],
-        phone: Annotated[str, "Customer's 10-digit phone number"],
+        name: Annotated[str, "Customer's name — phone must be empty until name is saved"],
+        phone: Annotated[str, "10-digit phone — leave empty until name step is complete"] = "",
     ) -> str:
-        """Save the customer's name and phone number."""
-        self.cart.customer_name = name.strip()
-        if not is_valid_customer_name(self.cart.customer_name):
-            return "Need the customer's real name — not pickup/delivery."
-        digits = extract_phone_digits(phone) or re.sub(r"\D", "", phone or "")
+        """Save customer name first, then phone on a separate step."""
+        if not self._flow.state.readback_confirmed:
+            return (
+                "Too early — customer has not confirmed the read-back. "
+                "Do NOT ask for or save name/phone yet."
+            )
+
+        lang = self._flow.state.preferred_language
+
+        if not self.cart.customer_name:
+            clean = name.strip()
+            phone_digits = extract_phone_digits(phone) or extract_phone_digits(clean)
+            if phone_digits and len(phone_digits) == 10:
+                return (
+                    "NAME STEP ONLY — save name without phone. "
+                    "Do NOT ask name and phone in the same turn."
+                )
+            if not is_valid_customer_name(clean):
+                return "Need the customer's real name — not pickup/delivery."
+            self.cart.customer_name = clean
+            self._flow.sync_from_cart(self.cart)
+            await self._sync_web()
+            ask_phone = phrase_ask_phone(lang, clean)
+            if self._session:
+                await self._session.say(ask_phone, allow_interruptions=True)
+                self.note_agent_speech(ask_phone)
+            return (
+                f'Name saved: "{clean}". Phone question already spoken — '
+                "do NOT ask name again or combine name+phone."
+            )
+
+        digits = extract_phone_digits(phone) or extract_phone_digits(name)
         if len(digits) != 10:
             return "Need a valid 10-digit phone number."
         self.cart.customer_phone = digits
         self._flow.sync_from_cart(self.cart)
         await self._sync_web()
         spoken = format_phone_spoken(digits)
+        saved = phrase_phone_saved(lang, spoken)
+        if self._session:
+            await self._session.say(saved, allow_interruptions=True)
+            self.note_agent_speech(saved)
+        ready, _ = self.cart.ready_to_place()
+        if ready:
+            return await self._execute_place_order(from_capture=True)
         return (
-            f"Saved: {name.strip()}, {digits}. "
-            f'When confirming phone, SAY EXACTLY the digits in English words: "{spoken}" '
-            "(never Punjabi/Hindi number words)."
+            f"Phone saved: {digits}. "
+            f'Read back used English digits only: "{spoken}".'
         )
 
     @function_tool

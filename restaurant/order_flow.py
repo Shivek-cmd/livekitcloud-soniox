@@ -19,6 +19,8 @@ from restaurant.conversation import (
     is_add_intent,
     is_allergies_step_answer,
     is_confirm_yes,
+    is_readback_ack,
+    is_readback_all_clear,
     is_want_to_order_only,
     language_turn_guidance,
     phrase_anything_else,
@@ -193,7 +195,10 @@ class OrderFlowController:
                 self.mark_special_instructions_done()
 
         if phase == OrderPhase.READBACK and (
-            intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text)
+            intent == UserIntent.CONFIRM_YES
+            or is_confirm_yes(user_text)
+            or is_readback_ack(user_text)
+            or is_readback_all_clear(user_text)
         ):
             self.mark_readback_confirmed()
 
@@ -325,7 +330,24 @@ class OrderFlowController:
 
         if is_code_owned_checkout(phase):
             lines.append(_CODE_OWNED_LINE)
-            if phase == OrderPhase.DELIVERY_ADDRESS:
+            if phase == OrderPhase.SPECIAL_INSTRUCTIONS and self.state.allergies_asked:
+                lines.append(
+                    "Allergies question already asked — do NOT ask allergies again."
+                )
+            elif phase == OrderPhase.READBACK:
+                lines.append(
+                    "Wait for customer to confirm read-back. "
+                    "Do NOT ask allergies, pickup, name, or phone."
+                )
+            elif phase == OrderPhase.CUSTOMER_NAME:
+                lines.append(
+                    "System asks for NAME only. Do NOT ask for phone until name is saved."
+                )
+            elif phase == OrderPhase.CUSTOMER_PHONE:
+                lines.append(
+                    "System asks for phone only. Do NOT repeat name or ask both together."
+                )
+            elif phase == OrderPhase.DELIVERY_ADDRESS:
                 lines.append(
                     "Ask for full delivery address, then call set_delivery_address."
                 )

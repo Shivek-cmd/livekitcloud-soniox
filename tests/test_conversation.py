@@ -2,6 +2,7 @@
 
 from restaurant.conversation import (
     ALLERGIES_QUESTION,
+    CustomerLanguage,
     UserIntent,
     detect_intent,
     format_order_readback,
@@ -9,6 +10,9 @@ from restaurant.conversation import (
     format_price_reply,
     is_confirm_yes,
     is_likely_pickup_stt,
+    is_readback_ack,
+    is_readback_all_clear,
+    phrase_phone_saved,
     resolve_intent,
     sanitize_assistant_speech,
 )
@@ -278,3 +282,43 @@ def test_sanitize_strips_price_on_web():
     assert "ਡਾਲਰ" not in out
     assert "dollar" not in out.lower()
     assert "ਵੈਜ ਸਪ੍ਰਿੰਗ ਰੋਲ" in out
+
+
+def test_readback_ack_chacko():
+    assert is_readback_ack("ਚੈਕੋ")
+    assert is_readback_ack("ਚੈਕੋ।")
+    assert resolve_intent("ਚੈਕੋ", phase="readback") == UserIntent.CONFIRM_YES
+
+
+def test_readback_all_clear_not_confirm_no():
+    text = "ਨਹੀਂ ਜੀ, ਕੋਈ ਗੱਲ ਨਹੀਂ"
+    assert is_readback_all_clear(text)
+    assert resolve_intent(text, phase="readback") == UserIntent.CONFIRM_YES
+    assert detect_intent(text) == UserIntent.CONFIRM_NO
+
+
+def test_readback_all_clear_advances_phase():
+    cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
+    cart.order_type = "pickup"
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_special_instructions_done()
+    flow.sync_from_cart(cart)
+    plan = flow.build_turn_plan("ਨਹੀਂ ਜੀ, ਕੋਈ ਗੱਲ ਨਹੀਂ", UserIntent.CONFIRM_NO, cart)
+    assert flow.state.readback_confirmed is True
+    assert flow.state.phase == OrderPhase.CUSTOMER_NAME
+    assert "phone" in plan.guidance.lower()
+
+
+def test_phone_saved_uses_gurmukhi_not_hindi_loanword():
+    line = phrase_phone_saved(CustomerLanguage.MIXED, "nine, four, one")
+    assert "Dhanyavaad" not in line
+    assert "ਧੰਨਵਾਦ" in line
+
+
+def test_sanitize_rewrites_dhanyavaad():
+    raw = "Dhanyavaad ji — nine, four, one."
+    out = sanitize_assistant_speech(raw, allow_greeting=False)
+    assert "Dhanyavaad" not in out
+    assert "ਧੰਨਵਾਦ" in out
