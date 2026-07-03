@@ -57,10 +57,24 @@ MENU = {
 
 
 def find_item(name: str) -> dict | None:
+    """Static-menu fallback matcher (USE_CLOVER_MENU=0 only).
+
+    Matches both directions: a short alias inside a longer canonical name
+    ("naan" in "Butter Naan") and a canonical name embedded in a longer
+    caller sentence ("Butter Naan" in "ਨਹੀਂ ਨਹੀਂ, ਬਟਰ ਨਾਨ ਕਰੋ"). Length
+    guards avoid 2-3 char item names/labels matching unrelated substrings.
+    """
     name_lower = name.lower().strip()
     for category, data in MENU.items():
         for item in data["items"]:
-            if name_lower in item["name"].lower() or name_lower in item["punjabi"]:
+            item_name = item["name"].lower()
+            item_punjabi = item["punjabi"]
+            if (
+                name_lower in item_name
+                or name_lower in item_punjabi
+                or (len(item_name) >= 4 and item_name in name_lower)
+                or (len(item_punjabi) >= 4 and item_punjabi in name_lower)
+            ):
                 return {**item, "category": category}
     return None
 

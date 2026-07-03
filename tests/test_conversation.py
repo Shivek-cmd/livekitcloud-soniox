@@ -57,6 +57,24 @@ def test_order_status_does_not_block_genuine_add():
     assert detect_intent("ਆਰਡਰ ਕਰ ਦਿਓ ਗਾਰਲਿਕ ਨਾਨ") == UserIntent.ADD_ITEM
 
 
+def test_restated_item_after_no_no_is_add_not_confirm_no():
+    # Live-call regression (PR 042): caller corrects a missed item by
+    # restating it after "ਨਹੀਂ ਨਹੀਂ" (no no); this used to be swallowed as
+    # CONFIRM_NO (interpreted as "no allergies") and the item never got
+    # added, forcing the caller to repeat it three times.
+    assert detect_intent("ਨਹੀਂ ਨਹੀਂ, ਬਟਰ ਨਾਨ ਕਰੋ") == UserIntent.ADD_ITEM
+
+
+def test_gurmukhi_add_loanword_detected():
+    # "ਐਡ" is the common Gurmukhi spelling of the English loanword "add".
+    assert detect_intent("ਬਟਰ ਨਾਨ ਐਡ ਕਰੋ") == UserIntent.ADD_ITEM
+
+
+def test_plain_negation_without_item_still_confirm_no():
+    assert detect_intent("ਨਹੀਂ ਨਹੀਂ") == UserIntent.CONFIRM_NO
+    assert detect_intent("nahi") == UserIntent.CONFIRM_NO
+
+
 def test_format_order_status():
     cart = OrderCart()
     assert format_order_status(cart) == "Your order is empty so far."

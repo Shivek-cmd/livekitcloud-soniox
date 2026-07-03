@@ -229,7 +229,7 @@ _ADD_RE = indic_word_re(
     r"add|order|want|need|get me|give me|i.?ll take|i want|"
     r"i'd like|chahiye|dedo|de do|lao|"
     r"order karo|order kar|add karo|add kar|"
-    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ"
+    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ|ਐਡ"
 )
 
 _QTY_ITEM_RE = re.compile(
@@ -382,6 +382,23 @@ def is_confirm_yes(text: str) -> bool:
     return False
 
 
+_ADD_IMPERATIVE_RE = re.compile(r"ਕਰੋ|ਕਰ ਦ|ਦਿਓ|ਦਿਉ|ਐਡ|\badd\b", re.I)
+
+
+def _add_item_with_action_cue(text: str) -> bool:
+    """Named dish + an add-style verb — wins over a leading negation/filler
+    word. Live-call regression (PR 042): "ਨਹੀਂ ਨਹੀਂ, ਗਾਰਲਿਕ ਨਾਨ ਕਰੋ" (customer
+    restating/correcting an item after Sierra misheard) was classified
+    CONFIRM_NO purely because it starts with "ਨਹੀਂ ਨਹੀਂ" — the explicit dish
+    + imperative later in the same sentence was never considered, so the
+    order-flow ladder advanced past allergies/pickup while the item was
+    still never added.
+    """
+    if not _ADD_IMPERATIVE_RE.search(text):
+        return False
+    return menu_item_hint_in_text(text)
+
+
 def detect_intent(text: str) -> UserIntent:
     t = (text or "").strip()
     if not t:
@@ -405,6 +422,8 @@ def detect_intent(text: str) -> UserIntent:
     if re.search(r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)", t):
         return UserIntent.ADD_ITEM
     if _I_SAID_RE.search(t) or _QTY_ITEM_RE.search(t):
+        return UserIntent.ADD_ITEM
+    if _add_item_with_action_cue(t):
         return UserIntent.ADD_ITEM
     if _NO_RE.search(t):
         return UserIntent.CONFIRM_NO
