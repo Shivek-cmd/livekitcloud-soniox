@@ -34,6 +34,7 @@ from restaurant.conversation import (
     detect_intent,
     echo_recovery_phrase,
     format_order_readback,
+    format_order_status,
     is_allergies_step_answer,
     is_confirm_yes,
     is_likely_pickup_stt,
@@ -274,6 +275,23 @@ class RestaurantAgent(Agent):
         if self._session:
             await self._session.say(line, allow_interruptions=True)
             self.note_agent_speech(line)
+
+    async def _try_answer_order_status(
+        self,
+        turn_ctx,
+        user_text: str,
+        intent: UserIntent,
+    ) -> None:
+        """Code-owned answer for 'what's my order' — grounded in real cart
+        data at any phase. Never let the LLM improvise this from memory
+        (PR 042) — that is how it hallucinates items the customer never
+        ordered.
+        """
+        if intent != UserIntent.ASK_ORDER_STATUS:
+            return
+        status = format_order_status(self.cart, include_price=not self.is_phone)
+        await self._ladder_say(turn_ctx, status, tag="ORDER_STATUS")
+        raise StopResponse()
 
     def _fast_forward_checkout(self) -> None:
         """Recover when LLM skipped allergies/pickup but caller moved on."""
@@ -609,6 +627,7 @@ class RestaurantAgent(Agent):
         self._background_ignore_streak = 0
 
         self._flow.note_customer_language(user_text)
+        await self._try_answer_order_status(turn_ctx, user_text, intent)
         await self._try_run_checkout_ladder(turn_ctx, user_text, intent)
         await self._try_capture_customer_info(turn_ctx, user_text, intent)
         await self._try_auto_add_multi(turn_ctx, user_text, intent)
@@ -651,6 +670,26 @@ class RestaurantAgent(Agent):
         """Remove an item from the customer's order."""
         result = self.cart.remove_item(item_name)
         await self._sync_web()
+        return result
+
+    @function_tool
+    async def update_item_quantity(
+        self,
+        item_name: Annotated[str, "Name of the item already in the order"],
+        quantity: Annotated[int, "The CORRECT total quantity for this item (not an amount to add)"],
+    ) -> str:
+        """Correct the quantity of an item already in the order.
+
+        Use this — never add_to_order — when the customer corrects a quantity
+        you already have (e.g. "I said one, not two", "make that three").
+        add_to_order is additive and would compound the mistake instead of
+        fixing it. quantity=0 removes the item.
+        """
+        result = self.cart.update_item_quantity(item_name, quantity)
+        await self._sync_web()
+        self._record_tool(
+            "update_item_quantity", {"item_name": item_name, "quantity": quantity}, result
+        )
         return result
 
     @function_tool

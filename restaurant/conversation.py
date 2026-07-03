@@ -164,6 +164,7 @@ class UserIntent(str, Enum):
     GENERAL = "general"
     ASK_PRICE = "ask_price"
     ASK_AVAILABILITY = "ask_availability"
+    ASK_ORDER_STATUS = "ask_order_status"
     ADD_ITEM = "add_item"
     ORDER_DONE = "order_done"
     CONFIRM_YES = "confirm_yes"
@@ -186,6 +187,17 @@ _AVAIL_RE = indic_word_re(
     r"do you have|have you got|is there|available|hai\??|hain\??|"
     r"mil.?ega|mil.?egi|kya hai|kya hain|"
     r"ਕੀ\s*ਹੈ|ਕੀ\s*ਹਨ|ਮਿਲੇਗ|ਚ\s*ਕੀ\s*ਹੈ"
+)
+
+# Customer asking what's already in their order — must win over _ADD_RE below,
+# which contains the bare word "order"/"ਆਰਡਰ" and would otherwise misclassify
+# a status question ("ਕੀ ਆਰਡਰ ਕੀਤਾ ਜੀ ਮੈਂ?") as a new add request (PR 042).
+_ORDER_STATUS_RE = indic_word_re(
+    r"what.?s my order|what is my order|what do i have|what did i order|"
+    r"what have i ordered|what.?s in my order|what.?s on my order|"
+    r"read (?:back )?my order|repeat my order|tell me my order|order so far|"
+    r"ਮੇਰਾ ਆਰਡਰ|ਆਰਡਰ ਦੱਸੋ|ਕੀ ਆਰਡਰ ਕੀਤਾ|ਆਰਡਰ ਕੀ ਹੈ|ਹੁਣ ਤੱਕ.*ਕੀ|"
+    r"मेरा ऑर्डर|ऑर्डर बताओ|क्या ऑर्डर"
 )
 
 _PICKUP_RE = indic_word_re(
@@ -376,6 +388,8 @@ def detect_intent(text: str) -> UserIntent:
         return UserIntent.UNCLEAR
     if _HUMAN_RE.search(t):
         return UserIntent.HUMAN
+    if _ORDER_STATUS_RE.search(t):
+        return UserIntent.ASK_ORDER_STATUS
     if _PRICE_RE.search(t):
         return UserIntent.ASK_PRICE
     if _DONE_RE.search(t):
@@ -536,11 +550,19 @@ def format_remove_tool_reply(voice_line: str) -> str:
     )
 
 
-def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str:
-    """Exact spoken read-back line for final confirmation (Step E)."""
-    if cart.is_empty:
-        return ""
+def format_update_tool_reply(quantity: int, voice_line: str) -> str:
+    """Correction confirm — distinct from add so it never reads as a second add."""
+    word = _qty_word(quantity)
+    confirm = f"Got it — {word} {voice_line}, fixed."
+    return (
+        "INTERNAL: quantity corrected (not added).\n"
+        f'SAY EXACTLY: "{confirm}"\n'
+        "Do NOT mention price, cart, or menu."
+    )
 
+
+def _cart_items_str(cart: OrderCart) -> str:
+    """Comma-joined spoken item list — shared by read-back and status templates."""
     item_parts: list[str] = []
     for item in cart.items:
         qty = _qty_word(item.quantity)
@@ -551,12 +573,34 @@ def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str
             item_parts.append(f"{qty} {name}")
 
     if len(item_parts) == 1:
-        items_str = item_parts[0]
-    elif len(item_parts) == 2:
-        items_str = f"{item_parts[0]} and {item_parts[1]}"
-    else:
-        items_str = ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
+        return item_parts[0]
+    if len(item_parts) == 2:
+        return f"{item_parts[0]} and {item_parts[1]}"
+    return ", ".join(item_parts[:-1]) + f", and {item_parts[-1]}"
 
+
+def format_order_status(cart: OrderCart, *, include_price: bool = True) -> str:
+    """Neutral mid-conversation cart read — grounded in real cart data, never
+    LLM-improvised. Used whenever the customer asks what's in their order so
+    far; distinct from format_order_readback, which is the final-confirmation
+    line and assumes order_type/close are already meaningful.
+    """
+    if cart.is_empty:
+        return "Your order is empty so far."
+
+    items_str = _cart_items_str(cart)
+    if include_price:
+        total = _format_dollars(cart.total)
+        return f"So far you have — {items_str}, total about {total} dollars."
+    return f"So far you have — {items_str}."
+
+
+def format_order_readback(cart: OrderCart, *, include_price: bool = True) -> str:
+    """Exact spoken read-back line for final confirmation (Step E)."""
+    if cart.is_empty:
+        return ""
+
+    items_str = _cart_items_str(cart)
     order_type = cart.order_type or "pickup"
     name = cart.customer_name or ""
 

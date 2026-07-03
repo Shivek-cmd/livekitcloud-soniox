@@ -84,6 +84,29 @@ class OrderCart:
                 return format_remove_tool_reply(voice)
         return f"INTERNAL: not found. Ask customer to clarify the item name."
 
+    def update_item_quantity(self, name: str, quantity: int) -> str:
+        """Set a cart line to an exact quantity (correction — not additive).
+
+        Use this when the customer corrects a quantity already in the cart
+        (e.g. "I said one, not two"). add_item() is additive and would
+        compound the error instead of fixing it.
+        """
+        from restaurant.conversation import (
+            format_remove_tool_reply,
+            format_update_tool_reply,
+        )
+
+        for i, item in enumerate(self.items):
+            if name.lower() in item.name.lower():
+                if quantity <= 0:
+                    removed = self.items.pop(i)
+                    voice = removed.voice_line or removed.name
+                    return format_remove_tool_reply(voice)
+                item.quantity = quantity
+                voice = item.voice_line or item.name
+                return format_update_tool_reply(quantity, voice)
+        return "INTERNAL: not found. Ask customer to clarify the item name."
+
     def set_quantity_by_id(self, clover_item_id: str, quantity: int) -> bool:
         """Set quantity for a cart line identified by Clover id. qty<=0 removes it."""
         for i, item in enumerate(self.items):

@@ -5,6 +5,7 @@ from restaurant.conversation import (
     UserIntent,
     detect_intent,
     format_order_readback,
+    format_order_status,
     format_price_reply,
     is_confirm_yes,
     is_likely_pickup_stt,
@@ -38,6 +39,33 @@ def test_pickup_not_add_item():
 def test_detect_order_done():
     assert detect_intent("that's it") == UserIntent.ORDER_DONE
     assert detect_intent("ਨਹੀਂ ਨਹੀਂ, ਬਸ") == UserIntent.ORDER_DONE
+
+
+def test_detect_order_status_not_misread_as_add():
+    # Live-call regression (PR 042): this exact utterance was classified
+    # add_item because _ADD_RE matches the bare word "ਆਰਡਰ", which routed
+    # the LLM into freeform generation and it hallucinated a wrong item.
+    assert (
+        detect_intent("ਮੇਰਾ ਆਰਡਰ ਦੱਸੋ, ਕੀ ਹੈਗਾ ਹੁਣ ਤੱਕਰ? ਕੀ ਆਰਡਰ ਕੀਤਾ ਜੀ ਮੈਂ?")
+        == UserIntent.ASK_ORDER_STATUS
+    )
+    assert detect_intent("what's my order so far?") == UserIntent.ASK_ORDER_STATUS
+    assert detect_intent("what did I order?") == UserIntent.ASK_ORDER_STATUS
+
+
+def test_order_status_does_not_block_genuine_add():
+    assert detect_intent("ਆਰਡਰ ਕਰ ਦਿਓ ਗਾਰਲਿਕ ਨਾਨ") == UserIntent.ADD_ITEM
+
+
+def test_format_order_status():
+    cart = OrderCart()
+    assert format_order_status(cart) == "Your order is empty so far."
+
+    cart.add_item({"name": "Amritsari Fish", "voice_line": "Amritsari Fish", "price": 15.0}, 1)
+    status = format_order_status(cart, include_price=False)
+    assert "Amritsari Fish" in status
+    assert "dollar" not in status.lower()
+    assert "All good" not in status
 
 
 def test_format_price_reply():
