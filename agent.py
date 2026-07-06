@@ -58,6 +58,7 @@ from restaurant.customer_info import (
     parse_customer_name,
 )
 from restaurant.order_flow import (
+    DETOUR_INTENTS,
     OrderFlowController,
     OrderPhase,
     is_code_owned_checkout,
@@ -450,6 +451,19 @@ class RestaurantAgent(Agent):
             if not cart.order_type:
                 await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
                 raise StopResponse()
+        elif (
+            phase == OrderPhase.SPECIAL_INSTRUCTIONS
+            and self._flow.state.allergies_asked
+            and intent not in DETOUR_INTENTS
+        ):
+            # Caller's turn didn't answer allergies and isn't a detour question
+            # (price/availability/status/human/add already get a real answer
+            # elsewhere) — re-ask instead of silently advancing (the bug this PR
+            # fixes) or going dead silent, since fillers.py blocks fillers in
+            # this phase and the general checkout-mute path has no fallback
+            # speech of its own.
+            await self._ladder_say(turn_ctx, ALLERGIES_QUESTION)
+            raise StopResponse()
 
         # LLM read-back early — caller confirms → ask name (skip re-read).
         if (
@@ -768,13 +782,7 @@ class RestaurantAgent(Agent):
 
         if (
             is_code_owned_checkout(self._flow.state.phase)
-            and intent not in (
-                UserIntent.ASK_PRICE,
-                UserIntent.ASK_AVAILABILITY,
-                UserIntent.ASK_ORDER_STATUS,
-                UserIntent.HUMAN,
-                UserIntent.ADD_ITEM,
-            )
+            and intent not in DETOUR_INTENTS
         ):
             self._maybe_speak_filler(intent, user_text)
             self._inject_turn_guidance(turn_ctx, user_text)
@@ -1195,10 +1203,6 @@ async def entrypoint(ctx: JobContext):
         f"participant={participant.identity}"
     )
 
-    # Race the fixed greeting: prime OpenAI's prompt cache so the caller's first real
-    # turn doesn't pay the ~3.5s cold-prefix cost. See pr/pr_046_llm-cache-warmup.md.
-    schedule_llm_warmup(is_phone=is_phone)
-
     recorder = SessionRecorder(
         metadata={"git_sha": os.getenv("DEPLOY_GIT_SHA", "")},
     )
@@ -1220,6 +1224,11 @@ async def entrypoint(ctx: JobContext):
     agent.bind_session(session)
     agent.bind_recorder(recorder)
     agent.bind_job_context(ctx)
+
+    # Race the fixed greeting: prime OpenAI's prompt cache with the real tool
+    # schema so the caller's first real turn doesn't pay the cold-prefix cost.
+    # See pr/pr_047_ladder-intent-guard-and-llm-warmup-v2.md.
+    schedule_llm_warmup(is_phone=is_phone, tools=agent.tools)
 
     _analytics_flushed = False
 
