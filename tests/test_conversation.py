@@ -76,6 +76,22 @@ def test_gurmukhi_add_loanword_detected():
     assert detect_intent("ਬਟਰ ਨਾਨ ਐਡ ਕਰੋ") == UserIntent.ADD_ITEM
 
 
+def test_bas_as_quantifier_is_add_not_done():
+    # Live-call regression (PR 051): "ਬਸ ਇੱਕ ਮਸਾਲਾ ਚਾ ਕਰ ਦੋ" (JUST one masala
+    # chai) has ਬਸ acting as a quantifier ("just"), not the discourse
+    # "that's it/done" _DONE_RE is meant to catch. This used to be
+    # misclassified ORDER_DONE and the chai never got added — the caller
+    # only discovered it was missing at the final read-back.
+    text = "ਚਲੋ ਮਸਾਲਾ ਚਾ ਕਰ ਦੋ ਫਿਰ। ਬਸ ਇੱਕ ਮਸਾਲਾ ਚਾ ਕਰ ਦੋ ਨਾ।"
+    assert detect_intent(text) == UserIntent.ADD_ITEM
+
+
+def test_bare_bas_without_item_still_order_done():
+    # A bare "ਬਸ" with no dish/imperative must still mean "that's it."
+    assert detect_intent("ਬਸ") == UserIntent.ORDER_DONE
+    assert detect_intent("ਨਹੀਂ ਨਹੀਂ, ਬਸ") == UserIntent.ORDER_DONE
+
+
 def test_plain_negation_without_item_still_confirm_no():
     assert detect_intent("ਨਹੀਂ ਨਹੀਂ") == UserIntent.CONFIRM_NO
     assert detect_intent("nahi") == UserIntent.CONFIRM_NO
