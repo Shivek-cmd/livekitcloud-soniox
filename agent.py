@@ -451,19 +451,6 @@ class RestaurantAgent(Agent):
             if not cart.order_type:
                 await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
                 raise StopResponse()
-        elif (
-            phase == OrderPhase.SPECIAL_INSTRUCTIONS
-            and self._flow.state.allergies_asked
-            and intent not in DETOUR_INTENTS
-        ):
-            # Caller's turn didn't answer allergies and isn't a detour question
-            # (price/availability/status/human/add already get a real answer
-            # elsewhere) — re-ask instead of silently advancing (the bug this PR
-            # fixes) or going dead silent, since fillers.py blocks fillers in
-            # this phase and the general checkout-mute path has no fallback
-            # speech of its own.
-            await self._ladder_say(turn_ctx, ALLERGIES_QUESTION)
-            raise StopResponse()
 
         # LLM read-back early — caller confirms → ask name (skip re-read).
         if (
@@ -580,6 +567,37 @@ class RestaurantAgent(Agent):
             await self._sync_web()
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
             raise StopResponse()
+
+    async def _reask_current_checkout_question(self, turn_ctx) -> bool:
+        """Re-speak the current phase's pending fixed question instead of
+        going dead silent when the caller's turn didn't answer it and isn't a
+        detour (live-call regression, PR 050): a caller correcting a missed
+        item at the read-back "All good?" step got zero response for 4+ turns
+        because the general checkout-mute path had no fallback speech of its
+        own — fillers are blocked in every code-owned phase and there was
+        nothing else to say. Returns True if a line was spoken."""
+        phase = self._flow.state.phase
+        lang = self._flow.state.preferred_language
+        cart = self.cart
+
+        if phase == OrderPhase.SPECIAL_INSTRUCTIONS and self._flow.state.allergies_asked:
+            await self._ladder_say(turn_ctx, ALLERGIES_QUESTION)
+            return True
+        if phase == OrderPhase.ORDER_TYPE:
+            await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
+            return True
+        if phase == OrderPhase.READBACK and self._flow.state.readback_spoken:
+            readback = format_order_readback(cart, include_price=not self.is_phone)
+            if readback:
+                await self._ladder_say(turn_ctx, readback)
+                return True
+        if phase == OrderPhase.CUSTOMER_NAME:
+            await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
+            return True
+        if phase == OrderPhase.CUSTOMER_PHONE and cart.customer_name:
+            await self._ladder_say(turn_ctx, phrase_ask_phone(lang, cart.customer_name))
+            return True
+        return False
 
     def _ready_for_contact_capture(self) -> bool:
         return (
@@ -784,6 +802,8 @@ class RestaurantAgent(Agent):
             is_code_owned_checkout(self._flow.state.phase)
             and intent not in DETOUR_INTENTS
         ):
+            if await self._reask_current_checkout_question(turn_ctx):
+                raise StopResponse()
             self._maybe_speak_filler(intent, user_text)
             self._inject_turn_guidance(turn_ctx, user_text)
             raise StopResponse()
