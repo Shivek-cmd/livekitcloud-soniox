@@ -14,6 +14,7 @@ from restaurant.conversation import (
     is_likely_pickup_stt,
     is_readback_ack,
     is_readback_all_clear,
+    mentions_already_said,
     phrase_phone_saved,
     resolve_intent,
     sanitize_assistant_speech,
@@ -105,6 +106,19 @@ def test_leading_no_still_answers_allergies():
     intent = detect_intent(text)
     assert intent == UserIntent.CONFIRM_NO
     assert is_allergies_step_answer(text, intent) is True
+
+
+def test_mentions_already_said_detects_correction_phrasing():
+    # Live-call regression (PR 052): caller naming ONE missed item after
+    # Sierra's confirmation — a correction, not a fresh order request.
+    assert mentions_already_said("ਦਾਲਮਖਨੀ ਵੀ ਕਿਹਾ ਮੈਂ।") is True
+    assert mentions_already_said("ਚਾਇ, ਚਾਇ ਵੀ ਬੋਲੀ ਸੀ ਮੈਂ ਨੇ।") is True
+    assert mentions_already_said("I also said one naan") is True
+
+
+def test_mentions_already_said_false_for_fresh_add():
+    assert mentions_already_said("add one naan") is False
+    assert mentions_already_said("ਇੱਕ ਨਾਨ ਕਰ ਦਿਓ") is False
 
 
 def test_format_order_status():

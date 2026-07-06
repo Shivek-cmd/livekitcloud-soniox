@@ -129,6 +129,46 @@ def test_ambiguous_shared_token_abstains(clover_cache):
     assert clover_cache.find_item("ਮੱਛੀ") is None
 
 
+def test_compressed_spelling_needs_explicit_alias():
+    # Live-call regression (PR 052): "ਦਾਲਮਖਨੀ" (no space) is one token, but
+    # the canonical label "ਦਾਲ ਮੱਖਣੀ" is two — content_tokens() splits on
+    # whitespace, so a fused query token can never align 1:1 against two
+    # separate label tokens with this token-based matcher. Without an
+    # explicit alias for the fused spelling, this abstains — confirming the
+    # root cause is a real architectural limit, not something to "just fix"
+    # in the scoring algorithm without adding real risk to an already
+    # carefully-tuned matcher (PR 032/033/034).
+    cache = _cache(
+        [
+            _item(
+                "DAL_MAKHANI",
+                "Dal Makhani",
+                "ਦਾਲ ਮੱਖਣੀ",
+                "ਦਾਲ ਮੱਖਣੀ",
+                ["dal makhani", "black dal"],
+            ),
+        ]
+    )
+    assert cache.find_item("ਦਾਲਮਖਨੀ") is None
+
+    # Adding the exact fused spelling as an alias (the fix — same pattern as
+    # data/clover_voice_labels.json) resolves it with full confidence.
+    cache_with_alias = _cache(
+        [
+            _item(
+                "DAL_MAKHANI",
+                "Dal Makhani",
+                "ਦਾਲ ਮੱਖਣੀ",
+                "ਦਾਲ ਮੱਖਣੀ",
+                ["dal makhani", "black dal", "ਦਾਲਮਖਨੀ"],
+            ),
+        ]
+    )
+    hit = cache_with_alias.find_item("ਦਾਲਮਖਨੀ")
+    assert hit is not None
+    assert hit.name == "Dal Makhani"
+
+
 def test_unique_single_token_matches(clover_cache):
     hit = clover_cache.find_item("jamun")
     assert hit is not None

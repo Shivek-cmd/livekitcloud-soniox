@@ -23,6 +23,7 @@ from restaurant.conversation import (
     is_readback_all_clear,
     is_want_to_order_only,
     language_turn_guidance,
+    mentions_already_said,
     phrase_anything_else,
     phrase_repeat_request,
     update_preferred_language,
@@ -258,13 +259,26 @@ class OrderFlowController:
                         if utterance_has_explicit_quantity(user_text)
                         else ""
                     )
+                    # Live-call regression (PR 052): caller named ONE missed
+                    # item ("I also said dal makhani") and the LLM re-called
+                    # add_to_order for an item already in the cart too,
+                    # doubling it — "two Palak Paneer" when only one was ever
+                    # asked for.
+                    correction_note = (
+                        " Customer says they ALREADY mentioned this item "
+                        "earlier — call add_to_order ONLY for this named "
+                        "item. Do NOT re-call add_to_order for any item "
+                        "already confirmed in the cart above."
+                        if mentions_already_said(user_text)
+                        else ""
+                    )
                     lines.append(
                         "Customer wants to add. Call add_to_order when the dish name is clear — "
                         "do NOT call check_menu_item first unless the name is truly unclear. "
                         "If tool says item is NOT on menu: say that once, suggest search_menu_items, "
                         f'then ask: "{phrase_anything_else(lang)}" — stay on collecting step. '
                         f"Use SAY EXACTLY from the tool result. Do NOT mention price unless customer asked."
-                        f"{qty_note}"
+                        f"{qty_note}{correction_note}"
                     )
         elif intent == UserIntent.ORDER_DONE:
             if not cart.is_empty:

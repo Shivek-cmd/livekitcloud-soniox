@@ -530,6 +530,28 @@ def is_add_intent(text: str) -> bool:
     return detect_intent(text) == UserIntent.ADD_ITEM
 
 
+_ALREADY_SAID_RE = indic_word_re(
+    r"i said|already said|also said|i mentioned|i told you|"
+    r"ਕਿਹਾ|ਬੋਲਿਆ|ਬੋਲੀ|ਬੋਲੇ"
+)
+
+
+def mentions_already_said(text: str) -> bool:
+    """Caller is referencing something they say they ALREADY told the agent
+    (e.g. "I also said dal makhani", "ਦਾਲਮਖਨੀ ਵੀ ਕਿਹਾ ਮੈਂ") — a correction
+    naming ONE missed item, not a request to redo the whole order. Live-call
+    regression (PR 052): the LLM re-called add_to_order for an item already
+    in the cart while also (correctly) adding the missed one, doubling it —
+    "two Palak Paneer" appeared when the caller only ever asked for one.
+    Deliberately a separate, narrower check from _I_SAID_RE (used for hard
+    intent classification elsewhere) so broadening it here can't affect
+    detect_intent()'s ADD_ITEM/pickup-STT paths."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    return bool(_ALREADY_SAID_RE.search(t))
+
+
 def looks_like_order_phrasing(text: str) -> bool:
     """True when the utterance contains a recognized add/order verb (English
     or Punjabi/Hindi) — the single source of truth for "does this sound like
