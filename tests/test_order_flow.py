@@ -66,3 +66,29 @@ def test_menu_miss_stays_collecting():
 
 def test_confirming_alias_equals_readback():
     assert OrderPhase.CONFIRMING is OrderPhase.READBACK
+
+
+def test_correction_guidance_added_when_customer_names_missed_item():
+    # Live-call regression (PR 052): caller named ONE missed item after an
+    # earlier confirmation. Guidance must tell the LLM not to re-add items
+    # already in the cart.
+    cart = OrderCart()
+    cart.add_item({"name": "Palak Paneer", "voice_line": "Palak Paneer", "price": 16.99}, 1)
+    flow = OrderFlowController(is_phone=True)
+    plan = flow.build_turn_plan(
+        "ਦਾਲਮਖਨੀ ਵੀ ਕਿਹਾ ਮੈਂ।",
+        UserIntent.ADD_ITEM,
+        cart,
+    )
+    assert "already confirmed in the cart" in plan.guidance
+
+
+def test_no_correction_guidance_on_fresh_add():
+    cart = OrderCart()
+    flow = OrderFlowController(is_phone=True)
+    plan = flow.build_turn_plan(
+        "add one naan",
+        UserIntent.ADD_ITEM,
+        cart,
+    )
+    assert "already confirmed in the cart" not in plan.guidance
