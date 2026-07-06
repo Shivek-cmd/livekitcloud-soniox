@@ -8,6 +8,7 @@ from restaurant.conversation import (
     format_order_readback,
     format_order_status,
     format_price_reply,
+    is_allergies_step_answer,
     is_confirm_yes,
     is_likely_pickup_stt,
     is_readback_ack,
@@ -188,6 +189,18 @@ def test_phase_advances_after_no_allergy():
     assert flow.state.special_instructions_done is True
     assert flow.state.phase == OrderPhase.ORDER_TYPE
     assert "CHECKOUT STEP" in plan.guidance
+
+
+def test_allergies_step_accepts_modifier_note_without_qty():
+    text = "ਤੰਦੂਰੀ ਰੋਟੀ ਤੇ ਥੋੜ੍ਹੀ ਅਜਵਾਇਨ ਐਡ ਕਰ ਦੇਣਾ ਜੀ"
+    assert detect_intent(text) == UserIntent.ADD_ITEM
+    assert is_allergies_step_answer(text, UserIntent.ADD_ITEM) is True
+
+
+def test_allergies_step_does_not_swallow_explicit_new_qty_add():
+    text = "ਇੱਕ ਹੋਰ ਗਾਰਲਿਕ ਨਾਨ ਐਡ ਕਰੋ"
+    assert detect_intent(text) == UserIntent.ADD_ITEM
+    assert is_allergies_step_answer(text, UserIntent.ADD_ITEM) is False
 
 
 def test_confirming_readback_template():

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "livekit-docs": {
+      "url": "https://docs.livekit.io/mcp"
+    },
+    "sarvam": {
+      "command": "C:\\Users\\shive\\.local\\bin\\uvx.exe",
+      "args": ["sarvam-mcp"],
+      "env": {
+        "SARVAM_API_KEY": "sk_70uoawf4_UVla2uvKlDWjuo8PG3fVKm5g"
+      }
+    }
+  }
+}

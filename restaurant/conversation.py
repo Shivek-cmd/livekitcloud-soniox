@@ -518,6 +518,14 @@ def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
         return True
     if intent == UserIntent.CONFIRM_YES and ("instruction" in t or "special" in t):
         return True
+    # Modifier-style special note during allergies step:
+    # "ਤੰਦੂਰੀ ਰੋਟੀ ਤੇ ਅਜਵਾਇਨ ਐਡ ਕਰ ਦੇਣਾ"
+    if (
+        intent == UserIntent.ADD_ITEM
+        and menu_item_hint_in_text(text)
+        and not _QTY_ITEM_RE.search(text)
+    ):
+        return True
     if intent == UserIntent.CONFIRM_NO:
         return True
     if intent == UserIntent.GENERAL and (_NO_RE.search(text) or _ALLERGY_NO_RE.search(text)):
