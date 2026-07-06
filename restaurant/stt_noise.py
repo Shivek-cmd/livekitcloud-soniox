@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from restaurant.conversation import looks_like_order_phrasing
 from restaurant.order_parse import _QTY_WORDS, _extract_qty
 
 # TV / YouTube / side-conversation fragments common in phone STT.
@@ -87,6 +88,12 @@ def is_likely_stt_noise(text: str) -> bool:
     if _STT_NOISE_RE.search(raw):
         return True
     # Long mixed-script ramble with no order verb — often TV + partial echo.
+    # Live-call regression (PR 049): the old inline keyword check
+    # (chahid|chaah|order|add|menu|allergy-style narrow list) didn't recognize
+    # "kar dio" (do it/make it) — an extremely common, completely normal
+    # Punjabi way to place an order — so genuine multi-item orders in natural
+    # code-mixed speech were silently discarded as noise. Now reuses the same,
+    # more complete add/order-verb detection conversation.py already uses.
     if len(raw) > 40:
         scripts = sum(
             1
@@ -97,11 +104,7 @@ def is_likely_stt_noise(text: str) -> bool:
             )
             if re.search(pat, raw)
         )
-        if scripts >= 2 and not re.search(
-            r"chahid|chaah|order|add|menu|ਚਾਹੀ|ਆਰਡਰ|ਐਡ|ਖਾਣ",
-            raw,
-            re.I,
-        ):
+        if scripts >= 2 and not looks_like_order_phrasing(raw):
             return True
     return False
 
