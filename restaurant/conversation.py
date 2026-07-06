@@ -530,6 +530,17 @@ def is_add_intent(text: str) -> bool:
     return detect_intent(text) == UserIntent.ADD_ITEM
 
 
+def looks_like_order_phrasing(text: str) -> bool:
+    """True when the utterance contains a recognized add/order verb (English
+    or Punjabi/Hindi) — the single source of truth for "does this sound like
+    a genuine order" so other modules (e.g. stt_noise's noise heuristic) don't
+    maintain their own narrower, drifting keyword list."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    return bool(_ADD_RE.search(t))
+
+
 _META_QUESTION_RE = re.compile(
     r"\?|^\s*(?:why|what|did you|do you understand|are you|should you|you should not)\b",
     re.I,
