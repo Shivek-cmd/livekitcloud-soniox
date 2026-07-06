@@ -772,6 +772,7 @@ class RestaurantAgent(Agent):
                 UserIntent.ASK_AVAILABILITY,
                 UserIntent.ASK_ORDER_STATUS,
                 UserIntent.HUMAN,
+                UserIntent.ADD_ITEM,
             )
         ):
             self._maybe_speak_filler(intent, user_text)
