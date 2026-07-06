@@ -79,6 +79,7 @@ from restaurant.ambient_audio import build_ambient_player, start_ambient, stop_a
 from restaurant.session_recorder import SessionRecorder
 from restaurant.analytics_store import persist_session
 from restaurant.call_control import hangup_after_order_enabled, schedule_call_hangup
+from restaurant.llm_warmup import schedule_llm_warmup
 from restaurant.fillers import agent_session_busy, pick_filler
 from restaurant.clover.order_submit import clover_submit_enabled
 
@@ -1193,6 +1194,10 @@ async def entrypoint(ctx: JobContext):
         f"channel={channel} | "
         f"participant={participant.identity}"
     )
+
+    # Race the fixed greeting: prime OpenAI's prompt cache so the caller's first real
+    # turn doesn't pay the ~3.5s cold-prefix cost. See pr/pr_046_llm-cache-warmup.md.
+    schedule_llm_warmup(is_phone=is_phone)
 
     recorder = SessionRecorder(
         metadata={"git_sha": os.getenv("DEPLOY_GIT_SHA", "")},
