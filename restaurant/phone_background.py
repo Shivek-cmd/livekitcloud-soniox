@@ -41,8 +41,21 @@ _SHORT_MEANINGFUL: frozenset[str] = frozenset(
         "five",
         "van",
         "wan",
+        # Live-call regression (PR 053): "ਨਹੀਂ" phonetic-folds to "nhn", which
+        # only "nahin" (not the shorter "na" already above) also folds to —
+        # so a caller's plain "no" answer, when transcribed as the fuller
+        # ਨਹੀਂ/nahin spelling, had no matching allowlist entry and was
+        # misread as an unrecognized (non-meaningful) token.
+        "nahin",
     }
 )
+
+# Filler/hesitation sounds — ignored rather than counted as "not meaningful,"
+# so "ਅਹ, ਨਹੀਂ" (um, no) isn't dragged down to background just because the
+# hesitation marker itself isn't a real answer (PR 053 live-call regression:
+# this exact phrase, answering the allergies question, was dropped as
+# background — the caller had to say "hello" to get Sierra's attention back).
+_FILLER_TOKENS: frozenset[str] = frozenset({"ah", "um", "uh", "erm", "hmm", "ਅਹ", "ਉਹ"})
 
 # Phonetic keys for the Latin allowlist — matches Gurmukhi/Devanagari equivalents.
 _SHORT_MEANINGFUL_KEYS: frozenset[str] = frozenset(
@@ -55,6 +68,11 @@ def _token_is_meaningful(token: str) -> bool:
         return True
     key = phonetic_key(token)
     return bool(key) and key in _SHORT_MEANINGFUL_KEYS
+
+
+def _drop_fillers(tokens: list[str]) -> list[str]:
+    stripped = [t for t in tokens if t not in _FILLER_TOKENS]
+    return stripped or tokens
 
 
 # Common background / side-conversation fragments (not order-related).
@@ -78,6 +96,23 @@ def _tokens(text: str) -> list[str]:
     cleaned = re.sub(r"[.,!?;:\"]+", " ", _normalize(text))
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return [t for t in cleaned.split() if t]
+
+
+# Every word capitalized (this STT pipeline's convention for a recognized
+# name/item, e.g. "Blue Lagoon", "Palak Paneer") — a plausible answer naming
+# something (a dish, drink, place), not background chatter. Live-call
+# regression (PR 053): a caller answering "which mocktail?" with "Blue
+# Lagoon." was dropped as background purely because neither word is in the
+# generic short-reply allowlist — which can never scale to cover every
+# possible dish/drink name a caller might say. Deliberately limited to short
+# (<=3 word) phrases so it can't swallow long, genuinely-capitalized TV
+# dialogue; checked AFTER _BACKGROUND_FRAGMENT_RE so known junk phrases
+# ("Thank You") are still caught regardless of case.
+_TITLE_CASE_RE = re.compile(r"^(?:[A-Z][a-zA-Z']*\.?\s*){1,3}$")
+
+
+def _looks_like_named_answer(raw_text: str) -> bool:
+    return bool(_TITLE_CASE_RE.match(raw_text.strip()))
 
 
 def is_likely_background_speech(
@@ -119,7 +154,10 @@ def is_likely_background_speech(
     if is_likely_stt_noise(text) and intent in (UserIntent.GENERAL, UserIntent.UNCLEAR):
         return True
 
-    tokens = _tokens(text)
+    if _looks_like_named_answer(text):
+        return False
+
+    tokens = _drop_fillers(_tokens(text))
     if not tokens:
         return True
 
