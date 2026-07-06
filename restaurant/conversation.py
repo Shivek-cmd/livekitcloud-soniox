@@ -302,6 +302,19 @@ _NO_RE = indic_word_re(
     r"नहीं|नही"
 )
 
+# Leading-only negative — the entire utterance must OPEN with a negative word
+# (mirrors _YES_RE's anchoring). Unlike _NO_RE above (unanchored, matches "no/not"
+# ANYWHERE), this does not fire when the negation is buried inside an unrelated
+# sentence, e.g. a predicate negation like "ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ" (chole bhature
+# isn't available) — live-call bug: that sentence was misread as CONFIRM_NO purely
+# because it contains "ਨਹੀਂ", and the checkout ladder treated it as "no allergies"
+# and skipped straight to pickup/delivery without the allergies question ever
+# actually being answered.
+_LEADING_NO_RE = re.compile(
+    r"^\s*" + word_bounded(r"no\.?|nope|nah|nahi|nahin|na|ਨਹੀਂ|ਨਹੀ|नहीं|नही"),
+    re.I,
+)
+
 _HUMAN_RE = indic_word_re(
     r"human|person|staff|manager|someone else|real person|"
     r"operator|agent|connect me|talk to someone|"
@@ -417,6 +430,16 @@ def is_confirm_yes(text: str) -> bool:
     return False
 
 
+def is_confirm_no(text: str) -> bool:
+    """Leading/bare negative — 'no', 'ਨਹੀਂ,', 'nahi ji' — answering a yes/no
+    question. Does NOT match a negation embedded later in an unrelated sentence
+    (e.g. "ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ" — chole bhature isn't available); see _LEADING_NO_RE."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    return bool(_LEADING_NO_RE.match(t))
+
+
 _ADD_IMPERATIVE_RE = re.compile(r"ਕਰੋ|ਕਰ ਦ|ਦਿਓ|ਦਿਉ|ਐਡ|\badd\b", re.I)
 
 
@@ -460,7 +483,7 @@ def detect_intent(text: str) -> UserIntent:
         return UserIntent.ADD_ITEM
     if _add_item_with_action_cue(t):
         return UserIntent.ADD_ITEM
-    if _NO_RE.search(t):
+    if is_confirm_no(t):
         return UserIntent.CONFIRM_NO
     if _ADD_RE.search(t):
         return UserIntent.ADD_ITEM
@@ -528,7 +551,7 @@ def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
         return True
     if intent == UserIntent.CONFIRM_NO:
         return True
-    if intent == UserIntent.GENERAL and (_NO_RE.search(text) or _ALLERGY_NO_RE.search(text)):
+    if intent == UserIntent.GENERAL and (is_confirm_no(text) or _ALLERGY_NO_RE.search(text)):
         return True
     return False
 
@@ -777,6 +800,7 @@ def sanitize_assistant_speech(
         replacements = {
             "ਸوری": "ਮਾਫ ਕਰਨਾ",
             "سوری": "ਮਾਫ ਕਰਨਾ",
+            "سفارش": "ਆਰਡਰ",
         }
         for bad, good in replacements.items():
             out = out.replace(bad, good)

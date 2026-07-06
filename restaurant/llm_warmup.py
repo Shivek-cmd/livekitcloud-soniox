@@ -1,13 +1,18 @@
 """LLM prompt-cache warmup — prime OpenAI's cache before the caller's first real turn.
 
-OpenAI caches the longest common request prefix (our ~1400-token system prompt), but
-that cache expires after a few minutes idle or a service restart. Without warmup, the
-caller's first utterance always lands on a cold prefix: ~3.5s llm_ttft instead of the
-normal ~0.6-1.6s once the cache is warm. Firing a throwaway completion with the same
-system prompt while the fixed greeting is still playing warms the cache in time.
+OpenAI caches the longest common request prefix — our ~1400-token system prompt
+PLUS the full tool/function-calling schema every real turn sends — but that cache
+expires after a few minutes idle or a service restart. Without warmup, the caller's
+first utterance always lands on a cold prefix: ~3.5s llm_ttft instead of the normal
+~0.6-1.6s once the cache is warm.
 
-This never touches the real AgentSession / ChatContext — it's a side call whose
-response is discarded, so it cannot affect conversation state or tool calls.
+v1 (PR 046) fired a raw completion with only the system prompt and no tools, which
+only got a partial cache hit (~2.0s) because the real request's tools changed the
+serialized prefix. This version drives the warmup through the actual openai.LLM
+plugin, a real ChatContext, and the agent's real registered tools, so the request
+is byte-identical in shape to a real turn. Fire-and-forget: it never touches the
+real AgentSession / ChatContext, so it cannot affect conversation state or tool
+calls — the response is discarded.
 """
 
 from __future__ import annotations
@@ -16,14 +21,17 @@ import asyncio
 import logging
 import os
 import time
+from typing import TYPE_CHECKING
 
-from openai import AsyncOpenAI
+from livekit.agents.llm import ChatContext
 
 from restaurant.prompts import build_system_prompt
+from restaurant.voice_stack import build_llm
+
+if TYPE_CHECKING:
+    from livekit.agents import llm as lk_llm
 
 logger = logging.getLogger("llm-warmup")
-
-_MODEL = "gpt-4o-mini"
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -37,24 +45,25 @@ def warmup_enabled() -> bool:
     return _env_bool("LLM_WARMUP_ENABLED", True)
 
 
-async def warm_llm_cache(*, is_phone: bool) -> None:
-    """Fire-and-forget: prime OpenAI's prompt cache for this channel's system prompt."""
+async def warm_llm_cache(*, is_phone: bool, tools: list[lk_llm.Tool]) -> None:
+    """Fire-and-forget: prime OpenAI's prompt cache with the same system prompt
+    and tool schema a real turn on this channel would send."""
     if not warmup_enabled():
         return
 
     channel = "phone" if is_phone else "web"
-    system_prompt = build_system_prompt(is_phone=is_phone)
+    chat_ctx = ChatContext.empty()
+    chat_ctx.add_message(role="system", content=build_system_prompt(is_phone=is_phone))
+    chat_ctx.add_message(role="user", content="Hi")
+
     started = time.monotonic()
     try:
-        client = AsyncOpenAI()
-        await client.chat.completions.create(
-            model=_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "Hi"},
-            ],
-            max_tokens=1,
-        )
+        llm = build_llm()
+        await llm.chat(
+            chat_ctx=chat_ctx,
+            tools=tools,
+            extra_kwargs={"max_completion_tokens": 1},
+        ).collect()
         logger.info(
             "LLM_WARMUP ok channel=%s elapsed=%.2fs",
             channel,
@@ -69,11 +78,11 @@ async def warm_llm_cache(*, is_phone: bool) -> None:
         )
 
 
-def schedule_llm_warmup(*, is_phone: bool) -> asyncio.Task | None:
+def schedule_llm_warmup(*, is_phone: bool, tools: list[lk_llm.Tool]) -> asyncio.Task | None:
     """Fire-and-forget scheduling — safe to call unconditionally."""
     if not warmup_enabled():
         return None
     return asyncio.create_task(
-        warm_llm_cache(is_phone=is_phone),
+        warm_llm_cache(is_phone=is_phone, tools=tools),
         name="llm_cache_warmup",
     )

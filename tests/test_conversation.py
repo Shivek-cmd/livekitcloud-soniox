@@ -9,6 +9,7 @@ from restaurant.conversation import (
     format_order_status,
     format_price_reply,
     is_allergies_step_answer,
+    is_confirm_no,
     is_confirm_yes,
     is_likely_pickup_stt,
     is_readback_ack,
@@ -78,6 +79,32 @@ def test_gurmukhi_add_loanword_detected():
 def test_plain_negation_without_item_still_confirm_no():
     assert detect_intent("ਨਹੀਂ ਨਹੀਂ") == UserIntent.CONFIRM_NO
     assert detect_intent("nahi") == UserIntent.CONFIRM_NO
+
+
+def test_leading_no_is_confirm_no():
+    assert is_confirm_no("no")
+    assert is_confirm_no("nahi ji")
+    assert is_confirm_no("ਨਹੀਂ, ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ।")
+
+
+def test_embedded_negation_is_not_confirm_no():
+    # Live-call regression (PR 047): "ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ" (chole bhature isn't
+    # available) has no leading "no" — the negation is a predicate deep in a
+    # sentence about food, not an answer to a yes/no question. This used to be
+    # misread as CONFIRM_NO purely because "ਨਹੀਂ" appeared anywhere in the
+    # text, which let is_allergies_step_answer() treat it as "no allergies"
+    # and skip straight to pickup/delivery without allergies ever being asked.
+    assert not is_confirm_no("ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ।")
+    assert detect_intent("ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ।") != UserIntent.CONFIRM_NO
+    assert is_allergies_step_answer("ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ।", UserIntent.GENERAL) is False
+
+
+def test_leading_no_still_answers_allergies():
+    # The genuine "no [more items], and by the way..." case must keep working.
+    text = "ਨਹੀਂ, ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ।"
+    intent = detect_intent(text)
+    assert intent == UserIntent.CONFIRM_NO
+    assert is_allergies_step_answer(text, intent) is True
 
 
 def test_format_order_status():
@@ -189,6 +216,24 @@ def test_phase_advances_after_no_allergy():
     assert flow.state.special_instructions_done is True
     assert flow.state.phase == OrderPhase.ORDER_TYPE
     assert "CHECKOUT STEP" in plan.guidance
+
+
+def test_unrelated_repeat_does_not_skip_allergies():
+    # Live-call regression (PR 047): caller repeats an unresolved food-
+    # availability statement instead of answering allergies. The ladder must
+    # stay at SPECIAL_INSTRUCTIONS, not silently advance to ORDER_TYPE.
+    cart = OrderCart()
+    cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_allergies_asked()
+
+    text = "ਛੋਲੇ ਬਟੂਰੇ ਨਹੀਂ ਹਨ।"
+    intent = resolve_intent(text, phase=OrderPhase.SPECIAL_INSTRUCTIONS.value)
+    flow.build_turn_plan(text, intent, cart)
+
+    assert flow.state.special_instructions_done is False
+    assert flow.state.phase == OrderPhase.SPECIAL_INSTRUCTIONS
 
 
 def test_allergies_step_accepts_modifier_note_without_qty():
