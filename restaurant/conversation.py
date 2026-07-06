@@ -530,6 +530,12 @@ def is_add_intent(text: str) -> bool:
     return detect_intent(text) == UserIntent.ADD_ITEM
 
 
+_META_QUESTION_RE = re.compile(
+    r"\?|^\s*(?:why|what|did you|do you understand|are you|should you|you should not)\b",
+    re.I,
+)
+
+
 def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
     """Caller answered the allergies / special-instructions question."""
     if intent in (UserIntent.CONFIRM_NO, UserIntent.PICKUP, UserIntent.DELIVERY):
@@ -537,7 +543,12 @@ def is_allergies_step_answer(text: str, intent: UserIntent) -> bool:
     t = (text or "").lower()
     if _ALLERGY_NO_RE.search(text):
         return True
-    if "allerg" in t or "ਐਲਰਜੀ" in text:
+    # Live-call regression (PR 048): "allerg" appearing ANYWHERE used to count
+    # as answered — including a caller complaining "why are you asking for
+    # allergies?", which is a question about the process, not an answer.
+    # _META_QUESTION_RE excludes question-shaped pushback so only an actual
+    # allergy mention (e.g. "peanut allergy") still counts.
+    if ("allerg" in t or "ਐਲਰਜੀ" in text) and not _META_QUESTION_RE.search(text):
         return True
     if intent == UserIntent.CONFIRM_YES and ("instruction" in t or "special" in t):
         return True

@@ -248,6 +248,27 @@ def test_allergies_step_does_not_swallow_explicit_new_qty_add():
     assert is_allergies_step_answer(text, UserIntent.ADD_ITEM) is False
 
 
+def test_allergies_complaint_is_not_an_answer():
+    # Live-call regression (PR 048): is_allergies_step_answer() matched the
+    # bare substring "allerg" anywhere in the text, so a caller complaining
+    # "why are you asking for allergies and special instructions?" counted
+    # as answering — the ladder then advanced to pickup/delivery without the
+    # caller ever actually being asked again or given a real answer.
+    complaint = (
+        "Did you understand what I asked you? Like, why are you asking "
+        "for allergies and special instructions?"
+    )
+    assert is_allergies_step_answer(complaint, UserIntent.GENERAL) is False
+
+
+def test_real_allergy_mention_still_counts_as_answer():
+    assert is_allergies_step_answer("I have a peanut allergy", UserIntent.GENERAL) is True
+    assert (
+        is_allergies_step_answer("ਮੈਨੂੰ ਐਲਰਜੀ ਹੈ ਮੂੰਗਫਲੀ ਤੋਂ", UserIntent.GENERAL)
+        is True
+    )
+
+
 def test_confirming_readback_template():
     cart = OrderCart()
     cart.add_item({"name": "Kulfi", "voice_line": "Mango Kulfi", "price": 6.99}, 1)
