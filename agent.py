@@ -38,6 +38,7 @@ from restaurant.conversation import (
     is_allergies_step_answer,
     is_confirm_yes,
     is_likely_pickup_stt,
+    is_quantity_correction,
     is_readback_ack,
     is_readback_all_clear,
     is_want_to_order_only,
@@ -58,10 +59,8 @@ from restaurant.customer_info import (
     parse_customer_name,
 )
 from restaurant.order_flow import (
-    DETOUR_INTENTS,
     OrderFlowController,
     OrderPhase,
-    is_code_owned_checkout,
     is_collecting_phase,
 )
 from restaurant.order_parse import auto_add_candidates, parse_order_lines
@@ -99,6 +98,19 @@ _AUTO_ADD_PHASES = frozenset(
         OrderPhase.AWAITING_MORE,
     }
 )
+
+
+def _add_clarify_min_conf() -> float:
+    """Below this match confidence, add_to_order asks 'did you mean X?' instead
+    of silently adding a possibly-misheard dish. Above the abstain floor (0.55)
+    but below the auto-add gate (0.8)."""
+    try:
+        return float(os.getenv("ADD_CLARIFY_MIN_CONF", "0.7"))
+    except ValueError:
+        return 0.7
+
+
+_ADD_CLARIFY_MIN_CONF = _add_clarify_min_conf()
 
 
 class RestaurantAgent(Agent):
@@ -237,6 +249,11 @@ class RestaurantAgent(Agent):
             return
         if intent != UserIntent.ADD_ITEM or is_want_to_order_only(user_text):
             return
+        # A quantity correction ("I said one, not two") must NOT be auto-added —
+        # add_item is additive and would double it. Let the LLM route it to
+        # update_item_quantity (steered by the correction guidance).
+        if is_quantity_correction(user_text):
+            return
 
         lines = auto_add_candidates(user_text)
         if not lines:
@@ -373,13 +390,14 @@ class RestaurantAgent(Agent):
         raise StopResponse()
 
     def _fast_forward_checkout(self) -> None:
-        """Recover when LLM skipped allergies/pickup but caller moved on."""
+        """Caller jumped ahead (e.g. straight to 'pickup') while still adding.
+
+        Only mark item-collection done — NEVER silently mark allergies as
+        asked/answered. Skipping the allergies step here was the root cause of
+        'sometimes it never asks about allergies': the flow still owes the
+        customer that question, so we let the checklist surface it instead."""
         if not self._flow.state.items_complete:
             self._flow.mark_items_complete()
-        if not self._flow.state.allergies_asked:
-            self._flow.mark_allergies_asked()
-        if not self._flow.state.special_instructions_done:
-            self._flow.mark_special_instructions_done()
 
     async def _speak_order_readback_if_due(self, turn_ctx) -> bool:
         """Code-owned English read-back — returns True if spoken."""
@@ -400,7 +418,11 @@ class RestaurantAgent(Agent):
         user_text: str,
         intent: UserIntent,
     ) -> None:
-        """Code-owned checkout steps — fixed English templates, no LLM improvisation."""
+        """Code-owned checkout anchors — the accuracy-critical, must-not-skip
+        steps (grounded read-back, order-type capture, name hand-off). Everything
+        conversational is led by the LLM via the per-turn checklist; this only
+        fires for the transitions that must be exact. `phase` is re-read after
+        every state change so a later branch never acts on a stale phase."""
         phase = self._flow.state.phase
         lang = self._flow.state.preferred_language
         cart = self.cart
@@ -417,6 +439,7 @@ class RestaurantAgent(Agent):
             if not self._flow.state.readback_confirmed:
                 return
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
             raise StopResponse()
@@ -427,6 +450,7 @@ class RestaurantAgent(Agent):
                 return
             self._flow.mark_items_complete()
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             if not self._flow.state.allergies_asked:
                 self._flow.mark_allergies_asked()
@@ -447,6 +471,7 @@ class RestaurantAgent(Agent):
                 self._flow.mark_allergies_asked()
             self._flow.mark_special_instructions_done()
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             if not cart.order_type:
                 await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
@@ -467,6 +492,7 @@ class RestaurantAgent(Agent):
         ):
             self._flow.mark_readback_confirmed()
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
             raise StopResponse()
@@ -485,6 +511,7 @@ class RestaurantAgent(Agent):
             self._flow.mark_readback_spoken()
             self._flow.mark_readback_confirmed()
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
             raise StopResponse()
@@ -500,6 +527,7 @@ class RestaurantAgent(Agent):
             else:
                 cart.order_type = "pickup"
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             if cart.order_type == "delivery" and not cart.delivery_address:
                 return
@@ -518,8 +546,13 @@ class RestaurantAgent(Agent):
             self._fast_forward_checkout()
             cart.order_type = "pickup" if intent == UserIntent.PICKUP else "delivery"
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             if cart.order_type == "delivery" and not cart.delivery_address:
+                return
+            # Never read the order back before allergies were actually asked —
+            # let the checklist surface allergies first (no silent skip).
+            if not self._flow.state.special_instructions_done:
                 return
             readback = format_order_readback(cart, include_price=not self.is_phone)
             if readback:
@@ -540,6 +573,7 @@ class RestaurantAgent(Agent):
                 self._flow.mark_readback_spoken()
                 self._flow.mark_readback_confirmed()
                 self._flow.sync_from_cart(cart)
+                phase = self._flow.state.phase
                 await self._sync_web()
                 await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
                 raise StopResponse()
@@ -561,43 +595,18 @@ class RestaurantAgent(Agent):
             and (intent == UserIntent.CONFIRM_YES or is_confirm_yes(user_text))
         ):
             self._fast_forward_checkout()
+            self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
+            # Allergies still owed → surface it before confirming/read-back.
+            if not self._flow.state.special_instructions_done:
+                return
             self._flow.mark_readback_spoken()
             self._flow.mark_readback_confirmed()
             self._flow.sync_from_cart(cart)
+            phase = self._flow.state.phase
             await self._sync_web()
             await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
             raise StopResponse()
-
-    async def _reask_current_checkout_question(self, turn_ctx) -> bool:
-        """Re-speak the current phase's pending fixed question instead of
-        going dead silent when the caller's turn didn't answer it and isn't a
-        detour (live-call regression, PR 050): a caller correcting a missed
-        item at the read-back "All good?" step got zero response for 4+ turns
-        because the general checkout-mute path had no fallback speech of its
-        own — fillers are blocked in every code-owned phase and there was
-        nothing else to say. Returns True if a line was spoken."""
-        phase = self._flow.state.phase
-        lang = self._flow.state.preferred_language
-        cart = self.cart
-
-        if phase == OrderPhase.SPECIAL_INSTRUCTIONS and self._flow.state.allergies_asked:
-            await self._ladder_say(turn_ctx, ALLERGIES_QUESTION)
-            return True
-        if phase == OrderPhase.ORDER_TYPE:
-            await self._ladder_say(turn_ctx, PICKUP_DELIVERY_QUESTION)
-            return True
-        if phase == OrderPhase.READBACK and self._flow.state.readback_spoken:
-            readback = format_order_readback(cart, include_price=not self.is_phone)
-            if readback:
-                await self._ladder_say(turn_ctx, readback)
-                return True
-        if phase == OrderPhase.CUSTOMER_NAME:
-            await self._ladder_say(turn_ctx, phrase_name_for_order(lang))
-            return True
-        if phase == OrderPhase.CUSTOMER_PHONE and cart.customer_name:
-            await self._ladder_say(turn_ctx, phrase_ask_phone(lang, cart.customer_name))
-            return True
-        return False
 
     def _ready_for_contact_capture(self) -> bool:
         return (
@@ -791,6 +800,13 @@ class RestaurantAgent(Agent):
         self._background_ignore_streak = 0
 
         self._flow.note_customer_language(user_text)
+        # Code-owned handlers run first and raise StopResponse only when they
+        # actually ground/capture something (order status, the exact read-back,
+        # name/phone, a standalone quantity, a clean multi-item add). If none of
+        # them fully handled the turn, the LLM leads the reply — and now ALWAYS
+        # with the per-turn checklist as context, in collecting AND checkout.
+        # This is what makes the agent flexible and human instead of a muted,
+        # canned-line script during checkout.
         await self._try_answer_order_status(turn_ctx, user_text, intent)
         await self._try_run_checkout_ladder(turn_ctx, user_text, intent)
         await self._try_capture_customer_info(turn_ctx, user_text, intent)
@@ -798,15 +814,8 @@ class RestaurantAgent(Agent):
         await self._try_quantity_reply(turn_ctx, user_text)
         await self._try_auto_add(turn_ctx, user_text, intent)
 
-        if (
-            is_code_owned_checkout(self._flow.state.phase)
-            and intent not in DETOUR_INTENTS
-        ):
-            if await self._reask_current_checkout_question(turn_ctx):
-                raise StopResponse()
-            self._maybe_speak_filler(intent, user_text)
-            self._inject_turn_guidance(turn_ctx, user_text)
-            raise StopResponse()
+        self._maybe_speak_filler(intent, user_text)
+        self._inject_turn_guidance(turn_ctx, user_text)
 
         if self._recorder is not None:
             self._recorder.complete_turn(
@@ -824,17 +833,28 @@ class RestaurantAgent(Agent):
         quantity: Annotated[int, "How many of this item to add"],
         note: Annotated[str, "Modifier choices and special instructions e.g. 'medium spicy, butter naan'"] = "",
     ) -> str:
-        """Add one menu item. If customer listed several dishes, call once per item in the same turn."""
-        if not is_collecting_phase(self._flow.state.phase):
-            return (
-                "Cannot add items during checkout. If the customer wants to change "
-                "the order, use update_item_quantity or remove_from_order."
-            )
+        """Add one menu item. Works at ANY point in the call — if the customer
+        adds a dish after checkout has begun, add it and the system re-reads the
+        updated order before placing. If customer listed several dishes, call
+        once per item in the same turn."""
         item = menu_provider.find_item(item_name)
         if not item:
             return f"'{item_name}' is not on our menu. Ask the customer to clarify or call search_menu_items."
+
+        # Uncertain match → confirm before adding rather than guessing the dish.
+        confidence = float(item.get("match_confidence", 1.0))
+        if confidence < _ADD_CLARIFY_MIN_CONF:
+            return (
+                f'Not fully sure — did the customer mean "{item["name"]}"? '
+                "Ask a quick one-line yes/no to confirm before adding; do NOT add yet."
+            )
+
+        was_checkout = not is_collecting_phase(self._flow.state.phase)
         result = self.cart.add_item(item, quantity, note)
         self._flow.on_item_added()
+        if was_checkout:
+            # New dish mid-checkout: the previous read-back is now stale.
+            self._flow.reopen_after_add()
         self._flow.note_discussed_item(item["name"], float(item.get("price") or 0))
         await self._sync_web()
         self._record_tool("add_to_order", {"item_name": item_name, "quantity": quantity, "note": note}, result)

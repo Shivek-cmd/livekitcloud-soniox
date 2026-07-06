@@ -6,6 +6,7 @@ code-owned in agent.py; LLM gets minimal detour-safe guidance only.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -19,6 +20,7 @@ from restaurant.conversation import (
     is_add_intent,
     is_allergies_step_answer,
     is_confirm_yes,
+    is_quantity_correction,
     is_readback_ack,
     is_readback_all_clear,
     is_want_to_order_only,
@@ -81,12 +83,6 @@ DETOUR_INTENTS = frozenset(
     }
 )
 
-_CODE_OWNED_LINE = (
-    "CHECKOUT STEP — fixed phrases (allergies, pickup/delivery, read-back, "
-    "name, phone, place order) are spoken by the system. Do NOT ask those "
-    "yourself or repeat the order."
-)
-
 
 @dataclass
 class OrderFlowState:
@@ -133,6 +129,71 @@ def compute_phase(cart: OrderCart, state: OrderFlowState) -> OrderPhase:
     return OrderPhase.READY_TO_PLACE
 
 
+# ── Requirements checklist (single source of truth for "what's still needed") ──
+# The flow is NOT a rigid ladder: code tracks which facts are still missing
+# before an order can be placed, and the LLM decides — like a human host — how
+# and in what order to collect them. compute_phase() above stays as the
+# analytics/gating label; the checklist below is what steers the conversation.
+
+_SPICE_WORDS_RE = re.compile(
+    r"mild|medium|spicy|hot|no\s*spice|less\s*spice|extra\s*spice|"
+    r"ਤਿੱਖਾ|ਘੱਟ\s*ਤਿੱਖਾ|ਮਿੱਠਾ|तीखा|कम\s*तीखा|spice",
+    re.I,
+)
+
+
+def _note_has_spice(note: str) -> bool:
+    return bool(note) and bool(_SPICE_WORDS_RE.search(note))
+
+
+def _dish_needs_spice(item) -> bool:
+    """A cart line still needs a spice choice: it has a Spice Level option and
+    no spice was captured in its note yet."""
+    return menu_provider.item_has_spice_level(item.name) and not _note_has_spice(item.note)
+
+
+def format_cart_brief(cart: OrderCart) -> str:
+    """One-line factual cart summary for per-turn LLM grounding (no price)."""
+    if cart.is_empty:
+        return ""
+    parts: list[str] = []
+    for it in cart.items:
+        label = f"{it.quantity}x {it.name}"
+        if it.note:
+            label += f" ({it.note})"
+        parts.append(label)
+    return ", ".join(parts)
+
+
+def outstanding_requirements(cart: OrderCart, state: OrderFlowState) -> list[str]:
+    """Plain-English list of everything still missing before this order can be
+    placed, most-relevant first. Empty list ⇒ ready to confirm and place.
+
+    This is a soft guide the LLM works through naturally — NOT an enforced
+    sequence. The only hard gate is OrderCart.ready_to_place() at place time.
+    """
+    if cart.is_empty:
+        return ["at least one item"]
+
+    reqs: list[str] = []
+    for item in cart.items:
+        if _dish_needs_spice(item):
+            reqs.append(f"spice level for {item.name}")
+    if not (state.allergies_asked or state.special_instructions_done):
+        reqs.append("ask about allergies / special instructions")
+    if not cart.order_type:
+        reqs.append("pickup or delivery")
+    if cart.order_type == "delivery" and not cart.delivery_address:
+        reqs.append("delivery address")
+    if not state.readback_confirmed:
+        reqs.append("read the order back once and get an OK")
+    if not cart.customer_name:
+        reqs.append("customer name")
+    if not cart.customer_phone:
+        reqs.append("phone number")
+    return reqs
+
+
 def is_collecting_phase(phase: OrderPhase) -> bool:
     return phase in COLLECTING_PHASES
 
@@ -173,6 +234,13 @@ class OrderFlowController:
     def on_item_added(self) -> None:
         self.state.quantity_allowed = False
         self.state.phase = OrderPhase.AWAITING_MORE
+
+    def reopen_after_add(self) -> None:
+        """A new item was added after checkout began — the order changed, so the
+        read-back is stale and must happen again before the order is placed.
+        Allergies / order-type already collected stay collected (don't re-ask)."""
+        self.state.readback_spoken = False
+        self.state.readback_confirmed = False
 
     def _advance_from_user_turn(
         self,
@@ -306,8 +374,10 @@ class OrderFlowController:
             return self._availability_guidance()
         if intent == UserIntent.ADD_ITEM:
             return [
-                "Customer tried to add during checkout. Politely say we can adjust "
-                "after this order — finish checkout first. Do NOT add items now."
+                "Customer wants to add or change an item — that's totally fine, "
+                "even mid-checkout. Call add_to_order for a new dish, or "
+                "update_item_quantity to correct a quantity. The system re-reads "
+                "the updated order before placing, so just help them naturally."
             ]
         if intent == UserIntent.HUMAN:
             return ["Call transfer_to_human immediately after one short line."]
@@ -328,13 +398,40 @@ class OrderFlowController:
 
         lang = self.state.preferred_language
         phase = self.state.phase
+        reqs = outstanding_requirements(cart, self.state)
+        cart_brief = format_cart_brief(cart)
+
         lines: list[str] = [
-            f"[TURN GUIDANCE] phase={phase.value} intent={intent.value} lang={lang.value}",
-            language_turn_guidance(lang),
-            f'If unclear audio, prefer: "{phrase_repeat_request(lang)}"',
-            "Do NOT mention price, dollars, totals, or ਡਾਲਰ in speech unless "
-            "customer asked price this turn (ASK_PRICE intent).",
+            f"[ORDER STATUS] phase={phase.value} intent={intent.value} lang={lang.value}",
+            f"In cart: {cart_brief}." if cart_brief else "Cart is empty so far.",
         ]
+        if reqs:
+            lines.append("Still needed before you can place this order: " + "; ".join(reqs) + ".")
+        else:
+            lines.append(
+                "Everything needed is collected — confirm briefly and call place_order()."
+            )
+
+        lines.append(
+            "You are a warm, real human host — never robotic. Cooperate with the "
+            "customer and let the conversation flow: you do NOT have to follow a "
+            "fixed order. If they add, change, or correct something, handle that "
+            "FIRST, then continue. Work through the needed items above ONE at a "
+            "time, in the customer's language."
+        )
+        lines.append(language_turn_guidance(lang))
+        lines.append(f'If unclear audio, prefer: "{phrase_repeat_request(lang)}"')
+        lines.append(
+            "Do NOT mention price, dollars, totals, or ਡਾਲਰ in speech unless "
+            "customer asked price this turn (ASK_PRICE intent)."
+        )
+
+        if not cart.is_empty and is_quantity_correction(user_text):
+            lines.append(
+                "Customer is CORRECTING a quantity already in the order — call "
+                "update_item_quantity with the correct TOTAL amount. NEVER use "
+                "add_to_order for a correction; it adds on top and doubles the mistake."
+            )
 
         quantity_allowed = (
             is_collecting_phase(phase)
@@ -342,39 +439,14 @@ class OrderFlowController:
             and not utterance_has_explicit_quantity(user_text)
         )
 
-        if is_code_owned_checkout(phase):
-            lines.append(_CODE_OWNED_LINE)
-            if phase == OrderPhase.SPECIAL_INSTRUCTIONS and self.state.allergies_asked:
-                lines.append(
-                    "Allergies question already asked — do NOT ask allergies again."
-                )
-            elif phase == OrderPhase.READBACK:
-                lines.append(
-                    "Wait for customer to confirm read-back. "
-                    "Do NOT ask allergies, pickup, name, or phone."
-                )
-            elif phase == OrderPhase.CUSTOMER_NAME:
-                lines.append(
-                    "System asks for NAME only. Do NOT ask for phone until name is saved."
-                )
-            elif phase == OrderPhase.CUSTOMER_PHONE:
-                lines.append(
-                    "System asks for phone only. Do NOT repeat name or ask both together."
-                )
-            elif phase == OrderPhase.DELIVERY_ADDRESS:
-                lines.append(
-                    "Ask for full delivery address, then call set_delivery_address."
-                )
-            elif intent in DETOUR_INTENTS:
-                lines.extend(self._checkout_detour_guidance(intent))
-            elif phase == OrderPhase.READY_TO_PLACE:
-                lines.append("Contact info complete. Call place_order() — do NOT repeat the order.")
-        else:
+        if is_collecting_phase(phase):
             lines.extend(self._collecting_guidance(user_text, intent, cart, lang))
+        else:
+            lines.extend(self._checkout_guidance(user_text, intent, cart, lang, reqs))
 
         if quantity_allowed:
             lines.append(
-                f'If asking quantity, SAY: "{QUANTITY_QUESTION}" '
+                f'If you need a quantity, ask naturally like: "{QUANTITY_QUESTION}" '
                 "(English number words one/two/three only — never ik/do or invented Punjabi)."
             )
         else:
@@ -382,13 +454,39 @@ class OrderFlowController:
                 "Do NOT ask how many / ਕਿੰਨਾ until customer clearly wants to add or order the item."
             )
 
-        lines.append("Reply in ONE short sentence. ONE question only.")
+        lines.append("Reply in ONE short, natural sentence. ONE question only.")
 
         self.state.quantity_allowed = quantity_allowed
         return TurnPlan(
             guidance="\n".join(lines),
             quantity_allowed=quantity_allowed,
         )
+
+    def _checkout_guidance(
+        self,
+        user_text: str,
+        intent: UserIntent,
+        cart: OrderCart,
+        lang: CustomerLanguage,
+        reqs: list[str],
+    ) -> list[str]:
+        """Soft, flexible steering once items are collected. The LLM leads the
+        conversation; code still owns the grounded read-back, contact capture,
+        and the final place-order gate (see agent.py handlers)."""
+        lines: list[str] = []
+
+        if intent in DETOUR_INTENTS:
+            lines.extend(self._checkout_detour_guidance(intent))
+
+        # Accuracy-critical lines stay code-owned — don't let the LLM improvise them.
+        lines.append(
+            "The order read-back, the phone-number read-back, and placing the "
+            "order are handled exactly by the system — don't invent the item "
+            "list, totals, or a phone read-back yourself."
+        )
+        if reqs:
+            lines.append(f'Naturally ask the customer for the next thing: {reqs[0]}.')
+        return lines
 
     def _price_guidance(self, user_text: str) -> list[str]:
         item = menu_provider.resolve_item_in_text(user_text)
