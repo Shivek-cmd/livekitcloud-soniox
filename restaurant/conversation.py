@@ -467,6 +467,15 @@ def detect_intent(text: str) -> UserIntent:
         return UserIntent.ASK_ORDER_STATUS
     if _PRICE_RE.search(t):
         return UserIntent.ASK_PRICE
+    # Named dish + add-imperative wins over _DONE_RE — live-call regression
+    # (PR 051): "ਬਸ ਇੱਕ ਮਸਾਲਾ ਚਾ ਕਰ ਦੋ" (JUST one masala chai) has "ਬਸ" acting
+    # as a quantifier ("just"), not the discourse "that's it/done" _DONE_RE is
+    # meant to catch — but the unanchored keyword match fired anyway, so the
+    # order-done branch silently swallowed a live item order. Same class of
+    # bug as PR 042's "ਨਹੀਂ ਨਹੀਂ, ਕਰੋ" fix, checked earlier here so it also
+    # wins over _DONE_RE (not just the later is_confirm_no check).
+    if _add_item_with_action_cue(t):
+        return UserIntent.ADD_ITEM
     if _DONE_RE.search(t):
         return UserIntent.ORDER_DONE
     if is_confirm_yes(t):
@@ -480,8 +489,6 @@ def detect_intent(text: str) -> UserIntent:
     if re.search(r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)", t):
         return UserIntent.ADD_ITEM
     if _I_SAID_RE.search(t) or _QTY_ITEM_RE.search(t):
-        return UserIntent.ADD_ITEM
-    if _add_item_with_action_cue(t):
         return UserIntent.ADD_ITEM
     if is_confirm_no(t):
         return UserIntent.CONFIRM_NO
