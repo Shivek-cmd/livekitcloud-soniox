@@ -76,6 +76,34 @@ def test_outstanding_requirements_lists_missing_facts():
     assert outstanding_requirements(cart, flow.state) == []
 
 
+def test_spice_deferred_until_contact_captured(monkeypatch):
+    from restaurant import menu_provider
+    from restaurant.order_flow import outstanding_requirements
+
+    monkeypatch.setenv("USE_CLOVER_MENU", "1")
+    menu_provider._cache = None
+    menu_provider._cache_loaded = False
+
+    cart = OrderCart()
+    cart.add_item(
+        {"name": "Amritsari Fish Pakora", "voice_line": "Fish Pakora", "price": 14.99},
+        1,
+    )
+    flow = OrderFlowController(is_phone=True)
+    flow.mark_items_complete()
+    flow.mark_special_instructions_done()
+    flow.mark_readback_confirmed()
+    joined = " | ".join(outstanding_requirements(cart, flow.state))
+    assert "spice level" not in joined
+    assert "customer name" in joined
+
+    cart.customer_name = "Sandeep Singh"
+    cart.customer_phone = "9413752688"
+    cart.order_type = "pickup"
+    reqs = outstanding_requirements(cart, flow.state)
+    assert any("spice level" in r for r in reqs)
+
+
 def test_reopen_after_add_invalidates_readback():
     cart = OrderCart()
     cart.add_item({"name": "Kulfi", "voice_line": "Kulfi", "price": 6.0}, 1)

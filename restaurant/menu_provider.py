@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+from pathlib import Path
 
 from restaurant.menu import find_item as static_find_item
 
@@ -34,7 +35,8 @@ def _get_cache():
         if not path.is_file():
             logger.warning("Menu cache missing at %s — falling back to static menu", path)
             return None
-        _cache = MenuCache.load(path)
+        labels_path = Path(tenant.voice_labels_path)
+        _cache = MenuCache.load(path, voice_labels_path=labels_path)
         logger.info(
             "Loaded Clover menu cache: %d items (synced %s)",
             _cache.item_count,

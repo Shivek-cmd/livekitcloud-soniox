@@ -805,7 +805,7 @@ class RestaurantAgent(Agent):
                 self.note_agent_speech(saved)
             ready, _ = self.cart.ready_to_place()
             if ready:
-                await self._execute_place_order(from_capture=True)
+                await self._execute_place_order(from_capture=True, turn_ctx=turn_ctx)
             raise StopResponse()
 
     async def _speak_filler(self, line: str) -> None:
@@ -1140,7 +1140,12 @@ class RestaurantAgent(Agent):
             )
         return summary
 
-    async def _execute_place_order(self, *, from_capture: bool = False) -> str:
+    async def _execute_place_order(
+        self,
+        *,
+        from_capture: bool = False,
+        turn_ctx=None,
+    ) -> str:
         """Finalize order — shared by place_order tool and code-owned phone capture."""
         if self.cart.placed or self._goodbye_spoken:
             return (
@@ -1213,6 +1218,15 @@ class RestaurantAgent(Agent):
         spoken = order_placed_goodbye(order_type=self.cart.order_type)
         self._record_tool("place_order", {}, "placed")
         self._goodbye_spoken = True
+
+        if turn_ctx is not None:
+            turn_ctx.add_message(
+                role="system",
+                content=(
+                    f'[PLACE_ORDER] Goodbye already spoken: "{spoken}". '
+                    "Do NOT generate any further assistant speech this turn."
+                ),
+            )
 
         if (
             hangup_after_order_enabled()

@@ -43,6 +43,7 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 055 | `pr_055_devanagari-add-item-coverage` | Devanagari (Hindi-script) add-item phrase recognition | ✅ |
 | 056 | `pr_056_category-menu-browse` | Category/family menu browse (mithai, fish, desserts) | ⬜ **Open** |
 | 057 | `pr_057_item-availability-and-kol-stopword` | Item availability + ਕੋਲ/Chole false-match fix | ⬜ **Open** |
+| 058 | `pr_058_voice-line-load-and-contact-capture` | Voice line load at runtime + name/phone capture + duplicate goodbye | ⬜ **Open** |
 
 > **Note on PR 054:** merged directly via Claude Code (Sandeep Taur) without following `pr_rules.md` — no doc-first, branch name doesn't match convention. Doc created after the fact: `pr/pr_054_checklist-driven-order-flow.md`. Numbered 054 because it merged right after PR 053.
 >

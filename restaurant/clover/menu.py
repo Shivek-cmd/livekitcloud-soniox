@@ -156,10 +156,18 @@ class MenuCache:
         return cache
 
     @classmethod
-    def load(cls, path: Path) -> "MenuCache":
+    def load(cls, path: Path, *, voice_labels_path: Path | None = None) -> "MenuCache":
         data = json.loads(path.read_text(encoding="utf-8"))
+        if voice_labels_path is None:
+            sibling = path.parent / "clover_voice_labels.json"
+            voice_labels_path = sibling if sibling.is_file() else None
+        voice_by_id = (
+            _load_voice_labels(voice_labels_path) if voice_labels_path and voice_labels_path.is_file() else {}
+        )
         items = []
         for raw in data.get("items", []):
+            iid = raw.get("clover_item_id", "")
+            voice = voice_by_id.get(iid) or {}
             mod_groups = []
             for g in raw.get("modifier_groups") or []:
                 mods = [
@@ -183,20 +191,27 @@ class MenuCache:
                         modifiers=mods,
                     )
                 )
-            voice_line, speech_mode = resolve_speech_from_label(raw)
+            label_source = voice if voice else raw
+            voice_line, speech_mode = resolve_speech_from_label(label_source)
+            speak_as = voice.get("speak_as") or raw.get("speak_as") or raw.get("name", "")
+            aliases = list(voice.get("aliases") or raw.get("aliases") or [])
+            if voice.get("voice_line"):
+                voice_line = voice["voice_line"]
+            if voice.get("speech_mode"):
+                speech_mode = voice["speech_mode"]
             items.append(
                 CachedMenuItem(
-                    clover_item_id=raw["clover_item_id"],
-                    name=raw["name"],
-                    speak_as=raw["speak_as"],
-                    voice_line=raw.get("voice_line") or voice_line,
-                    speech_mode=raw.get("speech_mode") or speech_mode,
+                    clover_item_id=iid,
+                    name=raw.get("name") or voice.get("clover_name") or "Unknown",
+                    speak_as=speak_as,
+                    voice_line=voice.get("voice_line") or raw.get("voice_line") or voice_line,
+                    speech_mode=voice.get("speech_mode") or raw.get("speech_mode") or speech_mode,
                     price_cents=raw["price_cents"],
                     veg=raw.get("veg", True),
                     available=raw.get("available", True),
                     category_id=raw.get("category_id", ""),
                     category_name=raw.get("category_name", ""),
-                    aliases=list(raw.get("aliases") or []),
+                    aliases=aliases,
                     modifier_groups=mod_groups,
                 )
             )

@@ -161,8 +161,10 @@ _NAME_FILLER_RE = re.compile(
     r"my name is|i am|i'm|im|"
     r"naam|name|"
     r"haan|han|ji|ਜੀ|yes|yeah|"
+    r"ah|um|uh|erm|"
+    r"ਅਹ|ਉਹ|"
     r"this is"
-    r")\s+",
+    r")\s*,?\s*",
     re.I,
 )
 
@@ -262,8 +264,16 @@ def parse_customer_name(text: str) -> str | None:
 
     if _QTY_ITEM_RE.search(cleaned) or menu_item_hint_in_text(cleaned):
         return None
+    if len(words) == 2:
+        pair = " ".join(words)
+        if is_valid_customer_name(pair):
+            return pair
     if len(words) == 1:
         return _clean_name_token(words[0])
+    if len(words) == 3:
+        pair = " ".join(words[-2:])
+        if is_valid_customer_name(pair):
+            return pair
     if len(words) <= 3:
         candidate = _clean_name_token(words[-1])
         if candidate:
