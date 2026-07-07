@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 
 from restaurant.menu import find_item as static_find_item
 
@@ -43,6 +44,126 @@ def _get_cache():
         logger.exception("Failed to load Clover menu cache — falling back to static menu")
         _cache = None
     return _cache
+
+
+_DISH_TOKEN_RE = re.compile(r"[A-Za-z\u0900-\u097F\u0A00-\u0A7F]+")
+
+_AVAIL_QUERY_PREFIX_RE = re.compile(
+    r"^(?:"
+    r"do you have|have you got|is there|is\s+.+\s+available|"
+    r"ਸਾਡੇ ਕੋਲ|ਸਾਡੇਕੋਲ|ਆਪਣੇ ਕੋਲ|ਹੋਰ|hor|"
+    r"ਕੀ\s*.+\s*ਹੈ|kya\s+.+\s*hai"
+    r")\s*",
+    re.I,
+)
+
+_AVAIL_QUERY_SUFFIX_RE = re.compile(
+    r"\s*(?:"
+    r"available|availability|ਅਵੇਲੇਬਲ|"
+    r"hai gi|haigi|ਹੈਗੀ|ਹੈਗੀ ਹੈ|"
+    r"hai\??|hain\??|ਹੈ\??|ਹਨ\??|"
+    r"kya hai|ਕੀ ਹੈ"
+    r")\s*$",
+    re.I,
+)
+
+
+def _strip_availability_phrases(text: str) -> str:
+    t = (text or "").strip()
+    for _ in range(3):
+        prev = t
+        t = _AVAIL_QUERY_PREFIX_RE.sub("", t).strip(" ,.?")
+        t = _AVAIL_QUERY_SUFFIX_RE.sub("", t).strip(" ,.?")
+        if t == prev:
+            break
+    return t
+
+
+def _item_candidates_from_text(text: str) -> list[str]:
+    raw = (text or "").strip()
+    stripped = _strip_availability_phrases(raw)
+    tokens = _DISH_TOKEN_RE.findall(raw)
+    candidates: list[str] = []
+    if stripped and len(stripped) >= 2:
+        candidates.append(stripped)
+    for i in range(len(tokens)):
+        for j in range(i + 1, min(i + 4, len(tokens) + 1)):
+            phrase = " ".join(tokens[i:j])
+            if len(phrase) >= 2:
+                candidates.append(phrase)
+    seen: set[str] = set()
+    out: list[str] = []
+    for cand in sorted(candidates, key=len, reverse=True):
+        key = cand.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cand)
+    return out
+
+
+def extract_dish_query(text: str) -> str | None:
+    """Best dish-name slice from a free-form caller utterance."""
+    cache = _get_cache()
+    best: tuple[dict, float] | None = None
+
+    for candidate in _item_candidates_from_text(text):
+        if cache:
+            scored = cache.find_item_scored(candidate)
+            if not scored:
+                continue
+            hit, confidence = scored
+            if hit.available:
+                item = {**hit.to_cart_dict(), "match_confidence": confidence}
+            else:
+                item = {**hit.to_cart_dict(), "unavailable": True, "match_confidence": confidence}
+            if best is None or confidence > best[1]:
+                best = (item, confidence)
+        else:
+            item = static_find_item(candidate)
+            if item and (best is None or 1.0 > best[1]):
+                best = ({**item, "match_confidence": 1.0}, 1.0)
+
+    if best and best[1] >= 0.55:
+        return best[0]["name"]
+    return None
+
+
+def resolve_item_dict_from_text(text: str) -> dict | None:
+    """Best menu item dict from free-form caller text (chunk-first for questions)."""
+    from restaurant.conversation import is_availability_question
+
+    t = (text or "").strip()
+    if not t:
+        return None
+
+    if is_availability_question(t):
+        name = extract_dish_query(t)
+        return find_item(name) if name else None
+
+    from restaurant.clover.match import content_tokens
+
+    if len(content_tokens(t)) > 2:
+        name = extract_dish_query(t)
+        if name:
+            return find_item(name)
+
+    direct = find_item(t)
+    if direct and not direct.get("unavailable"):
+        return direct
+
+    name = extract_dish_query(t)
+    if name:
+        hit = find_item(name)
+        if hit and not hit.get("unavailable"):
+            return hit
+
+    cache = _get_cache()
+    if cache:
+        hits = cache.search(t, limit=1)
+        if hits and hits[0].available:
+            return {**hits[0].to_cart_dict(), "match_confidence": 0.5}
+    return None
 
 
 def find_item(name: str) -> dict | None:
@@ -171,13 +292,14 @@ def required_modifier_groups(clover_item_id: str) -> list[str]:
 
 
 def check_item(name: str) -> str:
+    resolved = extract_dish_query(name) or name
     cache = _get_cache()
     if cache:
-        hit = cache.find_item(name)
+        hit = cache.find_item(resolved)
         if not hit:
             return f"'{name}' is not on our menu."
         return hit.describe()
-    item = static_find_item(name)
+    item = static_find_item(resolved)
     if not item:
         return f"'{name}' is not on our menu."
     veg = "Vegetarian" if item["veg"] else "Non-vegetarian"
@@ -220,27 +342,7 @@ def item_has_spice_level(name: str) -> bool:
 
 def resolve_item_in_text(text: str) -> dict | None:
     """Best-effort menu item match from free-form caller text."""
-    t = (text or "").strip()
-    if not t:
-        return None
-    direct = find_item(t)
-    if direct and not direct.get("unavailable"):
-        return direct
-    cache = _get_cache()
-    if cache:
-        hits = cache.search(t, limit=1)
-        if hits and hits[0].available:
-            # substring search is weak evidence — confidence capped below the
-            # auto-add gate so this path can never speak a code-owned confirm
-            return {**hits[0].to_cart_dict(), "match_confidence": 0.5}
-    # Try longest token runs (3+ chars) for dish names in mixed sentences
-    import re
-
-    for chunk in re.findall(r"[A-Za-z\u0900-\u097F\u0A00-\u0A7F]{4,}", t):
-        hit = find_item(chunk)
-        if hit and not hit.get("unavailable"):
-            return hit
-    return None
+    return resolve_item_dict_from_text(text)
 
 
 def item_price_dollars(name: str) -> float | None:
