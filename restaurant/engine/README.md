@@ -39,9 +39,9 @@ Prompt rules are not guarantees; control flow is.
 
 ## Status
 - [x] Stage 1 — `OrderEngine` deterministic core + tests (`tests/test_engine.py`).
-- [ ] Stage 2 — `CloverResolver` adapter (engine ↔ real matcher/menu cache).
-- [ ] Stage 3 — `extractor.py` (LLM → Proposal, JSON schema + validation).
-- [ ] Stage 4 — `renderer.py` (Action → in-language speech, fixed templates on
+- [x] Stage 2 — `CloverResolver` adapter (engine ↔ real matcher/menu cache).
+- [x] Stage 3 — `extractor.py` (LLM → Proposal, JSON schema + validation).
+- [x] Stage 4 — `renderer.py` (Action → in-language speech, fixed templates on
       the money path) + LiveKit adapter replacing the old turn handler.
 - [ ] Stage 5 — shadow mode (log proposed vs. correct), then ONE pilot
       restaurant, then the rest. No four-at-once rollout.

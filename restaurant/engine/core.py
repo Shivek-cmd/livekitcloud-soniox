@@ -216,7 +216,7 @@ class OrderEngine:
             self._clarify = res.options
             self.phase = Phase.CLARIFY_ITEM
             return [_act("clarify", query=res.query,
-                         options=[d.name for d in res.options])]
+                         options=[d.voice_line for d in res.options])]
         # Resolved -> stage; ask quantity if none was stated (never invent).
         self._staged = _Staged(dish=res.dish, quantity=req.quantity)
         return self._after_staged()
@@ -236,10 +236,10 @@ class OrderEngine:
             return []
         choice = p.choice or (p.adds[0].query if p.adds else None)
         if not choice:
-            return [_act("clarify", options=[d.name for d in self._clarify])]
+            return [_act("clarify", options=[d.voice_line for d in self._clarify])]
         picked = self._match_choice(choice, self._clarify)
         if picked is None:
-            return [_act("clarify", options=[d.name for d in self._clarify])]
+            return [_act("clarify", options=[d.voice_line for d in self._clarify])]
         qty = p.quantity_answer or (p.adds[0].quantity if p.adds else None)
         self._clarify = None
         self._staged = _Staged(dish=picked, quantity=qty)
@@ -379,7 +379,7 @@ class OrderEngine:
     def _prompt_for_phase(self) -> Action:
         return {
             Phase.CLARIFY_ITEM: _act("clarify",
-                                     options=[d.name for d in (self._clarify or ())]),
+                                     options=[d.voice_line for d in (self._clarify or ())]),
             Phase.ASK_QUANTITY: _act("ask_quantity",
                                      dish=self._staged.dish.voice_line if self._staged else ""),
             Phase.CONFIRM_ITEM: _act("confirm_item",

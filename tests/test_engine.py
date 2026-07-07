@@ -53,7 +53,7 @@ def test_ambiguous_fish_asks_which_one_and_adds_nothing():
     eng = _engine()
     acts = eng.handle(Proposal(adds=[AddRequest("fish", quantity=1)]))
     assert _kinds(acts) == ["clarify"]
-    assert set(acts[0].data["options"]) == {"Punjabi Fish Curry", "Amritsari Fish Pakora"}
+    assert set(acts[0].data["options"]) == {"Punjabi Fish Curry", "Fish Pakora"}
     assert eng.lines == []            # nothing added
     assert eng.phase == Phase.CLARIFY_ITEM
 
