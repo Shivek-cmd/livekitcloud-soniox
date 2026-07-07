@@ -60,6 +60,73 @@ def find_item(name: str) -> dict | None:
     return item
 
 
+def browse_menu_options(query: str, *, limit: int = 6) -> tuple[str, list[dict]]:
+    """Resolve browse query to (topic_label, [{name, voice_line}, ...])."""
+    from restaurant.menu_browse import BrowseKind, resolve_browse_target
+
+    cache = _get_cache()
+    if not cache:
+        return query, []
+
+    target = resolve_browse_target(query)
+    hits: list = []
+
+    if target is not None:
+        if target.kind == BrowseKind.CATEGORY and target.category_name:
+            hits = cache.list_by_category(target.category_name, limit=limit)
+        elif target.item_names:
+            for name in target.item_names:
+                item = cache.find_item(name)
+                if item and item.available:
+                    hits.append(item)
+        elif target.name_contains:
+            hits = cache.items_by_name_contains(target.name_contains, limit=limit)
+
+        label = target.label
+        if hits:
+            return label, [{"name": h.name, "voice_line": h.voice_line} for h in hits]
+
+    disamb = disambiguation_options(query, limit=limit)
+    if len(disamb) >= 2:
+        return query, disamb
+
+    search_hits = cache.search(query, limit=limit)
+    available = [h for h in search_hits if h.available]
+    if available:
+        return query, [{"name": h.name, "voice_line": h.voice_line} for h in available]
+
+    return query, []
+
+
+def _format_browse_tool_result(query: str, options: list[dict], *, spoken_limit: int = 2) -> str:
+    if not options:
+        return f"No menu items found matching '{query}'."
+    spoken = options[:spoken_limit]
+    lines = [f'{o["name"]} → say "{o["voice_line"]}"' for o in spoken]
+    joined = " | ".join(lines)
+    extra = len(options) - len(spoken)
+    tail = f" (+{extra} more — INTERNAL, offer if they want more)" if extra > 0 else ""
+    if len(spoken) == 1:
+        return (
+            f"One match for '{query}': {joined}. "
+            "Confirm briefly in one sentence, then ask quantity if needed."
+            f"{tail}"
+        )
+    return (
+        f"Browse result for '{query}' (mention at most TWO in ONE casual sentence — "
+        f"never a numbered list): {joined}. "
+        'Good: "ਹਾਂ ਜੀ, ਸਾਡੇ ਕੋਲ X ਤੇ Y ਹੈ — ਕਿਹੜਾ?" '
+        'Bad: "1 X, 2 Y" or "first X, second Y". Ask which they would like.'
+        f"{tail}"
+    )
+
+
+def browse_menu(query: str, *, limit: int = 2) -> str:
+    """Category/family-aware menu browse for tools and code-owned replies."""
+    _topic, options = browse_menu_options(query, limit=max(limit, 6))
+    return _format_browse_tool_result(query, options, spoken_limit=limit)
+
+
 def disambiguation_options(name: str, *, limit: int = 3) -> list[dict]:
     """Available menu items a vague term could mean, when the strict matcher
     abstained. Used to ASK the caller which dish instead of guessing (e.g.
@@ -124,28 +191,7 @@ def search_menu(query: str, *, limit: int = 2) -> str:
     cache = _get_cache()
     if not cache:
         return "Menu search is only available with Clover menu enabled."
-    hits = cache.search(query, limit=limit)
-    if not hits:
-        return f"No menu items found matching '{query}'."
-    options: list[str] = []
-    for item in hits:
-        if not item.available:
-            continue
-        options.append(f'{item.name} → say "{item.voice_line}"')
-    if not options:
-        return f"Items matching '{query}' exist but are currently unavailable."
-    if len(options) == 1:
-        return (
-            f"One match for '{query}': {options[0]}. "
-            "Confirm briefly in one sentence, then ask quantity if needed."
-        )
-    joined = " | ".join(options[:2])
-    return (
-        f"Matches for '{query}' (mention at most TWO in ONE casual sentence — never a numbered list): "
-        f"{joined}. "
-        'Good: "ਹਾਂ ਜੀ, ਸਾਡੇ ਕੋਲ X ਤੇ Y ਹੈ — ਕਿਹੜਾ?" '
-        'Bad: "1 X, 2 Y" or "first X, second Y" or reading bullet points aloud.'
-    )
+    return browse_menu(query, limit=limit)
 
 
 def catalog() -> dict | None:

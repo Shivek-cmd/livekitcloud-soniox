@@ -33,9 +33,12 @@ from restaurant.conversation import (
     confirm_items_added,
     detect_intent,
     echo_recovery_phrase,
+    extract_browse_query,
+    format_browse_reply,
     format_order_readback,
     format_order_status,
     is_allergies_step_answer,
+    is_category_browse_query,
     is_confirm_yes,
     is_likely_pickup_stt,
     is_quantity_correction,
@@ -59,6 +62,7 @@ from restaurant.customer_info import (
     parse_customer_name,
 )
 from restaurant.order_flow import (
+    COLLECTING_PHASES,
     OrderFlowController,
     OrderPhase,
     is_collecting_phase,
@@ -111,6 +115,14 @@ def _add_clarify_min_conf() -> float:
 
 
 _ADD_CLARIFY_MIN_CONF = _add_clarify_min_conf()
+
+
+def _menu_browse_enabled() -> bool:
+    return os.getenv("MENU_BROWSE_ENABLED", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
 
 
 class RestaurantAgent(Agent):
@@ -331,6 +343,56 @@ class RestaurantAgent(Agent):
             content=f'[QTY-REPLY] Set {item.name} qty={qty}. Already spoken: "{say_line}"',
         )
         logger.info("QTY_REPLY item=%s qty=%s", item.name, qty)
+
+        if self._session:
+            await self._session.say(say_line, allow_interruptions=True)
+            self.note_agent_speech(say_line)
+        raise StopResponse()
+
+    async def _try_menu_browse(
+        self,
+        turn_ctx,
+        user_text: str,
+        intent: UserIntent,
+    ) -> None:
+        """Code-owned category/family browse — list options, never add to cart."""
+        if not _menu_browse_enabled():
+            return
+        if intent in (UserIntent.HUMAN, UserIntent.ASK_ORDER_STATUS, UserIntent.ASK_PRICE):
+            return
+        if intent == UserIntent.ADD_ITEM:
+            return
+        if not is_category_browse_query(user_text):
+            return
+        if not (
+            is_collecting_phase(self._flow.state.phase)
+            or intent == UserIntent.ASK_AVAILABILITY
+            or intent == UserIntent.GENERAL
+        ):
+            return
+
+        query = extract_browse_query(user_text) or user_text.strip()
+        topic, options = menu_provider.browse_menu_options(query)
+        if not options:
+            return
+
+        lang = self._flow.state.preferred_language
+        say_line = format_browse_reply(options, lang, topic=topic)
+        tool_text = menu_provider.browse_menu(query)
+
+        turn_ctx.add_message(
+            role="system",
+            content=f'[MENU_BROWSE] Already spoken: "{say_line}"\n{tool_text}',
+        )
+        self._flow.note_browse_topic(topic or query)
+        logger.info("MENU_BROWSE topic=%s options=%s", topic, [o["name"] for o in options[:2]])
+
+        if self._recorder is not None:
+            self._recorder.complete_turn(
+                intent=intent.value,
+                phase=self._flow.state.phase.value,
+                cart_snapshot=self._cart_snapshot(),
+            )
 
         if self._session:
             await self._session.say(say_line, allow_interruptions=True)
@@ -812,6 +874,7 @@ class RestaurantAgent(Agent):
         await self._try_capture_customer_info(turn_ctx, user_text, intent)
         await self._try_reject_stt_noise(turn_ctx, user_text, intent)
         await self._try_quantity_reply(turn_ctx, user_text)
+        await self._try_menu_browse(turn_ctx, user_text, intent)
         await self._try_auto_add(turn_ctx, user_text, intent)
 
         self._maybe_speak_filler(intent, user_text)

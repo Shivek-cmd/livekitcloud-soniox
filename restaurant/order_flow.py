@@ -95,6 +95,7 @@ class OrderFlowState:
     preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
     last_discussed_item: str | None = None
     last_discussed_price: float | None = None
+    last_browse_topic: str | None = None
     quantity_allowed: bool = False
 
 
@@ -212,6 +213,13 @@ class OrderFlowController:
     def note_discussed_item(self, item_name: str, price: float | None = None) -> None:
         self.state.last_discussed_item = item_name
         self.state.last_discussed_price = price
+        self.state.last_browse_topic = None
+
+    def note_browse_topic(self, topic: str) -> None:
+        self.state.last_browse_topic = topic
+
+    def clear_browse_topic(self) -> None:
+        self.state.last_browse_topic = None
 
     def sync_from_cart(self, cart: OrderCart) -> None:
         self.state.phase = compute_phase(cart, self.state)
@@ -233,6 +241,7 @@ class OrderFlowController:
 
     def on_item_added(self) -> None:
         self.state.quantity_allowed = False
+        self.state.last_browse_topic = None
         self.state.phase = OrderPhase.AWAITING_MORE
 
     def reopen_after_add(self) -> None:
@@ -420,6 +429,11 @@ class OrderFlowController:
             "time, in the customer's language."
         )
         lines.append(language_turn_guidance(lang))
+        if self.state.last_browse_topic:
+            lines.append(
+                f'Customer was browsing "{self.state.last_browse_topic}" — they may be '
+                "picking a dish now; do NOT re-list the options unless they ask again."
+            )
         lines.append(f'If unclear audio, prefer: "{phrase_repeat_request(lang)}"')
         lines.append(
             "Do NOT mention price, dollars, totals, or ਡਾਲਰ in speech unless "

@@ -397,3 +397,10 @@ class MenuCache:
             if q in _norm(i.category_name) or q in _norm(i.category_name).replace("&", "and")
         ]
         return out[:limit]
+
+    def items_by_name_contains(self, needle: str, *, limit: int = 10) -> list[CachedMenuItem]:
+        q = _norm(needle)
+        if not q:
+            return []
+        out = [i for i in self._items if i.available and q in _norm(i.name)]
+        return out[:limit]
