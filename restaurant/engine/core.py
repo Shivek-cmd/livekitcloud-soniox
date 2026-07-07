@@ -78,6 +78,7 @@ class Proposal:
     order_type: str | None = None       # "pickup" | "delivery"
     name: str | None = None
     phone: str | None = None
+    address: str | None = None
     done_adding: bool = False
     wants_human: bool = False
     understood: bool = True             # False => nothing parsed -> ask to repeat
@@ -86,7 +87,8 @@ class Proposal:
         return bool(
             self.adds or self.corrections or self.removals or self.choice
             or self.quantity_answer is not None or self.yes or self.no
-            or self.order_type or self.name or self.phone or self.done_adding
+            or self.order_type or self.name or self.phone or self.address
+            or self.done_adding
         )
 
 
@@ -121,6 +123,7 @@ class Phase(str, Enum):
     ASK_SPICE = "ask_spice"          # staged/added dish needs a spice level
     ASK_ALLERGIES = "ask_allergies"
     ASK_ORDER_TYPE = "ask_order_type"
+    ASK_ADDRESS = "ask_address"      # delivery only
     READBACK = "readback"            # read whole order, awaiting confirm
     ASK_NAME = "ask_name"
     ASK_PHONE = "ask_phone"
@@ -154,6 +157,7 @@ class OrderEngine:
         self.order_type: str | None = None
         self.name: str | None = None
         self.phone: str | None = None
+        self.address: str | None = None
         self.allergies_done: bool = False
         self.readback_confirmed: bool = False
         self._staged: _Staged | None = None
@@ -179,6 +183,7 @@ class OrderEngine:
             Phase.ASK_SPICE: self._on_spice,
             Phase.ASK_ALLERGIES: self._on_allergies,
             Phase.ASK_ORDER_TYPE: self._on_order_type,
+            Phase.ASK_ADDRESS: self._on_address,
             Phase.READBACK: self._on_readback,
             Phase.ASK_NAME: self._on_name,
             Phase.ASK_PHONE: self._on_phone,
@@ -317,6 +322,16 @@ class OrderEngine:
         if p.order_type not in ("pickup", "delivery"):
             return [_act("ask_order_type")]
         self.order_type = p.order_type
+        if self.order_type == "delivery" and not self.address:
+            self.phase = Phase.ASK_ADDRESS
+            return [_act("ask_address")]
+        return self._go_readback()
+
+    def _on_address(self, p: Proposal) -> list[Action]:
+        addr = (p.address or "").strip()
+        if not addr:
+            return [_act("ask_address")]
+        self.address = addr
         return self._go_readback()
 
     def _go_readback(self) -> list[Action]:
@@ -389,6 +404,7 @@ class OrderEngine:
                                   dish=self._spice_line.dish.voice_line if self._spice_line else ""),
             Phase.ASK_ALLERGIES: _act("ask_allergies"),
             Phase.ASK_ORDER_TYPE: _act("ask_order_type"),
+            Phase.ASK_ADDRESS: _act("ask_address"),
             Phase.READBACK: _act("readback", **self.order_summary()),
             Phase.ASK_NAME: _act("ask_name"),
             Phase.ASK_PHONE: _act("ask_phone", name=self.name or ""),
@@ -431,5 +447,7 @@ class OrderEngine:
             ],
             "order_type": self.order_type,
             "name": self.name,
+            "phone": self.phone,
+            "address": self.address,
             "total": round(self.total(), 2),
         }

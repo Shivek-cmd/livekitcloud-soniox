@@ -32,6 +32,7 @@ Return ONLY a JSON object with these optional keys (omit what doesn't apply):
   "order_type": "pickup"|"delivery"
   "name": "<name>"
   "phone": "<digits>"
+  "address": "<full delivery address>"
   "done_adding": true             // "that's all / bas / nothing else"
   "wants_human": true
   "understood": true|false        // false ONLY if you truly caught nothing
@@ -115,6 +116,8 @@ def parse_proposal(raw: str | dict) -> Proposal:
 
     if isinstance(data.get("name"), str) and data["name"].strip():
         p.name = data["name"].strip()
+    if isinstance(data.get("address"), str) and data["address"].strip():
+        p.address = data["address"].strip()
     if data.get("phone") is not None:
         digits = "".join(ch for ch in str(data["phone"]) if ch.isdigit())
         if digits:

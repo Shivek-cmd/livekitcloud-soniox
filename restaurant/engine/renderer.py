@@ -98,6 +98,9 @@ def render(action, lang: str = "en") -> str:
     if k == "ask_order_type":
         return "Pickup ਜਾਂ delivery ਜੀ?" if pa else "Pickup or delivery?"
 
+    if k == "ask_address":
+        return "ਡਿਲਿਵਰੀ ਲਈ ਪੂਰਾ ਪਤਾ ਦੱਸੋ ਜੀ?" if pa else "What's the full delivery address?"
+
     if k == "readback":
         items = _join([_item_phrase(i, lang) for i in d.get("items", [])], lang)
         ot = d.get("order_type") or "pickup"

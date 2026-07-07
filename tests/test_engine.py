@@ -150,6 +150,22 @@ def test_full_order_happy_path():
     assert eng.total() == 21.99
 
 
+def test_delivery_requires_address_before_readback():
+    eng = _engine()
+    eng.handle(Proposal(adds=[AddRequest("fish curry", quantity=1)]))
+    eng.handle(Proposal(yes=True))
+    eng.handle(Proposal(done_adding=True))
+    eng.handle(Proposal(no=True))                        # no allergies
+    acts = eng.handle(Proposal(order_type="delivery"))
+    assert eng.phase == Phase.ASK_ADDRESS                # must ask address
+    assert _kinds(acts) == ["ask_address"]
+    acts = eng.handle(Proposal(address="123 Main St, Brampton"))
+    assert eng.phase == Phase.READBACK
+    assert eng.address == "123 Main St, Brampton"
+    # delivery charge is in the total
+    assert eng.total() == 21.99 + 5.0
+
+
 def test_unclear_utterance_asks_repeat_never_acts():
     eng = _engine()
     acts = eng.handle(Proposal(understood=False))

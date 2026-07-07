@@ -121,16 +121,58 @@ class EngineAgent(Agent):
             await self._session.say(speech, allow_interruptions=True)
         raise StopResponse()  # we fully own the turn; base LLM stays silent
 
+    def _to_order_cart(self):
+        """Map the engine's validated order onto the OrderCart shape the existing
+        Clover submit path expects (prices/ids come from the resolved dishes)."""
+        from restaurant.orders import CartItem, OrderCart
+
+        cart = OrderCart()
+        for line in self.engine.lines:
+            cart.items.append(CartItem(
+                name=line.dish.name,
+                voice_line=line.dish.voice_line,
+                price=line.dish.price,
+                quantity=line.quantity,
+                note=line.note,
+                clover_item_id=line.dish.id,
+            ))
+        cart.order_type = self.engine.order_type
+        cart.customer_name = self.engine.name
+        cart.customer_phone = self.engine.phone
+        cart.delivery_address = self.engine.address
+        return cart
+
     async def _submit_order(self) -> None:
-        """Hook for Clover submission — reuse restaurant.clover.order_submit.
-        Kept thin; the engine already validated the order is complete."""
+        """Place the completed order in Clover via the existing (kept) submit
+        path. The engine already guaranteed the order is complete + confirmed."""
+        summary = self.engine.order_summary()
+        logger.info("ORDER_READY_FOR_CLOVER %s",
+                    json.dumps(summary, ensure_ascii=False, default=str))
+
+        from restaurant.clover.order_submit import (
+            CloverOrderSubmitError,
+            clover_submit_enabled,
+            submit_cart_to_clover,
+        )
+
+        if not clover_submit_enabled():
+            logger.info("CLOVER_SUBMIT_DISABLED — order logged only (shadow/pilot mode)")
+            return
+
         try:
-            # Build the same cart shape order_submit expects, or call a small
-            # adapter. Left as an explicit integration point for the pilot.
-            logger.info("ORDER_READY_FOR_CLOVER %s",
-                        json.dumps(self.engine.order_summary(), ensure_ascii=False, default=str))
+            from restaurant.tenants.config import get_default_tenant
+
+            result = submit_cart_to_clover(
+                self._to_order_cart(),
+                tenant=get_default_tenant(),
+                channel="phone" if self.is_phone else "web",
+            )
+            logger.info("CLOVER_ORDER_OK id=%s printed=%s",
+                        result.clover_order_id, result.printed)
+        except CloverOrderSubmitError as e:
+            logger.error("Clover submit failed: %s", e)
         except Exception:
-            logger.exception("Clover submit failed")
+            logger.exception("Clover submit unexpected error")
 
 
 async def entrypoint(ctx: JobContext):
