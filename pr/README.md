@@ -41,6 +41,7 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 036 | `pr_036_multi-item-add-and-no-price` | Multi-item auto-add + no volunteer price on web | ⬜ **Open** |
 | 054 | `claude/repo-review-ujqggd` | Checklist-driven, model-led order flow (replaces rigid checkout ladder) — retroactive doc, see note | ✅ #90 |
 | 055 | `pr_055_devanagari-add-item-coverage` | Devanagari (Hindi-script) add-item phrase recognition | ✅ |
+| 056 | `pr_056_category-menu-browse` | Category/family menu browse (mithai, fish, desserts) | ⬜ **Open** |
 
 > **Note on PR 054:** merged directly via Claude Code (Sandeep Taur) without following `pr_rules.md` — no doc-first, branch name doesn't match convention. Doc created after the fact: `pr/pr_054_checklist-driven-order-flow.md`. Numbered 054 because it merged right after PR 053.
 >

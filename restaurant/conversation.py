@@ -189,6 +189,34 @@ _AVAIL_RE = indic_word_re(
     r"ਕੀ\s*ਹੈ|ਕੀ\s*ਹਨ|ਮਿਲੇਗ|ਚ\s*ਕੀ\s*ਹੈ"
 )
 
+_BROWSE_RE = indic_word_re(
+    r"what do you have|what.?s available|what .+ do you have|"
+    r"show me|tell me about|options for|types of|menu for|"
+    r"what .+ options|what .+ types|"
+    r"kya hai|kya hain|ਕੀ ਹੈ|ਕੀ ਹਨ|"
+    r"ਕੀ ਮਿਲੇਗਾ|ਕੀ ਮਿਲਦਾ|क्या है|क्या हैं"
+)
+
+_BROWSE_STRIP_RE = re.compile(
+    r"^(?:"
+    r"what do you have|what.?s available|do you have|have you got|"
+    r"show me|tell me(?: about)?|options for|types of|menu for|"
+    r"kya hai|kya hain|ਕੀ ਹੈ|ਕੀ ਹਨ|"
+    r"what .+ do you have|what .+ options|what .+ types|"
+    r"please|ji|ਜੀ"
+    r")\s*",
+    re.I,
+)
+
+_BROWSE_SUFFIX_RE = re.compile(
+    r"\s*(?:"
+    r"kya hai|kya hain|ਕੀ ਹੈ|ਕੀ ਹਨ|"
+    r"do you have|have you got|available|hai|hain|"
+    r"ਮਿਲੇਗਾ|ਮਿਲਦਾ|options|types|menu"
+    r")\s*\??\s*$",
+    re.I,
+)
+
 # Customer asking what's already in their order — must win over _ADD_RE below,
 # which contains the bare word "order"/"ਆਰਡਰ" and would otherwise misclassify
 # a status question ("ਕੀ ਆਰਡਰ ਕੀਤਾ ਜੀ ਮੈਂ?") as a new add request (PR 042).
@@ -365,6 +393,76 @@ def menu_item_hint_in_text(text: str) -> bool:
     from restaurant import menu_provider
 
     return menu_provider.resolve_item_in_text(text) is not None
+
+
+def extract_browse_query(text: str) -> str | None:
+    """Pull the food/category term out of a browse question."""
+    t = (text or "").strip()
+    if not t:
+        return None
+    what_have = re.search(r"what\s+(.+?)\s+do you have", t, re.I)
+    if what_have:
+        topic = what_have.group(1).strip(" ,.")
+        return topic if len(topic) >= 2 else None
+    t = _BROWSE_STRIP_RE.sub("", t).strip()
+    t = _BROWSE_SUFFIX_RE.sub("", t).strip()
+    t = re.sub(r"^(?:for|of|in)\s+", "", t, flags=re.I).strip()
+    t = re.sub(r"\?+$", "", t).strip(" ,.")
+    if len(t) < 2:
+        return None
+    return t
+
+
+def is_category_browse_query(text: str) -> bool:
+    """True when the caller is browsing a category/family, not ordering."""
+    from restaurant.menu_browse import resolve_browse_target
+    from restaurant import menu_provider
+
+    t = (text or "").strip()
+    if not t:
+        return False
+    # Ordering cues — never browse.
+    if _ADD_IMPERATIVE_RE.search(t):
+        return False
+    if _QTY_ITEM_RE.search(t):
+        return False
+    if _ADD_RE.search(t) and not _BROWSE_RE.search(t):
+        return False
+
+    query = extract_browse_query(t) or t
+    if resolve_browse_target(query):
+        return True
+    if _BROWSE_RE.search(t) and extract_browse_query(t):
+        return True
+    if not _ADD_RE.search(t) and len(menu_provider.disambiguation_options(query, limit=3)) >= 2:
+        return True
+    return False
+
+
+def format_browse_reply(
+    options: list[dict],
+    lang: CustomerLanguage,
+    *,
+    topic: str = "",
+) -> str:
+    """Cashier-style browse line — max two dish names, one question."""
+    if not options:
+        return ""
+    shown = options[:2]
+    if len(shown) == 1:
+        voice = shown[0]["voice_line"]
+        if lang in (CustomerLanguage.PUNJABI, CustomerLanguage.MIXED):
+            return f"ਹਾਂ ਜੀ, ਸਾਡੇ ਕੋਲ {voice} ਹੈ — ਚਾਹੀਦਾ?"
+        if lang == CustomerLanguage.HINDI:
+            return f"हाँ जी, हमारे पास {voice} है — चाहिए?"
+        return f"Yes — we have {voice}. Would you like that?"
+
+    v1, v2 = shown[0]["voice_line"], shown[1]["voice_line"]
+    if lang in (CustomerLanguage.PUNJABI, CustomerLanguage.MIXED):
+        return f"ਹਾਂ ਜੀ, ਸਾਡੇ ਕੋਲ {v1} ਤੇ {v2} ਹੈ — ਕਿਹੜਾ?"
+    if lang == CustomerLanguage.HINDI:
+        return f"हाँ जी, हमारे पास {v1} और {v2} है — कौन सा?"
+    return f"Yes — we have {v1} and {v2}. Which one?"
 
 
 def is_likely_pickup_stt(text: str) -> bool:
