@@ -38,6 +38,11 @@ def test_detect_add_intent():
     assert detect_intent("ਮੈਨੂੰ ਇੱਕ ਮੈਂਗੋ ਕੁਲਫੀ ਚਾਹੀਦੀ") == UserIntent.ADD_ITEM
 
 
+def test_detect_add_intent_devanagari():
+    assert detect_intent("मुझे एक मैंगो कुल्फी चाहिए") == UserIntent.ADD_ITEM
+    assert detect_intent("एक प्लेन राइस भी कर दियो") == UserIntent.ADD_ITEM
+
+
 def test_pickup_not_add_item():
     assert detect_intent("ਚਾਹੀਦਾ pickup") == UserIntent.PICKUP
     assert detect_intent("pick up please") == UserIntent.PICKUP

@@ -39,6 +39,12 @@ All PRs follow **`pr_rules.md`**: doc first → branch name matches doc → merg
 | 033 | `pr_033_voice-lines-and-aliases` | Voice lines speak customer's word + slang aliases (shikanji etc.) | ✅ #70 |
 | 034 | `pr_034_indic-safe-word-matching` | Indic-safe word boundaries (allergies stuck fix) | ✅ #71 |
 | 036 | `pr_036_multi-item-add-and-no-price` | Multi-item auto-add + no volunteer price on web | ⬜ **Open** |
+| 054 | `claude/repo-review-ujqggd` | Checklist-driven, model-led order flow (replaces rigid checkout ladder) — retroactive doc, see note | ✅ #90 |
+| 055 | `pr_055_devanagari-add-item-coverage` | Devanagari (Hindi-script) add-item phrase recognition | ✅ |
+
+> **Note on PR 054:** merged directly via Claude Code (Sandeep Taur) without following `pr_rules.md` — no doc-first, branch name doesn't match convention. Doc created after the fact: `pr/pr_054_checklist-driven-order-flow.md`. Numbered 054 because it merged right after PR 053.
+>
+> This table has gaps between 036 and 054 (PRs 037–053 exist as merged branches/docs but were never added to this index) — not fixed here, out of scope for this update.
 
 ---
 

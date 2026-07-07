@@ -244,7 +244,13 @@ _ADD_RE = indic_word_re(
     r"add|order|want|need|get me|give me|i.?ll take|i want|"
     r"i'd like|chahiye|dedo|de do|lao|"
     r"order karo|order kar|add karo|add kar|"
-    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ|ਐਡ"
+    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ|ਐਡ|"
+    # Devanagari (Hindi script) equivalents — live-call regression: a
+    # caller's Hindi-script add request ("एक प्लेन राइस भी कर दियो") was
+    # never recognized because these patterns previously only covered
+    # Gurmukhi and Latin script, despite the greeting itself advertising
+    # Hindi support.
+    r"चाहि(?:ए|ये|या)|ऑर्डर|डाल द|जोड़|ले|कर द|एड"
 )
 
 _QTY_ITEM_RE = re.compile(
@@ -440,7 +446,11 @@ def is_confirm_no(text: str) -> bool:
     return bool(_LEADING_NO_RE.match(t))
 
 
-_ADD_IMPERATIVE_RE = re.compile(r"ਕਰੋ|ਕਰ ਦ|ਦਿਓ|ਦਿਉ|ਐਡ|\badd\b", re.I)
+_ADD_IMPERATIVE_RE = re.compile(
+    r"ਕਰੋ|ਕਰ ਦ|ਦਿਓ|ਦਿਉ|ਐਡ|\badd\b|"
+    r"करो|कर द|दो|दिया|दियो|दीजिए",
+    re.I,
+)
 
 
 def _add_item_with_action_cue(text: str) -> bool:
@@ -486,7 +496,7 @@ def detect_intent(text: str) -> UserIntent:
         return UserIntent.DELIVERY
     if _ALLERGY_NO_RE.search(t):
         return UserIntent.CONFIRM_NO
-    if re.search(r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)", t):
+    if re.search(r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|चाहि(?:ए|ये|या)", t):
         return UserIntent.ADD_ITEM
     if _I_SAID_RE.search(t) or _QTY_ITEM_RE.search(t):
         return UserIntent.ADD_ITEM
