@@ -35,9 +35,11 @@ from restaurant.conversation import (
     echo_recovery_phrase,
     extract_browse_query,
     format_browse_reply,
+    format_availability_reply,
     format_order_readback,
     format_order_status,
     is_allergies_step_answer,
+    is_availability_question,
     is_category_browse_query,
     is_confirm_yes,
     is_likely_pickup_stt,
@@ -386,6 +388,50 @@ class RestaurantAgent(Agent):
         )
         self._flow.note_browse_topic(topic or query)
         logger.info("MENU_BROWSE topic=%s options=%s", topic, [o["name"] for o in options[:2]])
+
+        if self._recorder is not None:
+            self._recorder.complete_turn(
+                intent=intent.value,
+                phase=self._flow.state.phase.value,
+                cart_snapshot=self._cart_snapshot(),
+            )
+
+        if self._session:
+            await self._session.say(say_line, allow_interruptions=True)
+            self.note_agent_speech(say_line)
+        raise StopResponse()
+
+    async def _try_answer_item_availability(
+        self,
+        turn_ctx,
+        user_text: str,
+        intent: UserIntent,
+    ) -> None:
+        """Code-owned yes/no when caller asks if one specific dish is available."""
+        if not _menu_browse_enabled():
+            return
+        if intent in (UserIntent.HUMAN, UserIntent.ASK_ORDER_STATUS, UserIntent.ASK_PRICE):
+            return
+        if intent == UserIntent.ADD_ITEM:
+            return
+        if is_category_browse_query(user_text):
+            return
+        if not is_availability_question(user_text):
+            return
+
+        item = menu_provider.resolve_item_dict_from_text(user_text)
+        if not item:
+            return
+
+        lang = self._flow.state.preferred_language
+        say_line = format_availability_reply(item, lang)
+        self._flow.note_discussed_item(item["name"], float(item.get("price") or 0))
+
+        turn_ctx.add_message(
+            role="system",
+            content=f'[ITEM_AVAIL] Already spoken: "{say_line}"',
+        )
+        logger.info("ITEM_AVAIL item=%s available=%s", item["name"], not item.get("unavailable"))
 
         if self._recorder is not None:
             self._recorder.complete_turn(
@@ -875,6 +921,7 @@ class RestaurantAgent(Agent):
         await self._try_reject_stt_noise(turn_ctx, user_text, intent)
         await self._try_quantity_reply(turn_ctx, user_text)
         await self._try_menu_browse(turn_ctx, user_text, intent)
+        await self._try_answer_item_availability(turn_ctx, user_text, intent)
         await self._try_auto_add(turn_ctx, user_text, intent)
 
         self._maybe_speak_filler(intent, user_text)
@@ -900,12 +947,13 @@ class RestaurantAgent(Agent):
         adds a dish after checkout has begun, add it and the system re-reads the
         updated order before placing. If customer listed several dishes, call
         once per item in the same turn."""
-        item = menu_provider.find_item(item_name)
+        lookup = menu_provider.extract_dish_query(item_name) or item_name
+        item = menu_provider.find_item(lookup)
         if not item:
             # The strict matcher abstained. If the word maps to several real
             # dishes (e.g. "fish" -> Fish Curry / Fish Pakora), ASK which one —
             # never let the model pick or invent dishes the caller didn't name.
-            options = menu_provider.disambiguation_options(item_name)
+            options = menu_provider.disambiguation_options(lookup)
             if len(options) >= 2:
                 names = ", ".join(o["name"] for o in options)
                 return (
@@ -1225,14 +1273,15 @@ class RestaurantAgent(Agent):
         item_name: Annotated[str, "Item name to look up"],
     ) -> str:
         """Look up one menu item — veg/non-veg, modifier options, voice_line, availability. Price is internal."""
-        item = menu_provider.find_item(item_name)
+        item = menu_provider.resolve_item_dict_from_text(item_name) or menu_provider.find_item(
+            menu_provider.extract_dish_query(item_name) or item_name
+        )
         if item and not item.get("unavailable"):
             price = menu_provider.item_price_dollars(item["name"])
             self._flow.note_discussed_item(item["name"], price)
         if not item:
-            # Don't dead-end on "not on our menu" for a vague-but-real term —
-            # surface the real dishes it could mean so the model asks which one.
-            options = menu_provider.disambiguation_options(item_name)
+            lookup = menu_provider.extract_dish_query(item_name) or item_name
+            options = menu_provider.disambiguation_options(lookup)
             if len(options) >= 2:
                 names = ", ".join(o["name"] for o in options)
                 result = (

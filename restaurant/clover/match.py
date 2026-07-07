@@ -123,10 +123,11 @@ STOPWORDS: frozenset[str] = frozenset(
         "do", "did", "some", "also", "just", "yes", "no", "ok", "okay", "sure",
         "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
         "ten", "extra", "pcs", "piece", "pieces", "serves", "that", "this",
-        "it", "is", "your",
+        "it", "is", "your", "available", "availability",
         # Romanized Punjabi/Hindi courtesy
         "ji", "haan", "han", "kar", "karo", "karde", "dedo", "de", "dey",
         "dio", "deyo", "mainu", "sanu", "chahida", "chahidi", "hai", "hain",
+        "haigi", "hai gi", "available",
         "ek", "ik", "aur", "te", "bhi", "kuch", "zara", "thoda", "vich",
         # Gurmukhi
         "ਹਾਂ", "ਜੀ", "ਨਹੀਂ", "ਆਪਣੇ", "ਆਪਾਂ", "ਅਸੀਂ", "ਮੈਂ", "ਮੈਨੂੰ", "ਸਾਨੂੰ",
@@ -135,6 +136,7 @@ STOPWORDS: frozenset[str] = frozenset(
         "ਨੂੰ", "ਨਾਲ", "ਲਈ", "ਤੇ", "ਅਤੇ", "ਵੀ", "ਹੈ", "ਹਨ", "ਸੀ", "ਹੋਰ",
         "ਚਾਹੀਦਾ", "ਚਾਹੀਦੀ", "ਚਾਹੀਦੇ", "ਲੈ", "ਲਓ", "ਲਾਓ", "ਪਾ", "ਪਾਓ",
         "ਭੇਜ", "ਭੇਜੋ", "ਆਰਡਰ", "ਮੰਗਵਾ", "ਕੁਝ", "ਜ਼ਰਾ", "ਥੋੜਾ", "ਵਿੱਚ",
+        "ਕੋਲ", "ਹੈਗੀ", "ਅਵੇਲੇਬਲ",
         # Devanagari
         "हाँ", "जी", "नहीं", "एक", "दो", "तीन", "कर", "करो", "करें", "दे",
         "दो", "दीजिए", "दें", "मुझे", "हमें", "मेरा", "हमारा", "चाहिए",

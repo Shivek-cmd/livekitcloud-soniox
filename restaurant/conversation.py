@@ -184,9 +184,11 @@ _PRICE_RE = indic_word_re(
 )
 
 _AVAIL_RE = indic_word_re(
-    r"do you have|have you got|is there|available|hai\??|hain\??|"
+    r"do you have|have you got|is there|available|availability|hai\??|hain\??|"
+    r"hai gi|haigi|haigi hai|"
     r"mil.?ega|mil.?egi|kya hai|kya hain|"
-    r"ਕੀ\s*ਹੈ|ਕੀ\s*ਹਨ|ਮਿਲੇਗ|ਚ\s*ਕੀ\s*ਹੈ"
+    r"ਕੀ\s*ਹੈ|ਕੀ\s*ਹਨ|ਮਿਲੇਗ|ਚ\s*ਕੀ\s*ਹੈ|"
+    r"ਹੈਗੀ|ਅਵੇਲੇਬਲ"
 )
 
 _BROWSE_RE = indic_word_re(
@@ -463,6 +465,38 @@ def format_browse_reply(
     if lang == CustomerLanguage.HINDI:
         return f"हाँ जी, हमारे पास {v1} और {v2} है — कौन सा?"
     return f"Yes — we have {v1} and {v2}. Which one?"
+
+
+def is_availability_question(text: str) -> bool:
+    """True when caller is asking if a dish exists — not ordering it."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    if _ADD_IMPERATIVE_RE.search(t):
+        return False
+    if _QTY_ITEM_RE.search(t) and _ADD_RE.search(t):
+        return False
+    if _AVAIL_RE.search(t):
+        return True
+    if re.search(r"ਹੈਗੀ|ਅਵੇਲੇਬਲ", t):
+        return True
+    return False
+
+
+def format_availability_reply(item: dict, lang: CustomerLanguage) -> str:
+    """Short yes-line for a single dish availability check."""
+    voice = item.get("voice_line") or item.get("speak_as") or item["name"]
+    if item.get("unavailable"):
+        if lang in (CustomerLanguage.PUNJABI, CustomerLanguage.MIXED):
+            return f"ਮਾਫ ਕਰਨਾ ਜੀ — {voice} ਅਜੇ available ਨਹੀਂ ਹੈ।"
+        if lang == CustomerLanguage.HINDI:
+            return f"माफ़ कीजिए — {voice} अभी available नहीं है।"
+        return f"Sorry — {voice} isn't available right now."
+    if lang in (CustomerLanguage.PUNJABI, CustomerLanguage.MIXED):
+        return f"ਹਾਂ ਜੀ, {voice} available ਹੈ — ਚਾਹੀਦਾ?"
+    if lang == CustomerLanguage.HINDI:
+        return f"हाँ जी, {voice} available है — चाहिए?"
+    return f"Yes — we have {voice}. Would you like that?"
 
 
 def is_likely_pickup_stt(text: str) -> bool:
