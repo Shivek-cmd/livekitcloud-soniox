@@ -839,6 +839,22 @@ class RestaurantAgent(Agent):
         once per item in the same turn."""
         item = menu_provider.find_item(item_name)
         if not item:
+            # The strict matcher abstained. If the word maps to several real
+            # dishes (e.g. "fish" -> Fish Curry / Fish Pakora), ASK which one —
+            # never let the model pick or invent dishes the caller didn't name.
+            options = menu_provider.disambiguation_options(item_name)
+            if len(options) >= 2:
+                names = ", ".join(o["name"] for o in options)
+                return (
+                    f'"{item_name}" could be more than one dish: {names}. '
+                    "Ask the customer which ONE they want — do NOT add anything, "
+                    "do NOT pick for them, and do NOT add more than one dish."
+                )
+            if len(options) == 1:
+                return (
+                    f'Did the customer mean "{options[0]["name"]}"? '
+                    "Confirm with a quick yes/no before adding — do NOT add yet."
+                )
             return f"'{item_name}' is not on our menu. Ask the customer to clarify or call search_menu_items."
 
         # Uncertain match → confirm before adding rather than guessing the dish.
@@ -848,6 +864,10 @@ class RestaurantAgent(Agent):
                 f'Not fully sure — did the customer mean "{item["name"]}"? '
                 "Ask a quick one-line yes/no to confirm before adding; do NOT add yet."
             )
+
+        # Never add a quantity the caller didn't actually say.
+        if not isinstance(quantity, int) or quantity < 1:
+            quantity = 1
 
         was_checkout = not is_collecting_phase(self._flow.state.phase)
         result = self.cart.add_item(item, quantity, note)
@@ -1146,6 +1166,18 @@ class RestaurantAgent(Agent):
         if item and not item.get("unavailable"):
             price = menu_provider.item_price_dollars(item["name"])
             self._flow.note_discussed_item(item["name"], price)
+        if not item:
+            # Don't dead-end on "not on our menu" for a vague-but-real term —
+            # surface the real dishes it could mean so the model asks which one.
+            options = menu_provider.disambiguation_options(item_name)
+            if len(options) >= 2:
+                names = ", ".join(o["name"] for o in options)
+                result = (
+                    f'"{item_name}" could be: {names}. Ask the customer which ONE — '
+                    "do NOT pick for them and do NOT add anything yet."
+                )
+                self._record_tool("check_menu_item", {"item_name": item_name}, result)
+                return result
         result = menu_provider.check_item(item_name)
         self._record_tool("check_menu_item", {"item_name": item_name}, result)
         return result

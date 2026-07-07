@@ -113,6 +113,29 @@ def test_courtesy_verb_never_matches_curry(clover_cache):
     assert menu_provider.find_item("ਹਾਂ ਜੀ") is None
 
 
+def test_ambiguous_fish_disambiguates_not_guesses(clover_cache):
+    # Live-call bug: caller said "one fish" and got Fish Curry + two Fish Pakora.
+    # "fish" is ambiguous — the strict matcher must abstain, and disambiguation
+    # must surface BOTH real dishes so the agent asks which one instead of the
+    # model inventing dishes/quantities.
+    assert menu_provider.find_item("fish") is None
+    assert menu_provider.find_item("ਮੱਛੀ") is None
+    names = {o["name"] for o in menu_provider.disambiguation_options("fish")}
+    assert names == {"Punjabi Fish Curry", "Amritsari Fish Pakora"}
+    names_pa = {o["name"] for o in menu_provider.disambiguation_options("ਮੱਛੀ")}
+    assert names_pa == {"Punjabi Fish Curry", "Amritsari Fish Pakora"}
+
+
+def test_disambiguation_empty_for_non_item(clover_cache):
+    assert menu_provider.disambiguation_options("unicorn burger") == []
+
+
+def test_specific_fish_dish_still_resolves(clover_cache):
+    # Naming the specific dish must still add cleanly — no false disambiguation.
+    assert menu_provider.find_item("fish curry")["name"] == "Punjabi Fish Curry"
+    assert menu_provider.find_item("fish pakora")["name"] == "Amritsari Fish Pakora"
+
+
 def test_gurmukhi_spelling_variant_matches(clover_cache):
     hit = menu_provider.find_item("ਮਿਕਸ ਪਕੌੜਾ ਪਲੈਟਰ")
     assert hit is not None

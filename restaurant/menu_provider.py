@@ -60,6 +60,25 @@ def find_item(name: str) -> dict | None:
     return item
 
 
+def disambiguation_options(name: str, *, limit: int = 3) -> list[dict]:
+    """Available menu items a vague term could mean, when the strict matcher
+    abstained. Used to ASK the caller which dish instead of guessing (e.g.
+    "fish" -> Punjabi Fish Curry, Amritsari Fish Pakora) or dead-ending on
+    "not on our menu" when the dish clearly exists.
+    """
+    cache = _get_cache()
+    if not cache:
+        return []
+    out: list[dict] = []
+    for hit in cache.search(name, limit=limit * 2):
+        if not hit.available:
+            continue
+        out.append({"name": hit.name, "voice_line": hit.voice_line})
+        if len(out) >= limit:
+            break
+    return out
+
+
 def find_item_by_id(clover_item_id: str) -> dict | None:
     """Look up a menu item by its Clover id (used by web tap-to-add)."""
     cache = _get_cache()
