@@ -177,9 +177,11 @@ def outstanding_requirements(cart: OrderCart, state: OrderFlowState) -> list[str
         return ["at least one item"]
 
     reqs: list[str] = []
-    for item in cart.items:
-        if _dish_needs_spice(item):
-            reqs.append(f"spice level for {item.name}")
+    contact_pending = not cart.customer_name or not cart.customer_phone
+    if not contact_pending:
+        for item in cart.items:
+            if _dish_needs_spice(item):
+                reqs.append(f"spice level for {item.name}")
     if not (state.allergies_asked or state.special_instructions_done):
         reqs.append("ask about allergies / special instructions")
     if not cart.order_type:
@@ -429,6 +431,13 @@ class OrderFlowController:
             "time, in the customer's language."
         )
         lines.append(language_turn_guidance(lang))
+        if self.state.readback_confirmed and (
+            not cart.customer_name or not cart.customer_phone
+        ):
+            lines.append(
+                "Contact capture step ONLY — collect customer name then phone. "
+                "Do NOT ask spice, modifiers, or new menu items until BOTH are saved."
+            )
         if self.state.last_browse_topic:
             lines.append(
                 f'Customer was browsing "{self.state.last_browse_topic}" — they may be '

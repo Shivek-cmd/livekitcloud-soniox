@@ -74,6 +74,15 @@ def test_parse_punjabi_name_mera():
     assert "ਸ਼ਿਵ" in name or "Shiv" in name.lower() or len(name) >= 3
 
 
+def test_parse_punjabi_name_with_filler_and_two_words():
+    name = parse_customer_name("ਅਹ, ਸੰਦੀਪ ਸਿੰਘ")
+    assert name == "ਸੰਦੀਪ ਸਿੰਘ"
+
+
+def test_parse_two_word_english_name():
+    assert parse_customer_name("Sandeep Singh") == "Sandeep Singh"
+
+
 def test_phone_not_confused_with_order_in_customer_phone_phase():
     intent = resolve_intent("94137 52688", phase="customer_phone")
     assert intent != UserIntent.ADD_ITEM
