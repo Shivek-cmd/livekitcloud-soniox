@@ -233,7 +233,7 @@ def test_order_done_uses_allergies_template():
     flow = OrderFlowController(is_phone=True)
     plan = flow.build_turn_plan("that's all", UserIntent.ORDER_DONE, cart)
     assert flow.state.phase == OrderPhase.SPECIAL_INSTRUCTIONS
-    assert "CHECKOUT STEP" in plan.guidance
+    assert "Still needed before you can place this order" in plan.guidance
 
 
 def test_phase_advances_after_no_allergy():
@@ -245,7 +245,7 @@ def test_phase_advances_after_no_allergy():
     plan = flow.build_turn_plan("ਨਹੀਂ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ", UserIntent.CONFIRM_NO, cart)
     assert flow.state.special_instructions_done is True
     assert flow.state.phase == OrderPhase.ORDER_TYPE
-    assert "CHECKOUT STEP" in plan.guidance
+    assert "Still needed before you can place this order" in plan.guidance
 
 
 def test_unrelated_repeat_does_not_skip_allergies():
@@ -311,7 +311,7 @@ def test_confirming_readback_template():
     plan = flow.build_turn_plan("yes", UserIntent.CONFIRM_YES, cart)
     assert flow.state.readback_confirmed is True
     assert flow.state.phase == OrderPhase.CUSTOMER_NAME
-    assert "CHECKOUT STEP" in plan.guidance
+    assert "Still needed before you can place this order" in plan.guidance
 
 
 def test_want_to_order_asks_pickup_delivery():
@@ -362,7 +362,7 @@ def test_confirming_advances_on_all_good():
     plan = flow.build_turn_plan("ਹਾਂ ਜੀ, ਆਲ ਗੁੱਡ", UserIntent.GENERAL, cart)
     assert flow.state.readback_confirmed is True
     assert flow.state.phase == OrderPhase.CUSTOMER_NAME
-    assert "CHECKOUT STEP" in plan.guidance
+    assert "Still needed before you can place this order" in plan.guidance
 
 
 def test_readback_without_price_on_phone():

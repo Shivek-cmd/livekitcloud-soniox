@@ -559,6 +559,31 @@ def mentions_already_said(text: str) -> bool:
     return bool(_ALREADY_SAID_RE.search(t))
 
 
+_CORRECTION_CUE_RE = re.compile(
+    r"(?:"
+    r"\bnot\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\b|"
+    r"\bi\s+said\b|\bi\s+meant\b|\bi\s+didn'?t\s+say\b|"
+    r"\bmake\s+(?:it|that)\b|\bchange\s+(?:it|that)?\s*to\b|"
+    r"\bshould\s+be\b|\bnot\s+that\s+many\b|"
+    r"ਕਿਹਾ\s*ਸੀ|ਗਲਤ|ਬਦਲ|ਨਹੀਂ\s*ਕਿਹਾ|"
+    r"कहा\s*था|ग़लत|गलत|बदल"
+    r")",
+    re.I,
+)
+
+
+def is_quantity_correction(text: str) -> bool:
+    """Caller is CORRECTING a quantity already in the order (e.g. 'I said one,
+    not two', 'make it three'), not adding more. This must route to
+    update_item_quantity (exact set), never the additive add_to_order — which
+    would compound the very mistake the caller is fixing. Code detects the
+    correction intent; the LLM/tool own the exact number (language → state)."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    return bool(_CORRECTION_CUE_RE.search(t))
+
+
 def looks_like_order_phrasing(text: str) -> bool:
     """True when the utterance contains a recognized add/order verb (English
     or Punjabi/Hindi) — the single source of truth for "does this sound like
