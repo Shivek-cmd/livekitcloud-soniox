@@ -24,7 +24,7 @@ export function OrderPanel({ connected }: Props) {
         <div className="panel-title">Your Order</div>
         <div className="order-empty">
           {connected
-            ? 'Your items will appear here as you order with Sierra — by voice or by tapping Add.'
+            ? 'Your items will appear here as you order with Sierra — by voice, or adjust quantities here once they land.'
             : 'Start a call and order by voice — your cart updates live here.'}
         </div>
       </section>
@@ -122,7 +122,7 @@ export function OrderPanel({ connected }: Props) {
 
       {placed && (
         <div className="order-placed-note">
-          Pay at {state?.order_type === 'delivery' ? 'delivery' : 'pickup'}. ਧੰਨਵਾਦ ਜੀ!
+          Pay at {state?.order_type === 'delivery' ? 'delivery' : 'pickup'}. Thank you!
         </div>
       )}
     </section>
