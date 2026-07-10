@@ -1,9 +1,13 @@
 # Documentation index
 
-**New conversation → read [`HANDOFF.md`](HANDOFF.md) first.**
+**New conversation → read [`HANDOFF.md`](HANDOFF.md) first.**  
+**New developer → read [`DEVELOPER_ONBOARDING.md`](DEVELOPER_ONBOARDING.md).**  
+**Run locally → [`LOCAL_DEV.md`](LOCAL_DEV.md)** (token server + web + agent).
 
 | Doc | Purpose |
 |-----|---------|
+| [**LOCAL_DEV.md**](LOCAL_DEV.md) | Local processes & commands (Windows-friendly) |
+| [**DEVELOPER_ONBOARDING.md**](DEVELOPER_ONBOARDING.md) | Full architecture, repo map, env vars, deploy, onboarding checklist |
 | [**HANDOFF.md**](HANDOFF.md) | Current state, what's done, what's next, ops cheat sheet |
 | [plan/06-milestones.md](plan/06-milestones.md) | Build phases 1–8 + web W1–W6 |
 | [plan/11-web-order-with-sierra.md](plan/11-web-order-with-sierra.md) | Web "Order with Sierra" plan (W3–W6 next) |
