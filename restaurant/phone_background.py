@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 
 from restaurant.clover.match import phonetic_key
-from restaurant.conversation import UserIntent
 from restaurant.phone_echo import _ORDER_SIGNAL_RE, should_bypass_phone_echo_filter
 from restaurant.stt_noise import is_likely_stt_noise, parse_standalone_quantity
 
@@ -117,12 +116,16 @@ def _looks_like_named_answer(raw_text: str) -> bool:
 
 def is_likely_background_speech(
     user_text: str,
-    intent: UserIntent,
+    intent: str | None,
     *,
     enabled: bool = True,
     phase: str | None = None,
 ) -> bool:
-    """True when STT text is probably background TV / nearby speaker, not the customer."""
+    """True when STT text is probably background TV / nearby speaker, not the customer.
+
+    `intent` is the plain intent value ("general", "add_item", …) or None
+    (None is treated like an unclassified turn).
+    """
     if not enabled:
         return False
 
@@ -142,7 +145,7 @@ def is_likely_background_speech(
     if should_bypass_phone_echo_filter(text, intent):
         return False
 
-    if intent not in (UserIntent.GENERAL, UserIntent.UNCLEAR):
+    if intent not in ("general", "unclear", None):
         return False
 
     if _ORDER_SIGNAL_RE.search(text):
@@ -151,7 +154,7 @@ def is_likely_background_speech(
     if _BACKGROUND_FRAGMENT_RE.search(text):
         return True
 
-    if is_likely_stt_noise(text) and intent in (UserIntent.GENERAL, UserIntent.UNCLEAR):
+    if is_likely_stt_noise(text) and intent in ("general", "unclear", None):
         return True
 
     if _looks_like_named_answer(text):

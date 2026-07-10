@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Sequence
+from typing import Sequence
 
 from restaurant.text_match import indic_word_re, word_bounded
-
-if TYPE_CHECKING:
-    from restaurant.conversation import UserIntent
 
 # Echo of Sierra reprompt / recovery lines — drop silently, never reprompt again.
 _RECOVERY_ECHO_PHRASES: tuple[str, ...] = (
@@ -102,11 +99,14 @@ def is_greeting_tail_echo(user_text: str) -> bool:
     return any(phrase in u for phrase in _GREETING_TAIL_PHRASES)
 
 
-def should_bypass_phone_echo_filter(user_text: str, intent: UserIntent | None) -> bool:
-    """True when user speech must be processed even if it overlaps recent agent lines."""
+def should_bypass_phone_echo_filter(user_text: str, intent: str | None) -> bool:
+    """True when user speech must be processed even if it overlaps recent agent lines.
+
+    `intent` is the plain intent value ("pickup", "add_item", …) or None.
+    """
     if not user_text.strip():
         return False
-    if intent is not None and intent.value in _BYPASS_INTENTS:
+    if intent is not None and intent in _BYPASS_INTENTS:
         return True
     if _PRICE_SIGNAL_RE.search(user_text):
         return True
@@ -119,7 +119,7 @@ def is_likely_phone_echo(
     user_text: str,
     recent_agent_lines: Sequence[str],
     *,
-    intent: UserIntent | None = None,
+    intent: str | None = None,
 ) -> bool:
     """Return True if user_text is probably acoustic echo of recent agent speech."""
     user = user_text.strip()

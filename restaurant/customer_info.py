@@ -185,7 +185,37 @@ _NAME_PATTERNS = (
 )
 
 
-from restaurant.text_match import indic_word_re
+from restaurant.text_match import indic_word_re, word_bounded
+
+# Private copies of the pickup/delivery/qty-item patterns (formerly lazy
+# imports from conversation.py — severed in PR 060 so that module can be
+# deleted at cutover).
+_PICKUP_RE = indic_word_re(
+    r"pickup|pick up|pick-up|takeaway|take away|"
+    r"ਪਿਕਅੱਪ|ਪਿਕ ਅੱਪ|ਪਿਕ.*ਕਰ|pick.*up"
+)
+
+_DELIVERY_RE = indic_word_re(
+    r"delivery|deliver|home delivery|ਡਿਲਿਵਰੀ|ਘਰ.*ਡਿਲਿਵਰ"
+)
+
+_QTY_ITEM_RE = re.compile(
+    word_bounded(
+        r"one|two|three|four|five|six|seven|eight|nine|ten|"
+        r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
+        r"\d+"
+    )
+    + r"\s+\w+",
+    re.I,
+)
+
+
+def _menu_item_hint_in_text(text: str) -> bool:
+    """Utterance names a likely menu item (same check conversation.py used)."""
+    from restaurant import menu_provider
+
+    return menu_provider.resolve_item_in_text(text) is not None
+
 
 # Checkout / intent words — never valid customer names (e.g. STT "ਪਿਕਅੱਪ" alone).
 _BLOCKED_NAME_RE = indic_word_re(
@@ -207,8 +237,6 @@ def is_valid_customer_name(name: str) -> bool:
         # Allow longer strings that merely mention pickup in a sentence — not for names.
         if len(n.split()) == 1:
             return False
-    from restaurant.conversation import _DELIVERY_RE, _PICKUP_RE
-
     if len(n.split()) == 1:
         if _PICKUP_RE.search(n) or _DELIVERY_RE.search(n):
             return False
@@ -219,9 +247,7 @@ def _clean_name_token(token: str) -> str | None:
     name = (token or "").strip(" ,.-")
     if not name or not is_valid_customer_name(name):
         return None
-    from restaurant.conversation import _QTY_ITEM_RE, menu_item_hint_in_text
-
-    if _QTY_ITEM_RE.search(name) or menu_item_hint_in_text(name):
+    if _QTY_ITEM_RE.search(name) or _menu_item_hint_in_text(name):
         return None
     return name
 
@@ -260,9 +286,7 @@ def parse_customer_name(text: str) -> str | None:
         return None
     if re.search(r"\d", cleaned):
         return None
-    from restaurant.conversation import _QTY_ITEM_RE, menu_item_hint_in_text
-
-    if _QTY_ITEM_RE.search(cleaned) or menu_item_hint_in_text(cleaned):
+    if _QTY_ITEM_RE.search(cleaned) or _menu_item_hint_in_text(cleaned):
         return None
     if len(words) == 2:
         pair = " ".join(words)

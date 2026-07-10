@@ -1,6 +1,12 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
+from restaurant.agent.replies import (
+    format_add_tool_reply,
+    format_remove_tool_reply,
+    format_update_tool_reply,
+)
+from restaurant.customer_info import is_valid_customer_name
 from restaurant.menu import DELIVERY_CHARGE
 
 
@@ -32,6 +38,9 @@ class OrderCart:
     placed: bool = False
     order_id: Optional[str] = None
     eta: Optional[str] = None
+    # Bumped on every mutation (including web-RPC by-id paths) — a spoken
+    # readback is only valid for the revision it was generated from.
+    revision: int = 0
 
     @property
     def is_empty(self) -> bool:
@@ -49,8 +58,6 @@ class OrderCart:
         if item.get("unavailable"):
             return f"Sorry, {item['name']} is not available right now. Ask the customer to pick something else."
 
-        from restaurant.conversation import format_add_tool_reply
-
         voice = item.get("voice_line") or item.get("speak_as") or item["name"]
 
         for existing in self.items:
@@ -58,6 +65,7 @@ class OrderCart:
                 existing.quantity += quantity
                 if note:
                     existing.note = note
+                self.revision += 1
                 return format_add_tool_reply(
                     [(existing.quantity, existing.voice_line or voice)],
                     updated=True,
@@ -72,15 +80,15 @@ class OrderCart:
             clover_item_id=item.get("clover_item_id"),
             speech_mode=item.get("speech_mode") or "mixed",
         ))
+        self.revision += 1
         return format_add_tool_reply([(quantity, voice)])
 
     def remove_item(self, name: str) -> str:
-        from restaurant.conversation import format_remove_tool_reply
-
         for i, item in enumerate(self.items):
             if name.lower() in item.name.lower():
                 removed = self.items.pop(i)
                 voice = removed.voice_line or removed.name
+                self.revision += 1
                 return format_remove_tool_reply(voice)
         return f"INTERNAL: not found. Ask customer to clarify the item name."
 
@@ -91,19 +99,16 @@ class OrderCart:
         (e.g. "I said one, not two"). add_item() is additive and would
         compound the error instead of fixing it.
         """
-        from restaurant.conversation import (
-            format_remove_tool_reply,
-            format_update_tool_reply,
-        )
-
         for i, item in enumerate(self.items):
             if name.lower() in item.name.lower():
                 if quantity <= 0:
                     removed = self.items.pop(i)
                     voice = removed.voice_line or removed.name
+                    self.revision += 1
                     return format_remove_tool_reply(voice)
                 item.quantity = quantity
                 voice = item.voice_line or item.name
+                self.revision += 1
                 return format_update_tool_reply(quantity, voice)
         return "INTERNAL: not found. Ask customer to clarify the item name."
 
@@ -115,6 +120,7 @@ class OrderCart:
                     self.items.pop(i)
                 else:
                     item.quantity = quantity
+                self.revision += 1
                 return True
         return False
 
@@ -122,6 +128,7 @@ class OrderCart:
         for i, item in enumerate(self.items):
             if item.clover_item_id == clover_item_id:
                 self.items.pop(i)
+                self.revision += 1
                 return True
         return False
 
@@ -202,8 +209,6 @@ class OrderCart:
             return False, "Order type (pickup/delivery) not set."
         if not self.customer_name:
             return False, "Customer name not provided."
-        from restaurant.customer_info import is_valid_customer_name
-
         if not is_valid_customer_name(self.customer_name):
             return False, "Customer name not provided."
         if not self.customer_phone:
