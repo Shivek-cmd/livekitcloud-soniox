@@ -27,6 +27,14 @@ fallback, and clamping to Soniox's valid ranges (500–3000ms, -1.0–1.0).
   (default **unset/None** = Soniox neutral), clamps to -1.0–1.0.
 - `build_stt()` passes both into `soniox.STTOptions`.
 
+### `.env.example`
+Documents the two new vars under the Soniox section (delay set to the 1000ms
+default, sensitivity left commented out / neutral).
+
+### `docs/vps-config.md`
+Adds both vars to the phone-tuning env table so they can be overridden on the
+VPS without a code deploy.
+
 ## Files Deleted
 None.
 
