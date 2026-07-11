@@ -184,6 +184,16 @@ def recovery_phrase(*, is_phone: bool) -> str:
     return "Sorry ji — go ahead whenever you're ready."
 
 
+def echo_recovery_phrase() -> str:
+    """Short reprompt after phone echo drop — avoid echoing Sierra's own prior line."""
+    return "ਮੈਂ ਸੁਣ ਰਹੀ ਹਾਂ — go ahead ji."
+
+
+def background_repeat_phrase() -> str:
+    """One reprompt when background noise caused dropped turns."""
+    return "Sorry, I didn't catch that — could you repeat please?"
+
+
 # ── Assistant output guard ────────────────────────────────────────────────────
 
 
