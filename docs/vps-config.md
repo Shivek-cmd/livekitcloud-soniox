@@ -62,6 +62,8 @@ Add to `/opt/livekit-sarvam/.env` to override without code deploy:
 USE_CLOVER_MENU=1
 PHONE_ENDPOINTING_MAX=0.5          # phone + web — lower = faster reply, may cut off pauses
 PHONE_ENDPOINTING_MIN=0.2          # phone + web
+SONIOX_MAX_ENDPOINT_DELAY_MS=1000  # PR 064 — Soniox finalize delay after speech stops (500-3000)
+#SONIOX_ENDPOINT_SENSITIVITY=0.3   # PR 064 — -1.0..1.0, higher = finalize sooner; unset = neutral
 PHONE_PREEMPTIVE_GENERATION=true
 PHONE_PREEMPTIVE_TTS=true
 PHONE_GREETING_SETTLE_SEC=2.0

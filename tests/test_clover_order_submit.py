@@ -69,6 +69,12 @@ def test_build_order_cart_expands_quantity(mock_resolve, mock_use, tenant):
     assert len(body["orderCart"]["lineItems"]) == 2
     assert body["orderCart"]["orderType"]["id"] == "PICKUP_OT"
     assert "Sierra voice order" in body["orderCart"]["note"]
+    assert "ALLERGY" not in body["orderCart"]["note"]
+
+    body = build_order_cart_body(
+        cart, tenant=tenant, client=client, channel="web", allergy_note="peanut allergy"
+    )
+    assert "ALLERGY: peanut allergy" in body["orderCart"]["note"]
 
 
 @patch("restaurant.clover.order_submit.menu_provider.use_clover_menu", return_value=True)

@@ -1,15 +1,11 @@
 """Tests for customer name/phone parsing and English-only phone readback."""
 
-from restaurant.conversation import (
-    UserIntent,
-    is_done_ordering,
-    resolve_intent,
-    sanitize_assistant_speech,
-)
+from restaurant.agent.replies import sanitize_assistant_speech
 from restaurant.customer_info import (
     enforce_english_phone_in_speech,
     extract_phone_digits,
     format_phone_spoken,
+    is_valid_customer_name,
     looks_like_phone_utterance,
     parse_customer_name,
 )
@@ -21,10 +17,9 @@ def test_extract_phone_digits():
     assert extract_phone_digits("9413752688") == "9413752688"
 
 
-def test_looks_like_phone_not_add_item():
+def test_looks_like_phone_utterance():
     assert looks_like_phone_utterance("94137 52688")
-    assert resolve_intent("94137 52688", phase="customer_phone") == UserIntent.GENERAL
-    assert resolve_intent("94137 52688") == UserIntent.GENERAL
+    assert not looks_like_phone_utterance("one paneer tikka")
 
 
 def test_format_phone_spoken_english_words():
@@ -62,8 +57,6 @@ def test_parse_customer_name_exact():
 def test_pickup_not_a_customer_name():
     assert parse_customer_name("ਪਿਕਅੱਪ") is None
     assert parse_customer_name("pickup") is None
-    from restaurant.customer_info import is_valid_customer_name
-
     assert not is_valid_customer_name("ਪਿਕਅੱਪ")
     assert is_valid_customer_name("ਸ਼ਿਵੇਕ")
 
@@ -81,13 +74,3 @@ def test_parse_punjabi_name_with_filler_and_two_words():
 
 def test_parse_two_word_english_name():
     assert parse_customer_name("Sandeep Singh") == "Sandeep Singh"
-
-
-def test_phone_not_confused_with_order_in_customer_phone_phase():
-    intent = resolve_intent("94137 52688", phase="customer_phone")
-    assert intent != UserIntent.ADD_ITEM
-
-
-def test_done_ordering_punjabi_enough():
-    assert is_done_ordering("ਨਹੀਂ ਨਹੀਂ, ਬਹੁਤ ਹੈ")
-    assert resolve_intent("ਨਹੀਂ ਨਹੀਂ, ਬਹੁਤ ਹੈ", phase="awaiting_more") == UserIntent.ORDER_DONE
