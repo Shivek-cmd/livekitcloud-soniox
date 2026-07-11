@@ -24,6 +24,13 @@ Full local-testing runbook: the `AGENT_NAME` swap that isolates localhost
 from the VPS worker, launch/verify/measure steps, and teardown + deploy
 checklist for when testing is done.
 
+### `turnwatchdog.md`
+Plan + session-handoff doc for the follow-up work (PRs 065–067): why
+end-of-speech still stalls 3.4–14s in noise (turn commit gated on Soniox
+semantic endpointing), and the staged fix (latency-tracker repair, explicit
+tuned VAD + Soniox sensitivity, EOU watchdog force-commit). Doc only — no
+code from that plan is in this PR.
+
 ## Files Modified
 ### `restaurant/voice_stack.py`
 - New `stt_max_endpoint_delay_ms()` — reads `SONIOX_MAX_ENDPOINT_DELAY_MS`
