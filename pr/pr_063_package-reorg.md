@@ -39,6 +39,9 @@ Imports re-pointed to `restaurant.channels.{ambient_audio,web_sync}` and `restau
 ### `tests/test_phone_echo.py`, `tests/test_phone_background.py`, `tests/test_stt_noise.py`, `tests/test_ambient_audio.py`, `tests/test_call_control.py`, `tests/test_session_recorder.py`
 Import paths (and the one `patch("restaurant.call_control.…")` string) updated to the new package paths.
 
+### `.gitignore`
+Added `.DS_Store` (macOS Finder artifact).
+
 ## Files Deleted
 None (moves only).
 
