@@ -181,6 +181,7 @@ def build_order_cart_body(
     client: CloverClient,
     session_id: str | None = None,
     channel: str = "phone",
+    allergy_note: str | None = None,
 ) -> dict[str, Any]:
     if not menu_provider.use_clover_menu():
         raise CloverOrderSubmitError(
@@ -209,6 +210,8 @@ def build_order_cart_body(
         note_parts.append(f"phone={cart.customer_phone}")
     if cart.order_type == "delivery" and cart.delivery_address:
         note_parts.append(f"addr={cart.delivery_address}")
+    if allergy_note:
+        note_parts.append(f"ALLERGY: {allergy_note}")
 
     body: dict[str, Any] = {
         "orderCart": {
@@ -307,6 +310,7 @@ def submit_cart_to_clover(
     tenant: Tenant,
     session_id: str | None = None,
     channel: str = "phone",
+    allergy_note: str | None = None,
 ) -> CloverSubmitResult:
     """Checkout validate + create atomic order + optional print."""
     client = client_from_tenant(tenant)
@@ -316,6 +320,7 @@ def submit_cart_to_clover(
         client=client,
         session_id=session_id,
         channel=channel,
+        allergy_note=allergy_note,
     )
 
     checkout_validated = False

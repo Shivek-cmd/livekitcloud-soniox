@@ -707,6 +707,7 @@ class RestaurantAgent(Agent):
                         self._recorder.session_id if self._recorder is not None else None
                     ),
                     channel=self._channel_label(),
+                    allergy_note=self.state.allergy_note or None,
                 )
             except CloverOrderSubmitError as e:
                 logger.error("Clover submit failed: %s", e)

@@ -1,41 +1,40 @@
-"""Phone background speech filter."""
+"""Phone background speech filter.
 
-from restaurant.conversation import UserIntent, detect_intent
+Post-cutover the filter takes a plain intent string (or None — the hybrid
+agent's hygiene hook passes None; intent regexes died with conversation.py).
+"""
+
 from restaurant.phone_background import is_likely_background_speech
 
 
 def test_pickup_not_background():
-    text = "Yeah, I'm looking for pickup."
-    intent = detect_intent(text)
-    assert not is_likely_background_speech(text, intent)
+    assert not is_likely_background_speech("Yeah, I'm looking for pickup.", None)
 
 
 def test_order_not_background():
-    text = "One paneer tikka and two mango shake."
-    intent = detect_intent(text)
-    assert not is_likely_background_speech(text, intent)
+    assert not is_likely_background_speech(
+        "One paneer tikka and two mango shake.", None
+    )
 
 
 def test_short_filler_is_background():
-    assert is_likely_background_speech("mm hmm", UserIntent.GENERAL)
-    assert is_likely_background_speech("thank you", UserIntent.GENERAL)
+    assert is_likely_background_speech("mm hmm", None)
+    assert is_likely_background_speech("thank you", None)
 
 
 def test_short_meaningful_not_background():
-    assert not is_likely_background_speech("pickup", UserIntent.GENERAL)
-    assert not is_likely_background_speech("haan ji", detect_intent("haan ji"))
+    assert not is_likely_background_speech("pickup", None)
+    assert not is_likely_background_speech("haan ji", None)
 
 
 def test_disabled_never_filters():
-    assert not is_likely_background_speech(
-        "mm hmm", UserIntent.GENERAL, enabled=False
-    )
+    assert not is_likely_background_speech("mm hmm", None, enabled=False)
 
 
 def test_customer_name_phase_never_filters_single_word():
     assert not is_likely_background_speech(
         "ਸੰਦੀਪ",
-        UserIntent.GENERAL,
+        None,
         phase="customer_name",
     )
 
@@ -43,7 +42,7 @@ def test_customer_name_phase_never_filters_single_word():
 def test_quantity_van_not_background_while_collecting():
     assert not is_likely_background_speech(
         "ਵਨ।",
-        UserIntent.GENERAL,
+        None,
         phase="awaiting_more",
     )
 
@@ -52,10 +51,7 @@ def test_named_answer_not_background():
     # Live-call regression (PR 053): caller answering "which mocktail?" with
     # a proper-noun-style name got dropped as background purely because
     # neither word is in the generic short-reply allowlist.
-    text = "Blue Lagoon."
-    assert not is_likely_background_speech(
-        text, detect_intent(text), phase="awaiting_more"
-    )
+    assert not is_likely_background_speech("Blue Lagoon.", None, phase="awaiting_more")
 
 
 def test_filler_prefixed_no_not_background():
@@ -63,10 +59,18 @@ def test_filler_prefixed_no_not_background():
     # allergies question was dropped — the hesitation marker "ਅਹ" dragged
     # down the 2-token all-meaningful check even though "ਨਹੀਂ" is a real
     # answer.
-    text = "ਅਹ, ਨਹੀਂ।"
     assert not is_likely_background_speech(
-        text, detect_intent(text), phase="special_instructions"
+        "ਅਹ, ਨਹੀਂ।", None, phase="special_instructions"
     )
+
+
+def test_allergies_nahi_nahi_not_background():
+    # Live-transcript regression (2026-07-02 allergies stuck).
+    assert not is_likely_background_speech("ਨਹੀਂ ਨਹੀਂ,", None)
+
+
+def test_hello_gurmukhi_not_background():
+    assert not is_likely_background_speech("ਹੈਲੋ,", None)
 
 
 def test_title_case_bypass_does_not_match_long_sentences():

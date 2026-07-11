@@ -109,9 +109,10 @@ def test_clover_submit_runs_off_event_loop(agent, monkeypatch):
 
     seen = {}
 
-    def _fake_submit(cart, *, tenant, session_id=None, channel="phone"):
+    def _fake_submit(cart, *, tenant, session_id=None, channel="phone", allergy_note=None):
         seen["thread"] = threading.current_thread()
         seen["channel"] = channel
+        seen["allergy_note"] = allergy_note
         return _FakeSubmitResult()
 
     monkeypatch.setattr(core, "submit_cart_to_clover", _fake_submit)
@@ -120,6 +121,7 @@ def test_clover_submit_runs_off_event_loop(agent, monkeypatch):
 
     assert seen["thread"] is not threading.main_thread()
     assert seen["channel"] == "phone"
+    assert seen["allergy_note"] is None  # "no" answer → no note threaded
     assert agent.cart.placed
     assert agent.cart.order_id == "CLV123"
     assert "ORDER COMPLETE" in result or "Order placed" in result
@@ -131,7 +133,7 @@ def test_clover_failure_never_fakes_success(agent, monkeypatch):
 
     monkeypatch.setattr(tenants_config, "get_default_tenant", lambda: _FakeTenant())
 
-    def _fail(cart, *, tenant, session_id=None, channel="phone"):
+    def _fail(cart, *, tenant, session_id=None, channel="phone", allergy_note=None):
         raise core.CloverOrderSubmitError("validation failed: item missing")
 
     monkeypatch.setattr(core, "submit_cart_to_clover", _fail)
@@ -150,7 +152,7 @@ def test_unexpected_error_spoken_failure_path(agent, monkeypatch):
 
     monkeypatch.setattr(tenants_config, "get_default_tenant", lambda: _FakeTenant())
 
-    def _fail(cart, *, tenant, session_id=None, channel="phone"):
+    def _fail(cart, *, tenant, session_id=None, channel="phone", allergy_note=None):
         raise RuntimeError("socket timeout")
 
     monkeypatch.setattr(core, "submit_cart_to_clover", _fail)

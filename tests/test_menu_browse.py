@@ -5,12 +5,6 @@ import pytest
 from restaurant import menu_provider
 from restaurant.clover.menu import MenuCache
 from restaurant.clover.models import CachedMenuItem
-from restaurant.conversation import (
-    extract_browse_query,
-    format_browse_reply,
-    is_category_browse_query,
-    CustomerLanguage,
-)
 from restaurant.menu_browse import resolve_browse_target, BrowseKind
 
 
@@ -156,25 +150,6 @@ def test_browse_tool_format_caps_spoken_items(browse_cache):
     assert "mention at most TWO" in result
 
 
-def test_extract_browse_query_strips_question_words():
-    assert extract_browse_query("what desserts do you have") == "desserts"
-    assert extract_browse_query("mithai kya hai") == "mithai"
-
-
-def test_is_category_browse_question_not_add_order():
-    assert is_category_browse_query("what fish do you have") is True
-    assert is_category_browse_query("mithai kya hai") is True
-    assert is_category_browse_query("fish") is True
-    assert is_category_browse_query("ਹਾਂ ਜੀ, ਮੈਨੂੰ ਇੱਕ ਫਿਸ਼ ਆਰਡਰ ਕਰਨੀ ਸੀ ਜੀ") is False
-    assert is_category_browse_query("ਇੱਕ ਫਿਸ਼ ਚਾਹੀਦੀ") is False
-
-
-def test_format_browse_reply_two_items_punjabi():
-    options = [
-        {"name": "A", "voice_line": "ਡਿਸ਼ ਏ"},
-        {"name": "B", "voice_line": "ਡਿਸ਼ ਬੀ"},
-    ]
-    line = format_browse_reply(options, CustomerLanguage.PUNJABI)
-    assert "ਡਿਸ਼ ਏ" in line
-    assert "ਡਿਸ਼ ਬੀ" in line
-    assert "ਕਿਹੜਾ" in line
+# The old browse-intent helpers (extract_browse_query, is_category_browse_query,
+# format_browse_reply) died with conversation.py — the LLM now decides when to
+# browse and phrases the reply; browse_menu's tool text is checked above.
