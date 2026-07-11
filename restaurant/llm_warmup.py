@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 
 from livekit.agents.llm import ChatContext
 
-from restaurant.prompts import build_system_prompt
+from restaurant.agent.prompt import build_system_prompt
 from restaurant.voice_stack import build_llm
 
 if TYPE_CHECKING:

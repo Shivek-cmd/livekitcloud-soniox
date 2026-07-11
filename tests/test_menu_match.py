@@ -11,9 +11,6 @@ from restaurant import menu_provider
 from restaurant.clover.match import MatchIndex, content_tokens, phonetic_key
 from restaurant.clover.menu import MenuCache
 from restaurant.clover.models import CachedMenuItem
-from restaurant.order_parse import can_auto_add_lines, parse_order_lines
-
-LIVE_UTTERANCE = "ਹਾਂ ਜੀ, ਆਪਣੇ ਇੱਕ ਮਿਕਸ ਪਕੌੜਾ ਪਲੈਟਰ ਕਰ ਦਿਓ, ਤੇ ਇੱਕ ਸਮੋਸਾ ਚਾਟ ਕਰ ਦਿਓ।"
 
 
 def _item(iid, name, speak_as, voice_line, aliases, price=1000):
@@ -99,12 +96,14 @@ def test_content_tokens_drop_courtesy_words():
 # Live transcript regression
 
 
-def test_live_transcript_resolves_correct_items(clover_cache):
-    lines = parse_order_lines(LIVE_UTTERANCE)
-    names = [line.item["name"] for line in lines]
-    assert names == ["Mixed Pakora Platter", "Samosa Chaat (2 pcs)"]
-    assert all(line.quantity == 1 for line in lines)
-    assert can_auto_add_lines(lines) is True
+def test_live_transcript_dishes_resolve_per_query(clover_cache):
+    # The old multi-item parser is gone (the LLM now adds one validated item
+    # per add_item call) — the regression anchor survives as per-dish queries
+    # from the same live utterance, courtesy verbs and all.
+    hit = menu_provider.find_item("ਮਿਕਸ ਪਕੌੜਾ ਪਲੈਟਰ ਕਰ ਦਿਓ")
+    assert hit is not None and hit["name"] == "Mixed Pakora Platter"
+    hit = menu_provider.find_item("ਸਮੋਸਾ ਚਾਟ ਕਰ ਦਿਓ")
+    assert hit is not None and hit["name"] == "Samosa Chaat (2 pcs)"
 
 
 def test_courtesy_verb_never_matches_curry(clover_cache):
@@ -216,26 +215,6 @@ def test_extra_descriptors_do_not_break_match(clover_cache):
     hit = clover_cache.find_item("one butter chicken extra spicy please")
     assert hit is not None
     assert hit.name == "Butter Chicken"
-
-
-# ---------------------------------------------------------------------------
-# Auto-add confidence gate
-
-
-def test_low_confidence_line_blocks_auto_add(clover_cache):
-    lines = parse_order_lines(LIVE_UTTERANCE)
-    assert len(lines) == 2
-    weak = [
-        type(lines[0])(quantity=1, item=lines[0].item, confidence=0.5),
-        lines[1],
-    ]
-    assert can_auto_add_lines(weak) is False
-
-
-def test_auto_add_threshold_env(clover_cache, monkeypatch):
-    monkeypatch.setenv("AUTO_ADD_MIN_CONFIDENCE", "1.1")
-    lines = parse_order_lines(LIVE_UTTERANCE)
-    assert can_auto_add_lines(lines) is False
 
 
 # ---------------------------------------------------------------------------
