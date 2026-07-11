@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 
 from restaurant import menu_provider
+from restaurant.stt_noise import _QTY_RE, _QTY_WORDS, _extract_qty  # noqa: F401
 from restaurant.text_match import word_bounded
 
 _DEFAULT_AUTO_ADD_MIN_CONF = 0.8
@@ -83,35 +84,6 @@ _STRIP_SEGMENT_SUFFIX = re.compile(
 # STT sometimes inserts "ਤੁਸੀਂ" mid-phrase — "ਇੱਕ ਤੁਸੀਂ ਰਸਮਲਾਈ".
 _STRIP_INLINE_NOISE = re.compile(r"\s+\u0a24\u0a41\u0a38\u0a40\u0a02\s+")
 
-_QTY_WORDS = {
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
-    "ten": 10,
-    "a": 1,
-    "an": 1,
-    "ਇੱਕ": 1,
-    "ਐਕ": 1,
-    "ਦੋ": 2,
-    "ਤਿੰਨ": 3,
-}
-
-_QTY_RE = re.compile(
-    word_bounded(
-        r"one|two|three|four|five|six|seven|eight|nine|ten|"
-        r"a|an|"
-        r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
-        r"(\d+)"
-    ),
-    re.I,
-)
-
 _QTY_ITEM_CHUNKS = re.compile(
     r"(?:"
     r"one|two|three|four|five|six|seven|eight|nine|ten|"
@@ -128,21 +100,6 @@ class ParsedOrderLine:
     item: dict
     # 1.0 = exact/static match; Clover fuzzy matches carry their real score
     confidence: float = 1.0
-
-
-def _extract_qty(segment: str) -> tuple[int, str]:
-    segment = segment.strip()
-    match = _QTY_RE.search(segment)
-    if not match:
-        return 1, segment
-    token = match.group(0)
-    if token.isdigit():
-        qty = int(token)
-    else:
-        qty = _QTY_WORDS.get(token.lower(), 1)
-    rest = (segment[: match.start()] + segment[match.end() :]).strip()
-    rest = re.sub(r"^(?:of|x)\s+", "", rest, flags=re.I)
-    return max(1, qty), rest
 
 
 def _clean_order_segment(text: str) -> str:

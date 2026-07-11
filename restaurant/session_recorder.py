@@ -195,8 +195,8 @@ class SessionRecorder:
         self.outcome = "transfer"
         self.add_event("transfer_requested", {"reason": reason})
 
-    def finalize(self, cart, flow) -> dict[str, Any]:
-        """Build export payload from cart + order flow controller."""
+    def finalize(self, cart, *, preferred_language: str | None = None) -> dict[str, Any]:
+        """Build export payload from the cart + session language."""
         self.ended_at = _utcnow()
         duration = int((self.ended_at - self.started_at).total_seconds())
 
@@ -235,9 +235,7 @@ class SessionRecorder:
             "duration_seconds": duration,
             "outcome": self.outcome,
             "turn_count": len(self.turns),
-            "preferred_language": getattr(
-                flow.state.preferred_language, "value", str(flow.state.preferred_language)
-            ),
+            "preferred_language": preferred_language,
             "customer_name": cart.customer_name,
             "customer_phone": cart.customer_phone,
             "order_type": cart.order_type,

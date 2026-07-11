@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 from restaurant.menu import find_item as static_find_item
+from restaurant.text_match import indic_word_re, word_bounded
 
 logger = logging.getLogger("menu-provider")
 
@@ -131,15 +132,64 @@ def extract_dish_query(text: str) -> str | None:
     return None
 
 
+# Private copy of conversation.py's availability-question check (PR 060 —
+# severs the last lazy import into that module so it can be deleted at cutover).
+_AVAIL_Q_RE = indic_word_re(
+    r"do you have|have you got|is there|available|availability|hai\??|hain\??|"
+    r"hai gi|haigi|haigi hai|"
+    r"mil.?ega|mil.?egi|kya hai|kya hain|"
+    r"ਕੀ\s*ਹੈ|ਕੀ\s*ਹਨ|ਮਿਲੇਗ|ਚ\s*ਕੀ\s*ਹੈ|"
+    r"ਹੈਗੀ|ਅਵੇਲੇਬਲ"
+)
+
+_ADD_IMPERATIVE_Q_RE = re.compile(
+    r"ਕਰੋ|ਕਰ ਦ|ਦਿਓ|ਦਿਉ|ਐਡ|\badd\b|"
+    r"करो|कर द|दो|दिया|दियो|दीजिए",
+    re.I,
+)
+
+_QTY_ITEM_Q_RE = re.compile(
+    word_bounded(
+        r"one|two|three|four|five|six|seven|eight|nine|ten|"
+        r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
+        r"\d+"
+    )
+    + r"\s+\w+",
+    re.I,
+)
+
+_ADD_Q_RE = indic_word_re(
+    r"add|order|want|need|get me|give me|i.?ll take|i want|"
+    r"i'd like|chahiye|dedo|de do|lao|"
+    r"order karo|order kar|add karo|add kar|"
+    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ|ਐਡ|"
+    r"चाहि(?:ए|ये|या)|ऑर्डर|डाल द|जोड़|ले|कर द|एड"
+)
+
+
+def _is_availability_question(text: str) -> bool:
+    """True when caller is asking if a dish exists — not ordering it."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    if _ADD_IMPERATIVE_Q_RE.search(t):
+        return False
+    if _QTY_ITEM_Q_RE.search(t) and _ADD_Q_RE.search(t):
+        return False
+    if _AVAIL_Q_RE.search(t):
+        return True
+    if re.search(r"ਹੈਗੀ|ਅਵੇਲੇਬਲ", t):
+        return True
+    return False
+
+
 def resolve_item_dict_from_text(text: str) -> dict | None:
     """Best menu item dict from free-form caller text (chunk-first for questions)."""
-    from restaurant.conversation import is_availability_question
-
     t = (text or "").strip()
     if not t:
         return None
 
-    if is_availability_question(t):
+    if _is_availability_question(t):
         name = extract_dish_query(t)
         return find_item(name) if name else None
 

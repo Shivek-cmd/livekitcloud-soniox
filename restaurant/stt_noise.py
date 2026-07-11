@@ -4,8 +4,73 @@ from __future__ import annotations
 
 import re
 
-from restaurant.conversation import looks_like_order_phrasing
-from restaurant.order_parse import _QTY_WORDS, _extract_qty
+from restaurant.text_match import indic_word_re, word_bounded
+
+# Add/order-verb pattern (absorbed from conversation.py in PR 060) — the single
+# source of truth for "does this sound like a genuine order" used by the noise
+# heuristic below.
+_ADD_RE = indic_word_re(
+    r"add|order|want|need|get me|give me|i.?ll take|i want|"
+    r"i'd like|chahiye|dedo|de do|lao|"
+    r"order karo|order kar|add karo|add kar|"
+    r"ਚਾਹੀ(?:ਦਾ|ਦੀ|ਦੇ)|ਆਰਡਰ|ਪਾ ਦ|ਜੋੜ|ਲੈ|ਕਰ ਦ|ਐਡ|"
+    r"चाहि(?:ए|ये|या)|ऑर्डर|डाल द|जोड़|ले|कर द|एड"
+)
+
+
+def looks_like_order_phrasing(text: str) -> bool:
+    """True when the utterance contains a recognized add/order verb (English
+    or Punjabi/Hindi)."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    return bool(_ADD_RE.search(t))
+
+
+# Quantity tokens + extractor (absorbed from order_parse.py in PR 060).
+_QTY_WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "a": 1,
+    "an": 1,
+    "ਇੱਕ": 1,
+    "ਐਕ": 1,
+    "ਦੋ": 2,
+    "ਤਿੰਨ": 3,
+}
+
+_QTY_RE = re.compile(
+    word_bounded(
+        r"one|two|three|four|five|six|seven|eight|nine|ten|"
+        r"a|an|"
+        r"ਇੱਕ|ਐਕ|ਦੋ|ਤਿੰਨ|"
+        r"(\d+)"
+    ),
+    re.I,
+)
+
+
+def _extract_qty(segment: str) -> tuple[int, str]:
+    segment = segment.strip()
+    match = _QTY_RE.search(segment)
+    if not match:
+        return 1, segment
+    token = match.group(0)
+    if token.isdigit():
+        qty = int(token)
+    else:
+        qty = _QTY_WORDS.get(token.lower(), 1)
+    rest = (segment[: match.start()] + segment[match.end() :]).strip()
+    rest = re.sub(r"^(?:of|x)\s+", "", rest, flags=re.I)
+    return max(1, qty), rest
 
 # TV / YouTube / side-conversation fragments common in phone STT.
 _STT_NOISE_RE = re.compile(

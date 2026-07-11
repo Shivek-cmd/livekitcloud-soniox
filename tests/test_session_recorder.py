@@ -1,7 +1,6 @@
 """Tests for session analytics recorder."""
 
 from restaurant.orders import OrderCart
-from restaurant.order_flow import OrderFlowController
 from restaurant.session_recorder import SessionRecorder
 
 
@@ -25,8 +24,7 @@ def test_finalize_placed_order():
     cart.mark_placed(eta="20-25 min")
     recorder.set_outcome("placed")
 
-    flow = OrderFlowController(is_phone=True)
-    payload = recorder.finalize(cart, flow)
+    payload = recorder.finalize(cart, preferred_language="en")
 
     assert payload["session"]["outcome"] == "placed"
     assert payload["session"]["channel"] == "phone"
@@ -42,8 +40,7 @@ def test_mark_filtered_echo():
     recorder.mark_filtered("echo")
 
     cart = OrderCart()
-    flow = OrderFlowController(is_phone=True)
-    payload = recorder.finalize(cart, flow)
+    payload = recorder.finalize(cart, preferred_language="en")
 
     assert payload["session"]["echo_filter_count"] == 1
     assert payload["turns"][0]["was_filtered"] is True

@@ -86,7 +86,6 @@ from restaurant.session_recorder import SessionRecorder
 from restaurant.analytics_store import persist_session
 from restaurant.call_control import hangup_after_order_enabled, schedule_call_hangup
 from restaurant.llm_warmup import schedule_llm_warmup
-from restaurant.fillers import agent_session_busy, pick_filler
 from restaurant.clover.order_submit import clover_submit_enabled
 
 load_dotenv()
@@ -145,7 +144,6 @@ class RestaurantAgent(Agent):
         self._recorder: SessionRecorder | None = None
         self._job_ctx: JobContext | None = None
         self._hangup_started = False
-        self._recent_fillers: deque[str] = deque(maxlen=3)
         self._goodbye_spoken = False
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
@@ -808,40 +806,6 @@ class RestaurantAgent(Agent):
                 await self._execute_place_order(from_capture=True, turn_ctx=turn_ctx)
             raise StopResponse()
 
-    async def _speak_filler(self, line: str) -> None:
-        if not self._session or self._speech_in_flight():
-            return
-        try:
-            await self._session.say(line, allow_interruptions=True)
-            self.note_agent_speech(line)
-        except Exception:
-            logger.exception("Filler speech failed")
-
-    def _maybe_speak_filler(self, intent: UserIntent, user_text: str) -> None:
-        """Fire-and-forget filler TTS — does not block LLM / turn guidance."""
-        if not self._session:
-            return
-        line = pick_filler(
-            intent=intent,
-            phase=self._flow.state.phase,
-            lang=self._flow.state.preferred_language,
-            user_text=user_text,
-            recent=self._recent_fillers,
-            hangup_started=self._hangup_started,
-            agent_busy=agent_session_busy(self._session),
-        )
-        if not line:
-            return
-        self._recent_fillers.append(line)
-        logger.info(
-            "FILLER intent=%s phase=%s lang=%s text=%s",
-            intent.value,
-            self._flow.state.phase.value,
-            self._flow.state.preferred_language.value,
-            line,
-        )
-        asyncio.create_task(self._speak_filler(line))
-
     def _inject_turn_guidance(self, turn_ctx, user_text: str) -> None:
         intent = resolve_intent(user_text, phase=self._flow.state.phase.value)
         plan = self._flow.build_turn_plan(user_text, intent, self.cart)
@@ -859,7 +823,7 @@ class RestaurantAgent(Agent):
 
         if self.is_phone:
             if is_likely_phone_echo(
-                user_text, self._recent_agent_lines, intent=intent
+                user_text, self._recent_agent_lines, intent=intent.value
             ):
                 logger.info("Ignoring phone echo turn: %s", user_text)
                 if self._recorder is not None:
@@ -877,7 +841,7 @@ class RestaurantAgent(Agent):
 
             if is_likely_background_speech(
                 user_text,
-                intent,
+                intent.value,
                 enabled=phone_background_filter_enabled(),
                 phase=self._flow.state.phase.value,
             ):
@@ -924,7 +888,6 @@ class RestaurantAgent(Agent):
         await self._try_answer_item_availability(turn_ctx, user_text, intent)
         await self._try_auto_add(turn_ctx, user_text, intent)
 
-        self._maybe_speak_filler(intent, user_text)
         self._inject_turn_guidance(turn_ctx, user_text)
 
         if self._recorder is not None:
@@ -1442,7 +1405,10 @@ async def entrypoint(ctx: JobContext):
             recorder.session_id,
         )
         try:
-            payload = recorder.finalize(agent.cart, agent._flow)
+            payload = recorder.finalize(
+                agent.cart,
+                preferred_language=agent._flow.state.preferred_language.value,
+            )
             await persist_session(payload)
         except Exception:
             logger.exception("Session analytics flush failed (%s)", reason)
