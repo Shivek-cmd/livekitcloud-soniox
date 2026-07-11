@@ -63,7 +63,10 @@ USE_CLOVER_MENU=1
 PHONE_ENDPOINTING_MAX=0.5          # phone + web — lower = faster reply, may cut off pauses
 PHONE_ENDPOINTING_MIN=0.2          # phone + web
 SONIOX_MAX_ENDPOINT_DELAY_MS=1000  # PR 064 — Soniox finalize delay after speech stops (500-3000)
-#SONIOX_ENDPOINT_SENSITIVITY=0.3   # PR 064 — -1.0..1.0, higher = finalize sooner; unset = neutral
+#SONIOX_ENDPOINT_SENSITIVITY=0.3   # PR 066 — -1.0..1.0, default 0.3 (Soniox voice-AI rec); "none" = server default
+#SONIOX_ENDPOINT_LATENCY_ADJUSTMENT_LEVEL=2  # PR 066 — 0-3, default 2; "none" = don't send (server default)
+#VAD_ACTIVATION_THRESHOLD=0.6      # PR 066 — Silero VAD speech threshold; raise toward 0.7 if noise trips it
+#VAD_MIN_SILENCE_SEC=0.25          # PR 066 — silence before VAD end-of-speech
 PHONE_PREEMPTIVE_GENERATION=true
 PHONE_PREEMPTIVE_TTS=true
 PHONE_GREETING_SETTLE_SEC=2.0
