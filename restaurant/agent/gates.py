@@ -39,8 +39,13 @@ def invalidate_readback(state: OrderSessionState) -> None:
     state.readback_confirmed = False
 
 
-def place_order_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
-    """Everything still missing before place_order may run. Empty list = go."""
+def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
+    """Everything that must be complete before the order can be read back.
+
+    Same texts as place_order_blockers minus the readback-confirmation check —
+    get_order_readback refuses with these so the LLM is told exactly what to
+    collect next.
+    """
     blockers: list[str] = []
     if cart.is_empty:
         blockers.append("The order is empty — add at least one item.")
@@ -54,6 +59,12 @@ def place_order_blockers(cart: "OrderCart", state: OrderSessionState) -> list[st
         blockers.append("A valid 10-digit phone number is missing — ask and call set_customer_contact.")
     if not state.allergies_recorded:
         blockers.append("Allergies have not been asked — ask and call record_allergies.")
+    return blockers
+
+
+def place_order_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
+    """Everything still missing before place_order may run. Empty list = go."""
+    blockers = readback_blockers(cart, state)
     if not (state.readback_confirmed and state.readback_revision == cart.revision):
         blockers.append(
             "The order has not been read back and confirmed since the last change — "
