@@ -27,6 +27,7 @@ from restaurant.session_config import (
 )
 from restaurant.analytics.session_recorder import SessionRecorder
 from restaurant.analytics.turn_latency import TurnLatencyTracker
+from restaurant.channels.eou_watchdog import EouWatchdog
 from restaurant.channels.web_sync import WebSync
 
 load_dotenv()
@@ -80,6 +81,7 @@ async def entrypoint(ctx: JobContext):
         recorder.attach_latency(latency)
 
     TurnLatencyTracker(channel=channel, on_turn_latency=_on_turn_latency).attach(session)
+    EouWatchdog().attach(session)
 
     agent = RestaurantAgent(is_phone=is_phone)
     agent.bind_session(session)
