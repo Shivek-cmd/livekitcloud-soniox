@@ -194,7 +194,7 @@ def run() -> None:
     cli.run_app(
         WorkerOptions(
             entrypoint_fnc=entrypoint,
-            agent_name="restaurant-agent",
+            agent_name=os.getenv("AGENT_NAME", "restaurant-agent"),
             port=int(os.getenv("AGENT_HTTP_PORT", "8081")),
         )
     )

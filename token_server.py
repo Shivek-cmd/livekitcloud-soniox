@@ -62,7 +62,10 @@ async def get_token(room: str = None, identity: str = None):
             api_secret=LIVEKIT_API_SECRET,
         ) as lk:
             await lk.agent_dispatch.create_dispatch(
-                CreateAgentDispatchRequest(room=room_name, agent_name="restaurant-agent")
+                CreateAgentDispatchRequest(
+                    room=room_name,
+                    agent_name=os.getenv("AGENT_NAME", "restaurant-agent"),
+                )
             )
     except Exception:
         pass  # Don't block the token if dispatch fails

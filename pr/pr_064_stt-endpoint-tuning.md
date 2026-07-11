@@ -19,6 +19,11 @@ ranges so a bad env var can never crash the worker at startup).
 Tests for the two new env helpers: defaults, env overrides, invalid-value
 fallback, and clamping to Soniox's valid ranges (500–3000ms, -1.0–1.0).
 
+### `localtesting.md`
+Full local-testing runbook: the `AGENT_NAME` swap that isolates localhost
+from the VPS worker, launch/verify/measure steps, and teardown + deploy
+checklist for when testing is done.
+
 ## Files Modified
 ### `restaurant/voice_stack.py`
 - New `stt_max_endpoint_delay_ms()` — reads `SONIOX_MAX_ENDPOINT_DELAY_MS`
@@ -34,6 +39,12 @@ default, sensitivity left commented out / neutral).
 ### `docs/vps-config.md`
 Adds both vars to the phone-tuning env table so they can be overridden on the
 VPS without a code deploy.
+
+### `restaurant/agent/worker.py` / `token_server.py`
+Both now read the agent name from `AGENT_NAME` (default `restaurant-agent`,
+so production is byte-for-byte unchanged). Setting a local-only name (e.g.
+`restaurant-agent-local`) keeps local test calls off the VPS worker and
+production calls off your laptop — see `localtesting.md`.
 
 ## Files Deleted
 None.
