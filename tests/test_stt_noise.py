@@ -1,6 +1,6 @@
 """Tests for STT noise and quantity parsing (PR 044)."""
 
-from restaurant.stt_noise import (
+from restaurant.channels.stt_noise import (
     agent_recently_asked_quantity,
     is_likely_stt_noise,
     parse_standalone_quantity,

@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 
 from restaurant.clover.match import phonetic_key
-from restaurant.phone_echo import _ORDER_SIGNAL_RE, should_bypass_phone_echo_filter
-from restaurant.stt_noise import is_likely_stt_noise, parse_standalone_quantity
+from restaurant.channels.phone_echo import _ORDER_SIGNAL_RE, should_bypass_phone_echo_filter
+from restaurant.channels.stt_noise import is_likely_stt_noise, parse_standalone_quantity
 
 # Short replies that are valid even when intent stays GENERAL.
 _SHORT_MEANINGFUL: frozenset[str] = frozenset(

@@ -1,6 +1,6 @@
 """Web and phone ambient audio config."""
 
-from restaurant.ambient_audio import (
+from restaurant.channels.ambient_audio import (
     ambient_enabled,
     build_ambient_player,
     build_web_ambient_player,

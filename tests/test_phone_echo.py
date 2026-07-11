@@ -4,7 +4,7 @@ Post-cutover the filters take a plain intent string (or None — the hybrid
 agent's hygiene hook passes None; intent regexes died with conversation.py).
 """
 
-from restaurant.phone_echo import (
+from restaurant.channels.phone_echo import (
     is_likely_phone_echo,
     is_recovery_phrase_echo,
     should_bypass_phone_echo_filter,
