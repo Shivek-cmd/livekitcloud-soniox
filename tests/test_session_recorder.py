@@ -1,7 +1,7 @@
 """Tests for session analytics recorder."""
 
 from restaurant.orders import OrderCart
-from restaurant.session_recorder import SessionRecorder
+from restaurant.analytics.session_recorder import SessionRecorder
 
 
 def test_finalize_placed_order():

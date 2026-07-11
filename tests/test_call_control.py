@@ -3,7 +3,7 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from restaurant.call_control import (
+from restaurant.channels.call_control import (
     end_call_after_goodbye,
     hangup_after_order_enabled,
     hangup_grace_seconds,
@@ -87,7 +87,7 @@ def test_schedule_call_hangup_creates_task(monkeypatch):
     job_ctx = MagicMock()
     job_ctx.room.name = "room-x"
 
-    with patch("restaurant.call_control.asyncio.create_task") as create_task:
+    with patch("restaurant.channels.call_control.asyncio.create_task") as create_task:
         schedule_call_hangup(
             session,
             job_ctx,

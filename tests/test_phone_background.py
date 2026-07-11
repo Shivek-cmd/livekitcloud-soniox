@@ -4,7 +4,7 @@ Post-cutover the filter takes a plain intent string (or None — the hybrid
 agent's hygiene hook passes None; intent regexes died with conversation.py).
 """
 
-from restaurant.phone_background import is_likely_background_speech
+from restaurant.channels.phone_background import is_likely_background_speech
 
 
 def test_pickup_not_background():
@@ -77,7 +77,7 @@ def test_title_case_bypass_does_not_match_long_sentences():
     # The Title-Case bypass itself is capped at 3 words (longer utterances
     # were already not caught by the short-utterance heuristic at all, so
     # this only checks the regex's own scope, not the overall function).
-    from restaurant.phone_background import _looks_like_named_answer
+    from restaurant.channels.phone_background import _looks_like_named_answer
 
     assert not _looks_like_named_answer("Coming Up Next On Channel Five Tonight")
     assert _looks_like_named_answer("Blue Lagoon.")

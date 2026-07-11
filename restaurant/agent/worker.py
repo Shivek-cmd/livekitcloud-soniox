@@ -17,17 +17,17 @@ from livekit.agents import JobContext, WorkerOptions, cli
 from restaurant.agent.core import RestaurantAgent
 from restaurant.agent.language import OPENING_GREETING
 from restaurant.agent.replies import sanitize_assistant_speech
-from restaurant.ambient_audio import build_ambient_player, start_ambient, stop_ambient
-from restaurant.analytics_store import persist_session
+from restaurant.channels.ambient_audio import build_ambient_player, start_ambient, stop_ambient
+from restaurant.analytics.analytics_store import persist_session
 from restaurant.llm_warmup import schedule_llm_warmup
 from restaurant.session_config import (
     build_agent_session,
     build_room_options,
     phone_greeting_settle_seconds,
 )
-from restaurant.session_recorder import SessionRecorder
-from restaurant.turn_latency import TurnLatencyTracker
-from restaurant.web_sync import WebSync
+from restaurant.analytics.session_recorder import SessionRecorder
+from restaurant.analytics.turn_latency import TurnLatencyTracker
+from restaurant.channels.web_sync import WebSync
 
 load_dotenv()
 

@@ -42,7 +42,7 @@ from restaurant.agent.replies import (
     format_order_status,
     order_placed_goodbye,
 )
-from restaurant.call_control import hangup_after_order_enabled, schedule_call_hangup
+from restaurant.channels.call_control import hangup_after_order_enabled, schedule_call_hangup
 from restaurant.clover.order_submit import (
     CloverOrderSubmitError,
     clover_submit_enabled,
@@ -56,14 +56,14 @@ from restaurant.customer_info import (
 )
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant.orders import CartItem, OrderCart
-from restaurant.phone_background import is_likely_background_speech
-from restaurant.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
+from restaurant.channels.phone_background import is_likely_background_speech
+from restaurant.channels.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
 from restaurant.session_config import (
     phone_background_filter_enabled,
 )
-from restaurant.session_recorder import SessionRecorder
-from restaurant.stt_noise import is_likely_stt_noise
-from restaurant.web_sync import WebSync
+from restaurant.analytics.session_recorder import SessionRecorder
+from restaurant.channels.stt_noise import is_likely_stt_noise
+from restaurant.channels.web_sync import WebSync
 
 logger = logging.getLogger("restaurant-agent")
 
