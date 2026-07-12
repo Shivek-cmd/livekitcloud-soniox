@@ -67,6 +67,7 @@ SONIOX_MAX_ENDPOINT_DELAY_MS=1000  # PR 064 — Soniox finalize delay after spee
 #SONIOX_ENDPOINT_LATENCY_ADJUSTMENT_LEVEL=2  # PR 066 — 0-3, default 2; "none" = don't send (server default)
 #VAD_ACTIVATION_THRESHOLD=0.6      # PR 066 — Silero VAD speech threshold; raise toward 0.7 if noise trips it
 #VAD_MIN_SILENCE_SEC=0.25          # PR 066 — silence before VAD end-of-speech
+#EOU_WATCHDOG_SEC=2.0              # PR 067 — force turn commit if no final transcript this long after speech ends; 0 disables
 PHONE_PREEMPTIVE_GENERATION=true
 PHONE_PREEMPTIVE_TTS=true
 PHONE_GREETING_SETTLE_SEC=2.0

@@ -108,6 +108,11 @@ class _ConfigInjectingWS:
                 pass
         return await self._inner_ws.send_str(data)
 
+    def __aiter__(self):
+        # Dunder lookup bypasses __getattr__, so delegate iteration explicitly
+        # (the plugin reads messages with `async for msg in ws`).
+        return self._inner_ws.__aiter__()
+
     def __getattr__(self, name):
         return getattr(self._inner_ws, name)
 
