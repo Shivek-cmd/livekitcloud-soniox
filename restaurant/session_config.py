@@ -61,6 +61,37 @@ def phone_background_filter_enabled() -> bool:
     return _env_bool("PHONE_BACKGROUND_FILTER_ENABLED", True)
 
 
+def vad_activation_threshold() -> float:
+    """Silero VAD speech-probability threshold (VAD_ACTIVATION_THRESHOLD).
+
+    Lib default 0.5; we default 0.6 because both channels run against constant
+    background noise (restaurant chatter + our own ambient track). LiveKit's
+    noisy-telephony example uses ~0.7 — raise further via env if live calls
+    still show false speech starts.
+    """
+    return _env_float("VAD_ACTIVATION_THRESHOLD", 0.6)
+
+
+def vad_min_silence_seconds() -> float:
+    """Silence needed before VAD emits END_OF_SPEECH (VAD_MIN_SILENCE_SEC)."""
+    return _env_float("VAD_MIN_SILENCE_SEC", 0.25)
+
+
+def build_vad() -> inference.VAD:
+    """Explicit tuned VAD (PR 066).
+
+    Passing a VAD explicitly flips the framework's `_using_default_vad` to
+    False, so audio_recognition trusts VAD end-of-speech timestamps instead of
+    deferring to STT token timing (turnwatchdog.md Part I). The VAD sees
+    Krisp-BVC-cleaned audio (build_room_options).
+    """
+    return inference.VAD(
+        model="silero",
+        activation_threshold=vad_activation_threshold(),
+        min_silence_duration=vad_min_silence_seconds(),
+    )
+
+
 def _endpointing_delays() -> tuple[float, float]:
     """Shared phone + web silence window before Sierra replies (env-tunable)."""
     min_delay = _env_float("PHONE_ENDPOINTING_MIN", 0.2)
@@ -126,6 +157,7 @@ def build_agent_session(*, is_phone: bool) -> AgentSession:
     """Create AgentSession with channel-appropriate STT/TTS; shared turn latency."""
     kwargs: dict = {
         "stt": build_stt(is_phone),
+        "vad": build_vad(),
         "llm": build_llm(),
         "tts": build_tts(is_phone),
         "turn_handling": _turn_handling(is_phone=is_phone),
