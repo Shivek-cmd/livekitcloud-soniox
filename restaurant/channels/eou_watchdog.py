@@ -73,6 +73,15 @@ class EouWatchdog:
                 self._has_interim = False
             elif (ev.transcript or "").strip():
                 self._has_interim = True
+                # Under noise Soniox delays even non-final tokens, so the
+                # first interim can land after the post-EOU timer already
+                # expired empty-handed. Re-arm so late text still commits.
+                if (
+                    self._timer is None
+                    and not self._fired_this_turn
+                    and session.user_state == "listening"
+                ):
+                    self._arm_timer()
 
     def _arm_timer(self) -> None:
         self._cancel_timer()
