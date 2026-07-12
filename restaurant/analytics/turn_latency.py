@@ -44,6 +44,7 @@ class TurnLatencyTracker:
     on_turn_latency: Callable[[dict], None] | None = None
     _turn: _TurnSlice = field(default_factory=_TurnSlice)
     _turn_counter: int = 0
+    _turn_active: bool = False
     _user_was_speaking: bool = False
 
     def _ms(self, start: float | None, end: float | None) -> int | None:
@@ -65,6 +66,9 @@ class TurnLatencyTracker:
             parts.append(f'user="{snippet}"')
         if t.eou_delay is not None:
             parts.append(f"eou_delay={t.eou_delay:.2f}s")
+        transcript_delay = self._ms(t.user_stopped_at, t.user_final_at)
+        if transcript_delay is not None:
+            parts.append(f"transcript_delay={transcript_delay}ms")
         stop_to_think = self._ms(anchor, t.thinking_at)
         stop_to_speak = self._ms(anchor, t.speaking_at)
         if stop_to_think is not None:
@@ -82,12 +86,15 @@ class TurnLatencyTracker:
                 "eou_delay": t.eou_delay,
                 "llm_ttft": t.llm_ttft,
                 "tts_ttfb": t.tts_ttfb,
+                "transcript_delay_ms": transcript_delay,
                 "user_stop_to_speaking_ms": self._ms(anchor, t.speaking_at),
             })
+        self._turn_active = False
 
     def _begin_turn(self) -> None:
         self._turn_counter += 1
         self._turn.reset(self._turn_counter)
+        self._turn_active = True
 
     def attach(self, session: AgentSession) -> None:
         @session.on("user_input_transcribed")
@@ -95,7 +102,7 @@ class TurnLatencyTracker:
             if not ev.is_final:
                 return
             now = time.monotonic()
-            if self._turn.user_final_at is None:
+            if not self._turn_active:
                 self._begin_turn()
             self._turn.user_final_at = now
             self._turn.transcript = (ev.transcript or "").strip()
@@ -107,12 +114,14 @@ class TurnLatencyTracker:
         def _on_user_state(ev) -> None:
             if ev.new_state == "speaking":
                 self._user_was_speaking = True
+                if not self._turn_active:
+                    self._begin_turn()
             elif ev.new_state == "listening" and self._user_was_speaking:
                 self._user_was_speaking = False
                 now = time.monotonic()
+                if not self._turn_active:
+                    self._begin_turn()
                 if self._turn.user_stopped_at is None:
-                    if self._turn.turn_index == 0:
-                        self._begin_turn()
                     self._turn.user_stopped_at = now
 
         @session.on("agent_state_changed")
