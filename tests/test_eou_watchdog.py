@@ -1,6 +1,7 @@
 """Tests for the end-of-utterance watchdog (PR 067)."""
 
 import asyncio
+import time
 from types import SimpleNamespace
 
 from restaurant.channels.eou_watchdog import EouWatchdog, eou_watchdog_seconds
@@ -15,6 +16,11 @@ class _FakeSession:
         self.user_state = "listening"
         self.agent_state = "listening"
         self.commits: list[tuple[float, float]] = []
+        self.clear_calls = 0
+        self.commit_exc: Exception | None = None
+        self._activity = SimpleNamespace(
+            _audio_recognition=SimpleNamespace(_last_final_transcript_time=None)
+        )
 
     def on(self, name):
         def _register(fn):
@@ -24,10 +30,20 @@ class _FakeSession:
         return _register
 
     def emit(self, name, **fields):
-        self._handlers[name](SimpleNamespace(**fields))
+        if name in self._handlers:
+            self._handlers[name](SimpleNamespace(**fields))
 
     def commit_user_turn(self, *, transcript_timeout, stt_flush_duration):
         self.commits.append((transcript_timeout, stt_flush_duration))
+        fut = asyncio.get_running_loop().create_future()
+        if self.commit_exc is not None:
+            fut.set_exception(self.commit_exc)
+        else:
+            fut.set_result("one samosa")
+        return fut
+
+    def clear_user_turn(self):
+        self.clear_calls += 1
 
     # Scenario helpers ------------------------------------------------------
     def user_speaks(self):
@@ -42,7 +58,17 @@ class _FakeSession:
         self.emit("user_input_transcribed", is_final=False, transcript=text)
 
     def final(self, text="one samosa"):
+        self._activity._audio_recognition._last_final_transcript_time = time.time()
         self.emit("user_input_transcribed", is_final=True, transcript=text)
+
+    def promoted_final(self, text="one samosa"):
+        # commit_user_turn's interim promotion: same event on the bus, but
+        # _last_final_transcript_time is NOT stamped.
+        self.emit("user_input_transcribed", is_final=True, transcript=text)
+
+    def agent_thinks(self):
+        self.agent_state = "thinking"
+        self.emit("agent_state_changed", new_state="thinking", old_state="listening")
 
 
 def _attach(timeout=_TIMEOUT):
@@ -91,7 +117,7 @@ def test_late_final_fires_commit():
         session.interim()
         session.user_stops()
         await asyncio.sleep(_PAST_TIMEOUT)
-        assert session.commits == [(2.0, 2.0)]
+        assert session.commits == [(1.0, 2.0)]
 
     asyncio.run(_run())
 
@@ -161,3 +187,142 @@ def test_one_fire_per_turn_then_rearms_next_turn():
         assert len(session.commits) == 2
 
     asyncio.run(_run())
+
+
+# ── sliding re-arm (finding 3) ───────────────────────────────────────────────
+
+
+def test_streaming_interims_slide_the_deadline():
+    async def _run():
+        # VAD missed the speech entirely; Soniox keeps streaming interims.
+        # The deadline must slide so the commit never lands mid-utterance.
+        session = _attach()
+        session.user_speaks()
+        session.user_stops()
+        for _ in range(4):
+            await asyncio.sleep(_TIMEOUT / 2)
+            session.interim()
+            assert session.commits == []
+        await asyncio.sleep(_PAST_TIMEOUT)  # tokens stop → commit fires
+        assert len(session.commits) == 1
+
+    asyncio.run(_run())
+
+
+# ── re-arm after VAD-missed turns (finding 4) ────────────────────────────────
+
+
+def test_final_rearms_without_vad_transition():
+    async def _run():
+        session = _attach()
+        session.user_speaks()
+        session.interim()
+        session.user_stops()
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert len(session.commits) == 1
+        # Soniox's final for the committed turn arrives; the NEXT utterance
+        # is also VAD-missed (no "speaking" transition) — the watchdog must
+        # still be alive for it.
+        session.final()
+        session.interim("mango lassi")
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert len(session.commits) == 2
+
+    asyncio.run(_run())
+
+
+# ── stale-final STT reset (finding 2) ────────────────────────────────────────
+
+
+def test_reset_on_thinking_when_final_still_held():
+    async def _run():
+        session = _attach()
+        session.user_speaks()
+        session.interim()
+        session.user_stops()
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert len(session.commits) == 1
+        # transcript_timeout expired → the commit promoted the interim, but
+        # Soniox still holds its final. The reset lands on the thinking
+        # transition, killing the held final at the socket.
+        session.promoted_final()
+        session.agent_thinks()
+        assert session.clear_calls == 1
+
+    asyncio.run(_run())
+
+
+def test_no_reset_when_real_final_consumed():
+    async def _run():
+        session = _attach()
+        session.user_speaks()
+        session.interim()
+        session.user_stops()
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert len(session.commits) == 1
+        # Soniox finalized inside transcript_timeout — nothing stale is held.
+        session.final()
+        session.agent_thinks()
+        assert session.clear_calls == 0
+
+    asyncio.run(_run())
+
+
+def test_no_reset_when_user_speaks_again_first():
+    async def _run():
+        session = _attach()
+        session.user_speaks()
+        session.interim()
+        session.user_stops()
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert len(session.commits) == 1
+        # New VAD-detected utterance before the thinking transition:
+        # resetting would drop in-flight speech.
+        session.user_speaks()
+        session.agent_thinks()
+        assert session.clear_calls == 0
+
+    asyncio.run(_run())
+
+
+def test_no_reset_without_watchdog_fire():
+    async def _run():
+        session = _attach()
+        session.user_speaks()
+        session.interim()
+        session.user_stops()
+        session.final()  # normal turn, no rescue
+        session.agent_thinks()
+        assert session.clear_calls == 0
+
+    asyncio.run(_run())
+
+
+# ── lifecycle (finding 5) ────────────────────────────────────────────────────
+
+
+def test_close_cancels_pending_timer():
+    async def _run():
+        session = _attach()
+        session.user_speaks()
+        session.interim()
+        session.user_stops()
+        session.emit("close", error=None, reason="test")
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert session.commits == []
+
+    asyncio.run(_run())
+
+
+def test_commit_exception_is_logged_not_raised(caplog):
+    async def _run():
+        session = _attach()
+        session.commit_exc = RuntimeError("AgentSession isn't running")
+        session.user_speaks()
+        session.interim()
+        session.user_stops()
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert len(session.commits) == 1
+
+    asyncio.run(_run())
+    assert any("forced commit failed" in r.message for r in caplog.records)

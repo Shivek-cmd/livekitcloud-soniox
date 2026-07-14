@@ -203,10 +203,11 @@ New `restaurant/channels/eou_watchdog.py`, attached in
 
 ## Part IV — Resuming in a new session
 
-- **Where you are:** check `git log --oneline -8` and `ls pr/`. If
-  `pr_065…067` docs exist, work continues on those branches. The whole stack
-  060–067 is LOCAL — `origin/main` is still at the pre-rebuild web-UI merge
-  (#96). **Nothing is pushed or deployed without the owner's explicit OK.**
+- **Where you are (updated 2026-07-13):** the whole stack 060–067 is MERGED
+  to `origin/main` (#96, #97, #103–#106). Remaining work is the open audit
+  findings in `watchdog_gaps.md` (watchdog rescue latency, stale-final
+  phantom turn, re-arm/reset gaps, lifecycle hygiene) — read that doc first.
+  **Nothing is pushed or deployed without the owner's explicit OK.**
 - **Key measurement artifacts:** framework logs
   `received user transcript … transcript_delay=…` at DEBUG;
   `turn-latency` logger prints `LATENCY turn=…` lines (broken until PR 065 —
