@@ -114,7 +114,17 @@ class TurnLatencyTracker:
         def _on_user_state(ev) -> None:
             if ev.new_state == "speaking":
                 self._user_was_speaking = True
-                if not self._turn_active:
+                if self._turn.user_final_at is not None:
+                    # The current slice already reached a final transcript
+                    # for a PRIOR utterance -- whether that utterance was
+                    # emitted normally or dropped by a channel filter
+                    # (StopResponse, no agent thinking/speaking). Either
+                    # way, this "speaking" transition marks the start of a
+                    # genuinely NEW user utterance, so always start a fresh
+                    # slice rather than trusting the (possibly stale)
+                    # _turn_active flag, which a dropped turn never resets.
+                    self._begin_turn()
+                elif not self._turn_active:
                     self._begin_turn()
             elif ev.new_state == "listening" and self._user_was_speaking:
                 self._user_was_speaking = False
