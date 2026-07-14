@@ -5,6 +5,7 @@ import json
 
 from restaurant.voice_stack import (
     _ConfigInjectingWS,
+    _WSConnectHandle,
     stt_endpoint_latency_adjustment_level,
     stt_endpoint_sensitivity,
     stt_max_endpoint_delay_ms,
@@ -127,3 +128,50 @@ def test_ws_injects_first_message_only():
 def test_ws_delegates_other_attrs():
     ws = _ConfigInjectingWS(_FakeWS(), {})
     assert ws.custom_attr() == "delegated"
+
+
+class _FakeWSRequest:
+    """Mimics aiohttp's awaitable-context-manager ws_connect return value."""
+
+    def __init__(self, ws):
+        self._ws = ws
+        self.exited = False
+
+    def __await__(self):
+        async def _connect():
+            return self._ws
+
+        return _connect().__await__()
+
+    async def __aenter__(self):
+        return self._ws
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self.exited = True
+        return None
+
+
+def test_ws_connect_handle_awaitable():
+    fake = _FakeWS()
+    handle = _WSConnectHandle(_FakeWSRequest(fake), {})
+
+    async def _run():
+        ws = await handle
+        assert isinstance(ws, _ConfigInjectingWS)
+        assert ws._inner_ws is fake
+
+    asyncio.run(_run())
+
+
+def test_ws_connect_handle_context_manager():
+    fake = _FakeWS()
+    request = _FakeWSRequest(fake)
+    handle = _WSConnectHandle(request, {})
+
+    async def _run():
+        async with handle as ws:
+            assert isinstance(ws, _ConfigInjectingWS)
+            assert ws._inner_ws is fake
+        assert request.exited
+
+    asyncio.run(_run())
