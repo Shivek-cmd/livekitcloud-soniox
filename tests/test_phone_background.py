@@ -81,3 +81,15 @@ def test_title_case_bypass_does_not_match_long_sentences():
 
     assert not _looks_like_named_answer("Coming Up Next On Channel Five Tonight")
     assert _looks_like_named_answer("Blue Lagoon.")
+
+
+# PR 073 — regression: "No, thanks." was dropped as background because
+# `_BACKGROUND_FRAGMENT_RE` (aimed at TV chatter) matched "thanks" before the
+# short-meaningful-reply rescue ran.
+def test_no_thanks_not_background():
+    assert not is_likely_background_speech("No, thanks.", None)
+
+
+def test_tv_thankyou_still_background():
+    assert is_likely_background_speech("thank you for watching", None)
+    assert is_likely_background_speech("Thank you.", None)
