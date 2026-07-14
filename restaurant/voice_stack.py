@@ -117,6 +117,31 @@ class _ConfigInjectingWS:
         return getattr(self._inner_ws, name)
 
 
+class _WSConnectHandle:
+    """Wraps aiohttp's ws_connect return value, preserving its dual nature.
+
+    aiohttp's ws_connect returns an awaitable *context manager*; the plugin
+    currently awaits it, but `async with` must keep working too so a plugin
+    upgrade doesn't break silently (same duck-typing bug class as __aiter__).
+    """
+
+    def __init__(self, request, extra_config: dict):
+        self._request = request
+        self._extra_config = extra_config
+
+    def __await__(self):
+        return self._connect().__await__()
+
+    async def _connect(self):
+        return _ConfigInjectingWS(await self._request, self._extra_config)
+
+    async def __aenter__(self):
+        return _ConfigInjectingWS(await self._request.__aenter__(), self._extra_config)
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return await self._request.__aexit__(exc_type, exc, tb)
+
+
 class _ConfigInjectingSession:
     """aiohttp session proxy whose ws_connect yields a _ConfigInjectingWS."""
 
@@ -125,12 +150,9 @@ class _ConfigInjectingSession:
         self._extra_config = extra_config
 
     def ws_connect(self, *args, **kwargs):
-        request = self._inner_session.ws_connect(*args, **kwargs)
-
-        async def _connect():
-            return _ConfigInjectingWS(await request, self._extra_config)
-
-        return _connect()
+        return _WSConnectHandle(
+            self._inner_session.ws_connect(*args, **kwargs), self._extra_config
+        )
 
     def __getattr__(self, name):
         return getattr(self._inner_session, name)
