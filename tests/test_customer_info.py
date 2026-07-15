@@ -146,3 +146,55 @@ def test_parse_punjabi_name_with_filler_and_two_words():
 
 def test_parse_two_word_english_name():
     assert parse_customer_name("Sandeep Singh") == "Sandeep Singh"
+
+
+# ---------------------------------------------------------------------------
+# PR 072 -- spoken-word phone digits (checkout rejection-loop fix).
+# extract_phone_digits currently strips every non-digit char, so a
+# word-dictated phone number ("nine four one three...") yields zero digits
+# and returns None. These tests are RED until Task 2 wires
+# _spoken_words_to_digits into extract_phone_digits / looks_like_phone_utterance.
+
+
+def test_english_word_phone():
+    assert (
+        extract_phone_digits("nine four one three seven five two six eight eight")
+        == "9413752688"
+    )
+
+
+def test_mixed_digit_and_word_phone():
+    assert extract_phone_digits("94137 five two six eight eight") == "9413752688"
+
+
+def test_oh_double_triple_forms():
+    assert (
+        extract_phone_digits("oh four one three seven five two six eight eight")
+        == "0413752688"
+    )
+    assert (
+        extract_phone_digits("double eight one three seven five two six eight one")
+        == "8813752681"
+    )
+    assert (
+        extract_phone_digits("triple five one three seven five two six eight")
+        == "5551375268"
+    )
+
+
+def test_romanized_hindi_punjabi_phone():
+    assert (
+        extract_phone_digits("nau char ek teen saat paanch do chhe aath aath")
+        == "9413752688"
+    )
+
+
+def test_indic_script_word_phone():
+    assert (
+        extract_phone_digits("ਨੌ ਚਾਰ ਇੱਕ ਤਿੰਨ ਸੱਤ ਪੰਜ ਦੋ ਛੇ ਅੱਠ ਅੱਠ")
+        == "9413752688"
+    )
+    assert (
+        extract_phone_digits("नौ चार एक तीन सात पांच दो छह आठ आठ")
+        == "9413752688"
+    )
