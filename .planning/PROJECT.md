@@ -18,6 +18,7 @@ The conversation must sound and feel genuinely human — natural pacing, no scri
 - ✓ Multi-language support — English/Punjabi/Hindi code-mixing via Soniox STT — existing
 - ✓ Turn watchdog / noisy-environment end-of-speech handling — existing (PRs 065–069)
 - ✓ Phone (SIP) and Web (WebRTC) channels via LiveKit audio bridges — existing
+- ✓ Three parked bugs resolved as prerequisite hardening (menu-hint fuzzy-match false positive "Singh"→"single", phone word-digit STT normalization, echo/background filter false positives), plus per-turn latency observability surviving filter-dropped turns — Phase 1 (HYG-01–04)
 
 ### Active
 
@@ -27,7 +28,6 @@ The conversation must sound and feel genuinely human — natural pacing, no scri
 - [ ] Redesign turn-handling flow (`restaurant/agent/core.py`) so the LLM owns conversational direction; only tools can mutate order-critical data
 - [ ] Reshape tool contracts if a more natural flow calls for it (open to change — not required to preserve current tool shapes)
 - [ ] Give the LLM conversational context each turn: full transcript history AND a structured order-state summary (both, not one or the other)
-- [ ] Fold in and resolve three parked bugs as part of this rebuild (not separate PRs): menu-hint fuzzy-match false positive ("Singh"→"single"), phone word-digit STT normalization, echo/background filter false positives
 - [ ] Validate success via live call testing — the bar is a real phone/web call that feels human, not a transcript rubric
 
 ### Out of Scope
@@ -60,6 +60,10 @@ The conversation must sound and feel genuinely human — natural pacing, no scri
 | Tool contracts open to reshaping if a more natural flow needs it | Current tool shapes were designed around the old rigid flow; not assumed to be final | — Pending |
 | Fold the 3 parked bugs into this rebuild instead of separate PRs | Rebuild is expected to naturally resolve them (e.g. natural phone-digit speech, less rigid echo filtering) | — Pending |
 | Success measured via live call test, not transcript rubric | User will personally judge naturalness by talking to the agent | — Pending |
+| Menu-hint veto needs a confidence floor (0.8), not a bare presence check | A 0.65-confidence fuzzy match ("Singh"→"Bhatura (single)") was vetoing valid customer names; gating on confidence fixes precision without touching the order/menu-match path | ✓ Phase 1 |
+| Background-drop reprompt threshold drops to 1 (from 3) when a question is pending | A single false-positive drop right after a question must not cause dead air while waiting for a 3-drop streak | ✓ Phase 1 |
+| `_SPOKEN_DIGIT_WORDS` map wired into STT input direction, not just TTS output | Dictated phone numbers as words (English/Hindi/Punjabi/Gurmukhi/Devanagari) were stripped to zero digits by `extract_phone_digits`, causing an infinite rejection loop | ✓ Phase 1 |
+| Turn latency tracker forces a fresh slice on each new user utterance | A filter-dropped turn (`StopResponse`) left `_turn_active` stuck `True`, corrupting the next real turn's latency measurement | ✓ Phase 1 |
 
 ## Evolution
 
@@ -79,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 after initialization*
+*Last updated: 2026-07-15 after Phase 1*
