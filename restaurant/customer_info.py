@@ -64,12 +64,53 @@ _SPOKEN_DIGIT_WORDS: dict[str, str] = {
 }
 
 
+# Indian-English dictation prefixes that repeat the following digit word
+# 2x/3x (PR 072) -- English, Devanagari, Gurmukhi forms.
+_DOUBLE_TRIPLE_WORDS: dict[str, int] = {
+    "double": 2,
+    "triple": 3,
+    "डबल": 2,
+    "ट्रिपल": 3,
+    "ਡਬਲ": 2,
+    "ਟ੍ਰਿਪਲ": 3,
+}
+
+
+def _spoken_words_to_digits(text: str) -> str:
+    """Normalize whole-token spoken digit words (English + romanized/Indic-
+    script Hindi/Punjabi) to ASCII digits, including "double X"/"triple X"
+    dictation prefixes (PR 072). Whole-token match only -- "one" inside
+    "someone" must never match. Non-digit-word tokens pass through untouched.
+    """
+    raw = text or ""
+    tokens = re.split(r"(\s+)", raw)
+    result: list[str] = []
+    i = 0
+    n = len(tokens)
+    while i < n:
+        tok = tokens[i]
+        key = tok.lower().strip(".,")
+        repeat = _DOUBLE_TRIPLE_WORDS.get(key)
+        if repeat and i + 2 < n:
+            next_key = tokens[i + 2].lower().strip(".,")
+            digit = _SPOKEN_DIGIT_WORDS.get(next_key)
+            if digit:
+                result.append(digit * repeat)
+                i += 3
+                continue
+        digit = _SPOKEN_DIGIT_WORDS.get(key)
+        result.append(digit if digit else tok)
+        i += 1
+    return "".join(result)
+
+
 def extract_phone_digits(text: str) -> str | None:
     """Return 10-digit phone or None."""
     raw = (text or "").strip()
     if not raw:
         return None
     normalized = raw.translate(_INDIC_NUMERAL_MAP)
+    normalized = _spoken_words_to_digits(normalized)
     digits = re.sub(r"\D", "", normalized)
     if len(digits) == 10:
         return digits
@@ -87,7 +128,8 @@ def looks_like_phone_utterance(text: str) -> bool:
         return False
     if extract_phone_digits(raw):
         return True
-    return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in raw.translate(_INDIC_NUMERAL_MAP)) >= 7)
+    normalized = _spoken_words_to_digits(raw.translate(_INDIC_NUMERAL_MAP))
+    return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in normalized) >= 7)
 
 
 _DIGIT_ENGLISH = (

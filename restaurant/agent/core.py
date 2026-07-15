@@ -49,6 +49,8 @@ from restaurant.clover.order_submit import (
     submit_cart_to_clover,
 )
 from restaurant.customer_info import (
+    _INDIC_NUMERAL_MAP,
+    _spoken_words_to_digits,
     extract_phone_digits,
     format_phone_spoken,
     is_valid_customer_name,
@@ -619,10 +621,25 @@ class RestaurantAgent(Agent):
         if phone and phone.strip():
             digits = extract_phone_digits(phone)
             if not digits:
-                replies.append(
-                    "Phone NOT saved — need a valid 10-digit number. Ask the "
-                    "customer to repeat it slowly."
+                # PR 072 -- report what WAS captured (even if word-dictated
+                # and short) so the LLM can stitch a number spoken across
+                # turns instead of blindly re-asking from scratch.
+                normalized = _spoken_words_to_digits(
+                    phone.translate(_INDIC_NUMERAL_MAP)
                 )
+                captured = re.sub(r"\D", "", normalized)
+                if captured:
+                    replies.append(
+                        f"Phone NOT saved — heard only {len(captured)} "
+                        f"digit(s) ({captured}). Ask the customer for the "
+                        "full 10-digit number, then pass ALL digits "
+                        "together in one call."
+                    )
+                else:
+                    replies.append(
+                        "Phone NOT saved — need a valid 10-digit number. "
+                        "Ask the customer to repeat it slowly."
+                    )
             else:
                 self.cart.customer_phone = digits
                 spoken = format_phone_spoken(digits)
