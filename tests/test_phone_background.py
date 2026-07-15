@@ -4,7 +4,10 @@ Post-cutover the filter takes a plain intent string (or None — the hybrid
 agent's hygiene hook passes None; intent regexes died with conversation.py).
 """
 
-from restaurant.channels.phone_background import is_likely_background_speech
+from restaurant.channels.phone_background import (
+    _question_pending,
+    is_likely_background_speech,
+)
 
 
 def test_pickup_not_background():
@@ -93,3 +96,11 @@ def test_no_thanks_not_background():
 def test_tv_thankyou_still_background():
     assert is_likely_background_speech("thank you for watching", None)
     assert is_likely_background_speech("Thank you.", None)
+
+
+def test_question_pending_predicate():
+    assert _question_pending(
+        ["Would you like it mild, medium, spicy, or extra spicy?"]
+    )
+    assert not _question_pending(["Name saved."])
+    assert not _question_pending([])

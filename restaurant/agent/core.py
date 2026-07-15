@@ -56,7 +56,10 @@ from restaurant.customer_info import (
 )
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant.orders import CartItem, OrderCart
-from restaurant.channels.phone_background import is_likely_background_speech
+from restaurant.channels.phone_background import (
+    _question_pending,
+    is_likely_background_speech,
+)
 from restaurant.channels.phone_echo import is_greeting_tail_echo, is_likely_phone_echo
 from restaurant.session_config import (
     phone_background_filter_enabled,
@@ -260,7 +263,11 @@ class RestaurantAgent(Agent):
                         self._recorder.begin_user_turn(user_text)
                     self._recorder.mark_filtered("background")
                 self._background_ignore_streak += 1
-                if self._background_ignore_streak >= 3:
+                # PR 073 — if Sierra just asked a question, don't wait for a
+                # streak of drops before reprompting; a single false-positive
+                # drop right after a question would otherwise cause dead air.
+                threshold = 1 if _question_pending(self._recent_agent_lines) else 3
+                if self._background_ignore_streak >= threshold:
                     self._schedule_background_reprompt()
                 raise StopResponse()
 

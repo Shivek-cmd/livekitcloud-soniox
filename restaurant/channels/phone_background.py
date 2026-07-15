@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Sequence
 
 from restaurant.clover.match import phonetic_key
 from restaurant.channels.phone_echo import _ORDER_SIGNAL_RE, should_bypass_phone_echo_filter
@@ -112,6 +113,21 @@ _TITLE_CASE_RE = re.compile(r"^(?:[A-Z][a-zA-Z']*\.?\s*){1,3}$")
 
 def _looks_like_named_answer(raw_text: str) -> bool:
     return bool(_TITLE_CASE_RE.match(raw_text.strip()))
+
+
+def _question_pending(recent_agent_lines: Sequence[str]) -> bool:
+    """True when the last non-empty agent line was a question.
+
+    PR 073 — safety net for a single false-positive drop: if Sierra just
+    asked something and the caller's reply gets filtered, we should reprompt
+    immediately instead of waiting for a streak of drops.
+    """
+    for line in reversed(recent_agent_lines):
+        stripped = line.rstrip()
+        if not stripped:
+            continue
+        return stripped.endswith("?") or stripped.endswith("？")
+    return False
 
 
 def is_likely_background_speech(
