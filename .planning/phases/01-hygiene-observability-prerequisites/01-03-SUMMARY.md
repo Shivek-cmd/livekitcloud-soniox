@@ -139,3 +139,13 @@ None - no external service configuration required.
 ---
 *Phase: 01-hygiene-observability-prerequisites*
 *Completed: 2026-07-15*
+
+## Self-Check: PASSED
+
+- FOUND: restaurant/customer_info.py
+- FOUND: restaurant/agent/core.py
+- FOUND: tests/test_customer_info.py
+- FOUND commit: d99a909 (Task 1 RED)
+- FOUND commit: bf096eb (Task 2 GREEN)
+- FOUND commit: 9b09703 (Task 3 fix)
+- FOUND commit: ebdcea2 (SUMMARY docs commit)
