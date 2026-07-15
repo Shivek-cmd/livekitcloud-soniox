@@ -110,6 +110,7 @@ def extract_phone_digits(text: str) -> str | None:
     if not raw:
         return None
     normalized = raw.translate(_INDIC_NUMERAL_MAP)
+    normalized = _spoken_words_to_digits(normalized)
     digits = re.sub(r"\D", "", normalized)
     if len(digits) == 10:
         return digits
@@ -127,7 +128,8 @@ def looks_like_phone_utterance(text: str) -> bool:
         return False
     if extract_phone_digits(raw):
         return True
-    return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in raw.translate(_INDIC_NUMERAL_MAP)) >= 7)
+    normalized = _spoken_words_to_digits(raw.translate(_INDIC_NUMERAL_MAP))
+    return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in normalized) >= 7)
 
 
 _DIGIT_ENGLISH = (
