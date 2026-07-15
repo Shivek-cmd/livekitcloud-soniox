@@ -73,6 +73,62 @@ _ORDER_SIGNAL_RE = re.compile(
     re.I,
 )
 
+# PR 073 — function words excluded from echo content-overlap comparison. An
+# answer to an option-list question inherently reuses the question's function
+# words ("would", "it"); only leftover content words indicate real echo.
+# Deliberately EXCLUDES order-signal words ("want") and meaningful particles
+# ("ji", "haan") — those carry answer content, not filler.
+_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "i",
+        "we",
+        "you",
+        "it",
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "do",
+        "did",
+        "does",
+        "would",
+        "could",
+        "can",
+        "will",
+        "like",
+        "to",
+        "of",
+        "and",
+        "or",
+        "for",
+        "in",
+        "on",
+        "that",
+        "this",
+        "my",
+        "me",
+        "so",
+        # Common Punjabi/Hindi function-word equivalents.
+        "hai",
+        "hain",
+        "ka",
+        "ki",
+        "ke",
+        "ko",
+        "kya",
+        "aur",
+        "hi",
+        "ਹੈ",
+        "ਹਨ",
+        "ਦਾ",
+        "ਦੀ",
+        "ਦੇ",
+        "ਨੂੰ",
+        "ਅਤੇ",
+    }
+)
+
 
 def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
@@ -158,6 +214,13 @@ def is_likely_phone_echo(
             continue
 
         a_set = set(a_tokens)
+
+        # Content-word gate: an answer that reuses the question's function
+        # words but adds/changes a content word is a real reply, not echo.
+        u_content = [t for t in u_tokens if t not in _STOPWORDS]
+        if u_content and any(t not in a_set for t in u_content):
+            continue
+
         unique_user = [t for t in u_tokens if t not in a_set]
         overlap = sum(1 for t in u_tokens if t in a_set)
 
