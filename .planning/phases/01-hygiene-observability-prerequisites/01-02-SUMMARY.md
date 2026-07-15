@@ -160,3 +160,7 @@ None - no external service configuration required.
 ---
 *Phase: 01-hygiene-observability-prerequisites*
 *Completed: 2026-07-15*
+
+## Self-Check: PASSED
+
+All created/modified files verified present on disk (`tests/conftest.py`, `restaurant/customer_info.py`, `tests/test_customer_info.py`, this SUMMARY.md). All commit hashes verified present in `git log --oneline --all` (`e0d2af6`, `ca89e18`, `efb3b7a`, `d86414b`).
