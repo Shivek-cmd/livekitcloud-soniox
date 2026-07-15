@@ -130,3 +130,12 @@ None - no external service configuration required.
 ---
 *Phase: 01-hygiene-observability-prerequisites*
 *Completed: 2026-07-15*
+
+## Self-Check: PASSED
+
+- FOUND: restaurant/analytics/turn_latency.py
+- FOUND: tests/test_turn_latency.py
+- FOUND: tests/test_ambient_audio.py
+- FOUND commit: f868b7a (test(01-04): add failing test for dropped-turn latency gap)
+- FOUND commit: da90f86 (feat(01-04): fresh latency slice on each new user utterance)
+- FOUND commit: 3b9d8f6 (fix(01-04): construct ambient players inside a running loop in tests)
