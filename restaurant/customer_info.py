@@ -210,11 +210,25 @@ _QTY_ITEM_RE = re.compile(
 )
 
 
+# PR 070 — the phonetic matcher fuzzy-matches "Singh" -> "Bhatura (single)"
+# at the flat UNIQUE_SINGLE_CONF=0.65 (restaurant/clover/match.py), which
+# used to veto ANY non-None match and dropped "Singh" as a customer name.
+# The hint's job is precision ("is this really a dish?"), the opposite of
+# the order path's recall — raise the bar so only high-confidence dish
+# matches veto a name candidate. Default 1.0 preserves the static-menu path
+# (its dicts carry no match_confidence; substring matching there is already
+# precise).
+_MENU_HINT_MIN_CONF = 0.8
+
+
 def _menu_item_hint_in_text(text: str) -> bool:
     """Utterance names a likely menu item (same check conversation.py used)."""
     from restaurant import menu_provider
 
-    return menu_provider.resolve_item_in_text(text) is not None
+    item = menu_provider.resolve_item_in_text(text)
+    if item is None:
+        return False
+    return float(item.get("match_confidence", 1.0)) >= _MENU_HINT_MIN_CONF
 
 
 # Checkout / intent words — never valid customer names (e.g. STT "ਪਿਕਅੱਪ" alone).
