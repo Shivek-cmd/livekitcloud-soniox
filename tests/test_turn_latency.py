@@ -134,3 +134,47 @@ def test_interim_transcripts_do_not_open_turn(tracker_env, clock, caplog):
     session.emit("agent_state_changed", new_state="speaking", old_state="thinking")
     assert _latency_lines(caplog) == []
     assert payloads == []
+
+
+def test_turn_after_dropped_turn_logs_fresh(tracker_env, clock, caplog):
+    """Reproduces the HYG-04 gap: a filter-dropped turn (StopResponse, no
+    agent thinking/speaking pair) must not leak its stale anchors/index into
+    the NEXT real responded turn.
+    """
+    session, _, payloads = tracker_env
+    caplog.set_level(logging.INFO, logger="turn-latency")
+
+    # (a) a normal responded turn.
+    _run_turn(session, clock, "one samosa")
+
+    # (b) a DROPPED turn: user speaks, STT settles to a final transcript
+    # ("thank you" echo), but on_user_turn_completed raises StopResponse()
+    # so the agent NEVER emits thinking/speaking for this utterance.
+    session.emit("user_state_changed", new_state="speaking", old_state="listening")
+    clock.tick(1.0)
+    session.emit("user_state_changed", new_state="listening", old_state="speaking")
+    clock.tick(0.2)
+    session.emit(
+        "user_input_transcribed", is_final=True, transcript="thank you", language=None
+    )
+    # No agent_state_changed thinking/speaking pair here -- simulates the drop.
+
+    # (c) a normal responded turn with its own fresh timings.
+    _run_turn(session, clock, "that's all", stop_to_final=0.7)
+
+    lines = _latency_lines(caplog)
+    assert len(lines) == 2, f"expected exactly 2 LATENCY lines, got: {lines}"
+
+    first_turn_index = int(lines[0].split("turn=")[1].split(" ")[0])
+    second_turn_index = int(lines[1].split("turn=")[1].split(" ")[0])
+    assert second_turn_index > first_turn_index, (
+        "second turn must NOT reuse the dropped turn's index anchor"
+    )
+
+    # Fresh transcript -- not the dropped turn's stale transcript.
+    assert 'user="that\'s all"' in lines[1]
+    assert "thank you" not in lines[1]
+
+    # Fresh timings derived from (c)'s own clock, not (b)'s.
+    assert payloads[1]["transcript_delay_ms"] == 700
+    assert len(payloads) == 2

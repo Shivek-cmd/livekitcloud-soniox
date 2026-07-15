@@ -53,3 +53,29 @@ def test_recovery_phrase_echo():
         ["What would you like to know from the menu?"],
         intent=None,
     )
+
+
+# PR 073 — regression: option-list answers were dropped as echo because the
+# overlap counted function words ("would", "it") the same as content words.
+_SPICE_QUESTION = (
+    "Punjabi Fish Curry needs a spice level. Would you like it mild, "
+    "medium, spicy, or extra spicy?"
+)
+
+
+def test_option_answer_not_echo():
+    assert not is_likely_phone_echo(
+        "I would keep it spicy.", [_SPICE_QUESTION], intent=None
+    )
+
+
+def test_true_echo_still_filtered():
+    assert is_likely_phone_echo(_SPICE_QUESTION, [_SPICE_QUESTION], intent=None)
+
+
+def test_truncated_echo_still_filtered():
+    truncated = (
+        "Punjabi Fish Curry needs a spice level. Would you like it mild, "
+        "medium, spicy, or extra spi—"
+    )
+    assert is_likely_phone_echo(truncated, [_SPICE_QUESTION], intent=None)

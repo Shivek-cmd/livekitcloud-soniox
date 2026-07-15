@@ -10,3 +10,7 @@ node_modules/
 web/dist/
 *.log
 .DS_Store
+.planning/
+.gsd/
+.bg-shell/
+.mcp.json

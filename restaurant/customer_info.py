@@ -64,12 +64,53 @@ _SPOKEN_DIGIT_WORDS: dict[str, str] = {
 }
 
 
+# Indian-English dictation prefixes that repeat the following digit word
+# 2x/3x (PR 072) -- English, Devanagari, Gurmukhi forms.
+_DOUBLE_TRIPLE_WORDS: dict[str, int] = {
+    "double": 2,
+    "triple": 3,
+    "डबल": 2,
+    "ट्रिपल": 3,
+    "ਡਬਲ": 2,
+    "ਟ੍ਰਿਪਲ": 3,
+}
+
+
+def _spoken_words_to_digits(text: str) -> str:
+    """Normalize whole-token spoken digit words (English + romanized/Indic-
+    script Hindi/Punjabi) to ASCII digits, including "double X"/"triple X"
+    dictation prefixes (PR 072). Whole-token match only -- "one" inside
+    "someone" must never match. Non-digit-word tokens pass through untouched.
+    """
+    raw = text or ""
+    tokens = re.split(r"(\s+)", raw)
+    result: list[str] = []
+    i = 0
+    n = len(tokens)
+    while i < n:
+        tok = tokens[i]
+        key = tok.lower().strip(".,")
+        repeat = _DOUBLE_TRIPLE_WORDS.get(key)
+        if repeat and i + 2 < n:
+            next_key = tokens[i + 2].lower().strip(".,")
+            digit = _SPOKEN_DIGIT_WORDS.get(next_key)
+            if digit:
+                result.append(digit * repeat)
+                i += 3
+                continue
+        digit = _SPOKEN_DIGIT_WORDS.get(key)
+        result.append(digit if digit else tok)
+        i += 1
+    return "".join(result)
+
+
 def extract_phone_digits(text: str) -> str | None:
     """Return 10-digit phone or None."""
     raw = (text or "").strip()
     if not raw:
         return None
     normalized = raw.translate(_INDIC_NUMERAL_MAP)
+    normalized = _spoken_words_to_digits(normalized)
     digits = re.sub(r"\D", "", normalized)
     if len(digits) == 10:
         return digits
@@ -87,7 +128,8 @@ def looks_like_phone_utterance(text: str) -> bool:
         return False
     if extract_phone_digits(raw):
         return True
-    return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in raw.translate(_INDIC_NUMERAL_MAP)) >= 7)
+    normalized = _spoken_words_to_digits(raw.translate(_INDIC_NUMERAL_MAP))
+    return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in normalized) >= 7)
 
 
 _DIGIT_ENGLISH = (
@@ -175,8 +217,12 @@ _NAME_PATTERNS = (
         r"([\u0900-\u097F\u0A00-\u0A7F\u0A01-\u0A4Da-zA-Z]+)",
         re.I,
     ),
+    # English "my name is <name>" deliberately does NOT match here (no "my"
+    # alternative below) -- see PR 070: routing it through _NAME_FILLER_RE's
+    # "my name is" filler strip instead correctly handles multi-word names,
+    # where this pattern's single-token capture group cannot.
     re.compile(
-        r"(?:mera|my|\u0a2e\u0a47\u0a30\u0a3e)\s+"
+        r"(?:mera|\u0a2e\u0a47\u0a30\u0a3e)\s+"
         r"(?:naam|name|\u0a28\u0a3e\u0a02)\s+"
         r"(?:hai\s+|\u0a39\u0a48\s+)?"
         r"([\u0900-\u097F\u0A00-\u0A7F\u0A01-\u0A4Da-zA-Z]+)",
@@ -210,11 +256,25 @@ _QTY_ITEM_RE = re.compile(
 )
 
 
+# PR 070 — the phonetic matcher fuzzy-matches "Singh" -> "Bhatura (single)"
+# at the flat UNIQUE_SINGLE_CONF=0.65 (restaurant/clover/match.py), which
+# used to veto ANY non-None match and dropped "Singh" as a customer name.
+# The hint's job is precision ("is this really a dish?"), the opposite of
+# the order path's recall — raise the bar so only high-confidence dish
+# matches veto a name candidate. Default 1.0 preserves the static-menu path
+# (its dicts carry no match_confidence; substring matching there is already
+# precise).
+_MENU_HINT_MIN_CONF = 0.8
+
+
 def _menu_item_hint_in_text(text: str) -> bool:
     """Utterance names a likely menu item (same check conversation.py used)."""
     from restaurant import menu_provider
 
-    return menu_provider.resolve_item_in_text(text) is not None
+    item = menu_provider.resolve_item_in_text(text)
+    if item is None:
+        return False
+    return float(item.get("match_confidence", 1.0)) >= _MENU_HINT_MIN_CONF
 
 
 # Checkout / intent words — never valid customer names (e.g. STT "ਪਿਕਅੱਪ" alone).

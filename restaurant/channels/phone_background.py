@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Sequence
 
 from restaurant.clover.match import phonetic_key
 from restaurant.channels.phone_echo import _ORDER_SIGNAL_RE, should_bypass_phone_echo_filter
@@ -114,6 +115,21 @@ def _looks_like_named_answer(raw_text: str) -> bool:
     return bool(_TITLE_CASE_RE.match(raw_text.strip()))
 
 
+def _question_pending(recent_agent_lines: Sequence[str]) -> bool:
+    """True when the last non-empty agent line was a question.
+
+    PR 073 — safety net for a single false-positive drop: if Sierra just
+    asked something and the caller's reply gets filtered, we should reprompt
+    immediately instead of waiting for a streak of drops.
+    """
+    for line in reversed(recent_agent_lines):
+        stripped = line.rstrip()
+        if not stripped:
+            continue
+        return stripped.endswith("?") or stripped.endswith("？")
+    return False
+
+
 def is_likely_background_speech(
     user_text: str,
     intent: str | None,
@@ -151,6 +167,13 @@ def is_likely_background_speech(
     if _ORDER_SIGNAL_RE.search(text):
         return False
 
+    # PR 073 — meaningful-token rescue runs before `_BACKGROUND_FRAGMENT_RE`
+    # so a real short reply like "No, thanks." ("no" is meaningful) isn't
+    # swallowed by the TV-chatter fragment regex matching "thanks".
+    tokens = _drop_fillers(_tokens(text))
+    if len(tokens) <= 3 and any(_token_is_meaningful(t) for t in tokens):
+        return False
+
     if _BACKGROUND_FRAGMENT_RE.search(text):
         return True
 
@@ -160,17 +183,11 @@ def is_likely_background_speech(
     if _looks_like_named_answer(text):
         return False
 
-    tokens = _drop_fillers(_tokens(text))
     if not tokens:
         return True
 
-    if len(tokens) == 1:
-        return not _token_is_meaningful(tokens[0])
-
-    if len(tokens) == 2 and all(_token_is_meaningful(t) for t in tokens):
-        return False
-
-    # Very short side speech with no order/menu signal.
+    # Very short side speech with no order/menu signal and no meaningful
+    # token (the rescue above already returned False otherwise).
     if len(tokens) <= 2:
         return True
 
