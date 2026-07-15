@@ -198,3 +198,27 @@ def test_indic_script_word_phone():
         extract_phone_digits("नौ चार एक तीन सात पांच दो छह आठ आठ")
         == "9413752688"
     )
+
+
+def test_word_phone_negatives():
+    # Non-phone utterance must never be misread as a phone number.
+    assert extract_phone_digits("do samosa") is None
+    # 9-word-digit string (one short of 10) must still return None.
+    assert (
+        extract_phone_digits("nine four one three seven five two six eight")
+        is None
+    )
+    # A real name utterance is unaffected by the word-digit normalization.
+    assert parse_customer_name("my name is Shivek") == "Shivek"
+
+
+def test_looks_like_phone_utterance_word_digits():
+    assert looks_like_phone_utterance(
+        "nine four one three seven five two six eight eight"
+    )
+    assert (
+        parse_customer_name(
+            "nine four one three seven five two six eight eight"
+        )
+        is None
+    )
