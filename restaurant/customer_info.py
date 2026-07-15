@@ -175,8 +175,12 @@ _NAME_PATTERNS = (
         r"([\u0900-\u097F\u0A00-\u0A7F\u0A01-\u0A4Da-zA-Z]+)",
         re.I,
     ),
+    # English "my name is <name>" deliberately does NOT match here (no "my"
+    # alternative below) -- see PR 070: routing it through _NAME_FILLER_RE's
+    # "my name is" filler strip instead correctly handles multi-word names,
+    # where this pattern's single-token capture group cannot.
     re.compile(
-        r"(?:mera|my|\u0a2e\u0a47\u0a30\u0a3e)\s+"
+        r"(?:mera|\u0a2e\u0a47\u0a30\u0a3e)\s+"
         r"(?:naam|name|\u0a28\u0a3e\u0a02)\s+"
         r"(?:hai\s+|\u0a39\u0a48\s+)?"
         r"([\u0900-\u097F\u0A00-\u0A7F\u0A01-\u0A4Da-zA-Z]+)",

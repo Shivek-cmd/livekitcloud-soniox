@@ -68,6 +68,21 @@ def test_confidence_ladder_guard(singh_menu_cache):
     assert hit["match_confidence"] == 0.65
 
 
+def test_singh_gurmukhi_variant(singh_menu_cache):
+    assert parse_customer_name("ਅਹ, ਸੰਦੀਪ ਸਿੰਘ") == "ਸੰਦੀਪ ਸਿੰਘ"
+
+
+def test_name_with_filler_prefix(singh_menu_cache):
+    assert parse_customer_name("my name is Sandeep Singh") == "Sandeep Singh"
+
+
+def test_dish_answer_still_rejected(singh_menu_cache):
+    # Precision survives the floor: a caller literally answering the dish
+    # name to the name question is still rejected, both scripts.
+    assert parse_customer_name("Butter Chicken") is None
+    assert parse_customer_name("ਬਟਰ ਚਿਕਨ") is None
+
+
 def test_extract_phone_digits():
     assert extract_phone_digits("94137 52688") == "9413752688"
     assert extract_phone_digits("+1 941-375-2688") == "9413752688"
