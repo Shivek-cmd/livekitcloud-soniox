@@ -1,29 +1,31 @@
 # GHL + n8n Order Sync — Plan (CRM & follow-ups)
 
-> **Status:** **G0 live** (n8n + GHL SMS). **G1 implemented** in `pr_071_n8n-order-placed-webhook` — enable on VPS with `N8N_SYNC_ENABLED=1`.  
-> **Last updated:** 2026-07-16  
-> **Goal:** Push Sierra / Clover order lifecycle events into **GoHighLevel (GHL)** via **self-hosted n8n**, so Bizbull can run **SMS follow-ups** and keep a light CRM trail.  
+> **Status:** **G0+G1+G2b live** (Sierra → n8n → GHL contact + Voice Orders opp + confirm SMS via **Opportunity Created**). **Next:** G3 abandoned / G4 completed.  
+> **Last updated:** 2026-07-17  
+> **Goal:** Push Sierra / Clover order lifecycle into **GoHighLevel (GHL)** via **self-hosted n8n** so Bizbull can run **automations** (SMS and stage-based workflows). Contacts hold identity; **opportunities** hold per-order automation state.  
 > **Tenant:** **Bizbull only** (single restaurant). Multi-tenant later.  
-> **Priority:** Follow-ups first; CRM contact history second.  
-> **Artifacts:** [`n8n/sierra-ghl-connection-stub.json`](../../n8n/sierra-ghl-connection-stub.json) · [`n8n/README.md`](../../n8n/README.md)  
+> **Priority:** Automations first (not an owner pipeline dashboard).  
+> **Doc rule:** Any plan change (now or later) is written here **before** build; status tables updated when shipped.  
+> **Artifacts:** [`n8n/sierra-ghl-connection-stub.json`](../../n8n/sierra-ghl-connection-stub.json) · [`n8n/README.md`](../../n8n/README.md) · [`pr/pr_071_n8n-order-placed-webhook.md`](../../pr/pr_071_n8n-order-placed-webhook.md) · [`pr/pr_072_ghl-opportunity-on-place.md`](../../pr/pr_072_ghl-opportunity-on-place.md)  
 > **Context:** [`09-clover-pos.md`](09-clover-pos.md) · [`12-admin-analytics-supabase.md`](12-admin-analytics-supabase.md) · [`HANDOFF.md`](../HANDOFF.md)
 
 ---
 
-## Production readiness (Phase 0) — what “live” means today
+## Production readiness — what “live” means today
 
 | Layer | Status | Notes |
 |-------|--------|--------|
 | n8n webhook (prod) | ✅ | `https://n8n.bizbull.ai/webhook/sierra-ghl-sync` — workflow Active |
 | GHL contact upsert + custom fields | ✅ | Tags + `last_order_*` fields (§7.1) |
-| Multi-order SMS re-arm | ✅ | n8n removes then re-adds `order-placed` every run |
-| GHL confirm SMS workflow | ✅ | Trigger: tag `order-placed` added → Send SMS |
-| SMS “Delivered” in GHL Conversations | ✅ | Treat as system OK; iPhone Unknown Senders / carrier may hide message from user |
-| Sierra agent auto-POST | ✅ **G1 (PR 071)** | Kill switch `N8N_SYNC_ENABLED` (default 0 on VPS until flipped) |
-| Place-failed / abandoned / Clover completed | ⬜ | G1 fail path · G3 · G4 |
-| Webhook HMAC / kill switch / dead-letter | ⬜ | G1 env + G5 harden |
+| Multi-order SMS | ✅ **Option B** | Confirm SMS on **Opportunity Created** + Allow multiple opportunities |
+| GHL confirm SMS workflow | ✅ **Option B** | Trigger: **Opportunity Created** + In Pipeline `Voice Orders` |
+| SMS “Delivered” in GHL Conversations | ✅ | Device filtering may hide SMS; GHL Delivered = stack OK |
+| Sierra agent auto-POST | ✅ **G1 (PR 071)** | VPS: `N8N_SYNC_ENABLED=1` + webhook URL |
+| **GHL Opportunities / pipeline** | ✅ **G2b (PR 072)** | Multi-order: one opp + one SMS each — verified |
+| Abandoned / Clover completed | ⬜ | G3 · G4 (create/move opportunities) |
+| Webhook HMAC / idempotency / dead-letter | ⬜ | G5 |
 
-**Production rule:** CRM/SMS must stay **fail-open** for voice. GHL “Delivered” = GHL accepted delivery to carrier; device filtering is outside our stack.
+**Production rule:** CRM/SMS/opp sync must stay **fail-open** for voice. GHL “Delivered” = accepted by carrier path; device filtering is outside our stack.
 
 ---
 ## 1. Problem statement
@@ -43,23 +45,29 @@ Today Sierra can place orders (log + optional Clover submit) and store call anal
 
 | # | Decision | Value |
 |---|----------|--------|
-| 1 | Primary win | **Follow-ups** (SMS/WhatsApp/email); CRM contact trail also required |
-| 2 | Middleware | **Self-hosted n8n** (already available); GHL API keys ready |
+| 1 | Primary win | **Automations** (SMS + stage triggers); CRM contact trail supports that |
+| 2 | Middleware | **Self-hosted n8n** → GHL APIs / workflows |
 | 3 | “Delivered” meaning (v1) | Clover **order completed** (not courier tracking) |
-| 4 | Incomplete calls | **Yes in v1** — abandoned / no-place sessions sync to GHL for recovery follow-up |
+| 4 | Incomplete calls | **Yes** — abandoned sync when phone + cart nonempty (G3) |
 | 5 | Tenancy | **Bizbull only** now |
-| 6 | Voice path | **Fail-open** — n8n/GHL failure must never block place_order, goodbye, or hang-up |
-| 7 | Analytics vs CRM | Supabase admin = ops truth; **GHL = customer automation**. Two sinks, two jobs |
+| 6 | Voice path | **Fail-open** — n8n/GHL failure never blocks place_order / goodbye / hang-up |
+| 7 | Analytics vs CRM | Supabase admin = ops truth; **GHL = customer automations** |
+| 8 | Pipeline purpose | **Automation hooks**, not an owner-facing kitchen board (v1) |
+| 9 | Opportunities | **One opportunity per order** (repeat customers get many opps, one contact) |
+| 10 | Confirm SMS trigger | **Opportunity Created** + In Pipeline `Voice Orders`. Tag `order-placed` labeling only. Allow multiple opportunities ON. |
+| 11 | Place failed (Clover error) | **No opportunity** in v1 (log / optional later `Lost`) |
+| 12 | Doc discipline | Update **this plan** whenever scope/phases change — before coding |
 
 ---
 
 ## 3. What GHL is for (and not for)
 
 ### GHL owns
-- Contact upsert (name + phone)
-- Tags / custom fields for last order
-- Workflows: confirm, ready/completed, abandoned recovery, later review ask
-- Owner-facing CRM inbox for messaging
+- Contact upsert (name + phone) + last-order fields
+- Tags for fast triggers (confirm SMS today)
+- **Opportunities / `Voice Orders` pipeline** for per-order automation stages (§7.2)
+- Workflows: confirm, abandoned recovery, completed/review
+- Messaging inbox (SMS)
 
 ### Clover still owns
 - Menu, kitchen tickets, Register, payments, order status source of truth
@@ -68,13 +76,15 @@ Today Sierra can place orders (log + optional Clover submit) and store call anal
 - Live conversation, cart authority, call transcripts, latency QA
 
 ```
-  CUSTOMER                 POS / OPS                      CRM / FOLLOW-UP
-  ────────                 ─────────                      ───────────────
+  CUSTOMER                 POS / OPS                      CRM / AUTOMATION
+  ────────                 ─────────                      ────────────────
   Phone/Web → Sierra  →    Clover (ticket + status)
                       ↘              ↓ webhooks
                        →  n8n  ←─────┘
                               ↓
-                           GHL workflows (SMS etc.)
+                           GHL contact + opportunity stages
+                              ↓
+                           GHL workflows (SMS / later stage triggers)
 ```
 
 ---
@@ -99,18 +109,20 @@ Today Sierra can place orders (log + optional Clover submit) and store call anal
                                                             ┌─────────────┐
                                                             │  GoHighLevel│
                                                             │  Contact +  │
-                                                            │  workflows  │
+                                                            │  Opportunity│
+                                                            │  + workflows │
                                                             └─────────────┘
 ```
 
 ### Design rules (locked)
 
 1. **Sierra stays thin** — POST a normalized JSON envelope to one n8n webhook (or few). No GHL SDK in the agent.
-2. **n8n owns mapping** — GHL field IDs, tags, workflow triggers, retries, dead-letter logging.
+2. **n8n owns mapping** — GHL field IDs, tags, **opportunities/stages**, workflow triggers, retries, dead-letter logging.
 3. **Normalized payload** — not raw Clover JSON dump into GHL.
-4. **Idempotency** — same `event_id` / `clover_order_id` / `session_id` must not create duplicate contacts or duplicate SMS.
+4. **Idempotency** — same `event_id` / `clover_order_id` / `session_id` must not create duplicate contacts, duplicate SMS, or duplicate opportunities (G5 hardens).
 5. **Phone is the contact key** — E.164 preferred; GHL upsert by phone.
-6. **PII / CASL** — Canadian SMS needs clear restaurant identity + STOP handling via GHL; capture consent assumptions in Phase G0.
+6. **One opportunity per order** — pipeline stages drive automations; not an owner kitchen board.
+7. **PII / CASL** — Canadian SMS needs clear restaurant identity + STOP handling via GHL.
 
 ---
 
@@ -188,7 +200,7 @@ All Sierra → n8n POSTs share a wrapper:
 
 Rules:
 
-- Emit abandoned only if useful for follow-up: prefer **phone known** OR **cart nonempty**. Pure browse with no identity can be dropped or logged only (decide in G1).
+- Emit abandoned only if useful for follow-up: **phone known** AND **cart nonempty** (locked §7.2 / G3). Pure browse with no identity → skip GHL.
 - `event_id` must be stable for retries (e.g. `order.placed:{clover_order_id}` or `session.ended:{session_id}`).
 
 ---
@@ -197,11 +209,12 @@ Rules:
 
 | GHL object | Use |
 |------------|-----|
-| **Contact** | Upsert by phone; name when known |
-| **Tags** | See §7.1 Phase 0 |
-| **Custom fields** | See §7.1 Phase 0 |
-| **Note** or conversation | Optional later |
-| **Workflows** | See Phase G2–G3 |
+| **Contact** | Who the customer is (phone key); `last_order_*` snapshot |
+| **Tags** | Fast automation triggers (§7.1) — confirm SMS today |
+| **Custom fields** | Last-order facts on the contact (§7.1) |
+| **Opportunity** | **One per order** — stage = automation hook (§7.2) |
+| **Pipeline** | `Voice Orders` — stages for workflows, not staff board (§7.2) |
+| **Workflows** | Tag-based (live) + stage-based (as opps ship) |
 
 ### 7.1 Phase 0 locked schema (live) — no “sierra” naming
 
@@ -225,9 +238,44 @@ Rules:
 | `last_order_summary` | `FyLZbBVUDD9TzY7LXlm4` | `contact.last_order_summary` | LARGE_TEXT |
 | `last_channel` | `UUqkRGbEl5HjS5Sd2eIz` | `contact.last_channel` | TEXT |
 
-n8n upsert should set custom fields by **id** (or fieldKey per GHL API) and apply tags by **name**.
+n8n upsert sets custom fields by **id** and applies tags by **name**.
 
-Avoid inventing a full “orders database” inside GHL in v1 — custom fields + notes + tags are enough for follow-ups.
+### 7.2 Opportunities + pipeline — G2b (IDs locked)
+
+**Why:** Tags/SMS cover “message now.” Opportunities cover **per-order journey** so GHL workflows can fire on **stage enter** (abandoned nudge, completed/review) without overloading the contact.
+
+**Pipeline:** `Voice Orders` · id `wCQVOwUah69xD6KHFrsi` · location `uc3GK4buCjDTCkedqWyy`
+
+| Stage | Stage id | When set | Automation intent |
+|-------|----------|----------|-------------------|
+| `Abandoned` | `ed4e4d7b-7a77-4e86-9c98-5a4204a046ac` | G3: session ended, no place, **phone + cart nonempty** | Delayed recovery SMS / wait |
+| `Placed` | `a6c71988-47c0-4f13-8a2b-40b784a9a72f` | On `order.placed` (G2b): create **or** move Abandoned→Placed | Confirm SMS via **Opportunity Created** (Option B) |
+| `Completed` | `35a07d49-4524-48b3-96c7-a89b679618f7` | G4: Clover order completed | Thanks / review ask |
+| `Lost` | `c86cd5f9-b078-4487-8e64-19c963a92250` | Optional later (void / abandoned never recovered) | Suppress further SMS |
+
+**Opportunity custom fields**
+
+| Name | Field id | fieldKey | Type |
+|------|----------|----------|------|
+| `event_id` | `ebYtqePmkjxB2BFjaEtJ` | `opportunity.event_id` | TEXT |
+| `clover_order_id` | `mqQZGfXEM7Ixbfcpbeej` | `opportunity.clover_order_id` | TEXT |
+| `session_id` | `urTkDJuILkxhG4942CmU` | `opportunity.session_id` | TEXT |
+| `order_summary` | `zH1m3iD6sNuy8y22uqMa` | `opportunity.order_summary` | LARGE_TEXT |
+
+**Rules (production):**
+
+1. **One opportunity per order** — never reuse an open opp for a later place on the same contact (unless same-session Abandoned→Placed move below).  
+2. **Contact still upserted** every place; opp is additional.  
+3. **Match keys** on opp custom fields (above).  
+4. **Monetary value** = order `total`.  
+5. **Name format:** `{order_type} · {first_name} · {summary}` truncated (e.g. `pickup · Aman · 1x Butter Chicken`).  
+6. **Confirm SMS:** trigger = opportunity enters **`Placed`** (decision #10 / §8.1). Tag `order-placed` is labeling only.  
+7. **Place failed:** no opportunity in v1.  
+8. **Abandoned:** opportunity only if phone **and** cart has items (G3).
+
+**Same-session Abandoned→Placed (implemented in n8n G2b):** when `order.placed` arrives with `session_id`, if an open `Abandoned` opp exists for that contact+session, **move it to `Placed`** and update value/summary; else **create** new `Placed`.
+
+**Not in scope for pipeline v1:** owner dashboard UX, kitchen “In progress / Ready” micro-stages, multi-pipeline per channel.
 
 ---
 
@@ -235,110 +283,105 @@ Avoid inventing a full “orders database” inside GHL in v1 — custom fields 
 
 | Workflow | Trigger | Actions | Status |
 |----------|---------|---------|--------|
-| **W-Place** | `order.placed` → n8n | Upsert contact → custom fields → re-arm `order-placed` → apply tags → GHL SMS workflow | ✅ Phase 0 |
-| **W-Fail** | `order.place_failed` | Upsert if phone → tag `order-failed` → optional owner alert | ⬜ G1 |
-| **W-Abandoned** | `session.ended` abandoned | Upsert if phone → tag `order-abandoned` → delayed recovery SMS | ⬜ G3 |
-| **W-Completed** | Clover status completed | Update fields/tags → thank-you / ready SMS | ⬜ G4 |
+| **W-Place** | `order.placed` → n8n | Upsert contact → fields → tags → create/move opp **Placed** | ✅ G0/G1 + G2b |
+| **W-Place-Opp** | same `order.placed` | Opportunity → stage `Placed` (§7.2) | ✅ verified (multi-order) |
+| **W-Confirm-SMS** | GHL: **Opportunity Created** / Voice Orders | Send confirm SMS (one execution per opportunity) | ✅ Option B verified |
+| **W-Fail** | `order.place_failed` | Optional note; **no opp** v1 | ⬜ later |
+| **W-Abandoned** | `session.ended` abandoned | Tag + opp `Abandoned` + delayed SMS | ⬜ G3 |
+| **W-Completed** | Clover completed | Opp → `Completed` + contact fields + SMS | ⬜ G4 |
 
-### 8.1 Confirmation SMS — locked & verified
+### 8.1 Confirmation SMS — Option B (Opportunity Created)
 
 | Item | Decision |
 |------|----------|
 | Channel | GHL SMS |
-| Approach | **Option A** — GHL Workflow (not n8n Conversations API) |
-| Trigger | Tag **`order-placed`** added |
-| Multi-order | n8n **DELETE** `order-placed` then **POST** tags again every sync |
-| Verified | PowerShell → prod webhook → GHL Conversations shows SMS **Delivered** |
-| Device note | If GHL says Delivered but iPhone silent → Unknown Senders / Focus / carrier — not a workflow bug |
+| Approach | **GHL Workflow** |
+| Trigger | **Opportunity Created** + filter **In Pipeline** = `Voice Orders` |
+| Multi-order | **Allow multiple opportunities** ON (one SMS per opp / order) |
+| Also enable | **Allow re-entry** ON |
+| Do **not** use (for confirm) | Tag `order-placed`; Opportunity Changed; Opportunity Status Changed; Stale |
+| Later (G3 move only) | Optional 2nd trigger: **Pipeline Stage Changed** → stage `Placed` (Abandoned→Placed) |
+| Tags still applied | `voice-order`, `order-placed`, `pickup`/`delivery` — labeling only |
+| Copy | Keep existing text; optionally use opp custom field `order_summary` |
+| Device note | Phone filtering ≠ workflow failure |
 
-### Follow-up throttle rules (plan defaults — tune live)
+**GHL setup checklist (Option B):**
 
-- Confirm SMS: once per successful n8n sync (re-arm pattern); avoid double-fire only if we add idempotency key later (G5)
+1. Open existing confirm SMS workflow (or clone it).
+2. **Pause** / remove the old trigger **Tag added → `order-placed`**.
+3. Add trigger: **Opportunity Created** → filter **In Pipeline** = **Voice Orders**.  
+   (Do not use Opportunity Changed / Status Changed / Stale for confirm.)  
+4. Confirm settings: **Allow re-entry** ON, **Allow multiple opportunities** ON.
+5. Keep **Send SMS** action (same message is fine).
+6. Publish / make Active. Disable any duplicate old tag-based confirm workflow.
+7. Test with a new PowerShell order → expect SMS every place.
+
+### Follow-up throttle rules
+
+- Confirm SMS: **once per opportunity** (Placed stage enter); stronger idempotency in G5
 - Max **1** abandoned SMS per phone per **48h** (G3)
-- No abandoned SMS if `order.placed` already for same session
-- Completed SMS only if contact exists and order not voided (G4)
+- No abandoned SMS if same session already placed
+- Completed SMS only if opp/contact exists and not voided (G4)
 
 ---
 
 ## 9. Implementation phases
 
-Work **phase by phase**. Code changes use `pr/pr_rules.md` (doc first → branch = doc name).
+Code changes: `pr/pr_rules.md`. **Update this file when a phase starts or ships.**
 
-### Phase G0 — Setup, CRM sync, confirm SMS — ✅ DONE (2026-07-16)
+### Phase G0 — ✅ DONE
+Contact + tags + fields + confirm SMS + re-arm.
 
-**Done when:** prod webhook upserts contact + fields + tags; GHL SMS workflow fires; multi-order re-arm works.
+### Phase G1 — ✅ DONE (PR 071 / #111)
+Sierra `place_order` → n8n; VPS `N8N_SYNC_ENABLED=1`.
 
-| Item | Status |
-|------|--------|
-| GHL Location `uc3GK4buCjDTCkedqWyy` | ✅ |
-| n8n Header Auth (PIT) | ✅ — never commit token |
-| Tags + custom fields (§7.1) | ✅ |
-| Importable workflow + sticky notes | ✅ [`n8n/sierra-ghl-connection-stub.json`](../../n8n/sierra-ghl-connection-stub.json) |
-| Prod URL Active | ✅ `https://n8n.bizbull.ai/webhook/sierra-ghl-sync` |
-| Confirm SMS (tag → GHL workflow) | ✅ Delivered in Conversations |
-| Re-arm for repeat orders | ✅ remove → re-add `order-placed` |
+### Phase G2 — ✅ mostly done in G0
+SMS copy / quiet hours optional.
 
-### Phase G1 — Sierra → n8n (production voice path) — ✅ **PR 071**
+### Phase G2b — Opportunities on place — ✅ **DONE (PR 072)**
 
-**Done when:** real phone/web `place_order` POSTs the normalized envelope without PowerShell.
+**Done when:** each `order.placed` creates a GHL opportunity in `Voice Orders` / `Placed` + confirm SMS via Opportunity Created (multi-order verified).
 
-- ✅ `restaurant/integrations/n8n_webhook.py` — async POST, timeout, **never raise**
-- ✅ Called from `place_order` after successful place
-- ✅ Env: `N8N_SYNC_ENABLED` (default 0), `N8N_WEBHOOK_ORDERS_URL`, optional `N8N_WEBHOOK_SECRET`
-- ✅ Unit tests: `tests/test_n8n_webhook.py` + place_order wiring
-- Branch/doc: `pr/pr_071_n8n-order-placed-webhook.md`
+- [x] Create pipeline + stages in GHL (`Voice Orders` — §7.2)
+- [x] Opp custom fields: `event_id`, `clover_order_id`, `session_id`, `order_summary`
+- [x] Extend n8n after contact/tags → search Abandoned / create or move Placed
+- [x] Fail-open on opp API errors (`neverError`)
+- [x] Write pipeline/stage/field IDs into §7.2
+- [x] Re-import workflow in n8n + attach credentials
+- [x] Live test: multi-order → multiple opps + SMS (Option B)
 
-**Ops:** keep `N8N_SYNC_ENABLED=0` on VPS until first live call reviewed, then set `1`.
+### Phase G3 — Abandoned — ⬜
+Phone + cart nonempty → tag + opp `Abandoned` + delayed SMS; same-session place → move to `Placed` (§7.2).
 
-### Phase G2 — Confirm SMS polish — ✅ mostly done in G0
+### Phase G4 — Clover completed — ⬜
+Find opp by `clover_order_id` → `Completed` + SMS.
 
-- GHL workflow already live; copy edits stay in GHL UI
-- Optional: quiet hours, STOP footer tweak, Canadian from-number check for CA callers
-
-### Phase G3 — Abandoned `session.ended` — ⬜
-
-- Emit on session end without place (phone required)
-- Tag `order-abandoned` + delayed SMS + 48h throttle
-
-### Phase G4 — Clover completed → GHL — ⬜
-
-- Clover status webhook → n8n → update `last_order_status` + tag `order-completed` → SMS
-
-### Phase G5 — Harden (production grade) — ⬜
-
-- HMAC/shared secret on webhook
-- Idempotency on `event_id` / `clover_order_id` (no double SMS on retry)
-- n8n error → Slack/email dead-letter
-- Optional Supabase `crm_sync_events` mirror
-- Kill switches per event type
+### Phase G5 — Harden — ⬜
+HMAC, idempotency, dead-letter, optional Supabase mirror.
 
 ---
 
-## 9.1 Roadmap snapshot (what a full production system still needs)
+## 9.1 Roadmap snapshot
 
 ```
-DONE (G0)     n8n ← PowerShell/manual     → GHL contact + SMS
-NEXT (G1)     Sierra place_order          → n8n (same webhook)
-THEN (G3)     Abandoned calls             → recovery SMS
-THEN (G4)     Clover completed            → done/thanks SMS
-THEN (G5)     Auth, idempotency, alerts   → restaurant-grade ops
+DONE  G0/G1   Sierra → n8n → GHL contact + tags
+DONE  G2b     Opportunity Placed + confirm SMS (Opportunity Created)
+NEXT  G3      Abandoned → opp + recovery SMS
+THEN  G4      Clover completed → opp Completed + SMS
+THEN  G5      Auth, idempotency, alerts
 ```
-
-Pickup vs delivery, phone vs web, repeat same-day orders: **handled in G0 data model** once G1 wires Sierra.
 
 ---
-## 10. Suggested PR / doc naming (when we implement)
+
+## 10. Suggested PR / doc naming
 
 | Phase | Likely artifact |
 |-------|-----------------|
-| G0 | Doc updates + n8n export notes in this plan |
-| G1 | `pr/pr_070_n8n-order-placed-webhook.md` (number confirm at start) |
-| G2 | Mostly n8n + GHL config (doc checklist in plan) |
-| G3 | `pr/pr_071_n8n-session-abandoned.md` |
-| G4 | `pr/pr_072_clover-status-to-n8n.md` (+ Caddy route if needed) |
-| G5 | Hardening PR or ops notes in `vps-config.md` |
-
-Numbers are placeholders — pick next free PR number when coding starts.
+| G0/G1 | ✅ `pr_071_n8n-order-placed-webhook` (#111) |
+| G2b | ✅ `pr/pr_072_ghl-opportunity-on-place.md` |
+| G3 | `pr/pr_073_n8n-session-abandoned.md` |
+| G4 | `pr/pr_074_clover-status-to-n8n.md` |
+| G5 | Hardening / `vps-config.md` |
 
 ---
 
@@ -348,58 +391,40 @@ Numbers are placeholders — pick next free PR number when coding starts.
 - Real courier delivery tracking
 - Payments / card links inside GHL
 - Replacing Supabase admin analytics
-- Full GHL “opportunities pipeline” UI redesign
-- Putting Clover OAuth UI inside Sierra
+- Owner-facing pipeline UX / kitchen micro-stages
+- Clover OAuth UI inside Sierra
 
 ---
 
-## 12. What we need from you (before / during G0)
+## 12. Inputs already gathered (G0/G1)
 
-Please gather these so Phase G0 can close without blocking:
+| Item | Status |
+|------|--------|
+| GHL location + PIT in n8n | ✅ |
+| n8n `https://n8n.bizbull.ai` | ✅ |
+| SMS channel working | ✅ |
+| Confirm SMS workflow on opp **Created** / Voice Orders | ✅ Option B |
+| VPS `N8N_SYNC_ENABLED=1` + webhook URL | ✅ |
+| Pipeline / opportunity custom fields in GHL | ✅ §7.2 |
 
-### A. GoHighLevel
-1. **Location / sub-account** name used for Bizbull  
-2. **Private Integration token** (or OAuth) with scopes to: contacts upsert, tags, notes, workflows/custom fields as needed  
-3. Confirmation of preferred channel for v1 follow-ups: **SMS vs WhatsApp vs both**  
-4. From-number / messaging readiness already verified in GHL  
-5. OK to create the custom fields + tags listed in §7 (or send a screenshot of existing fields to reuse)
-
-### B. n8n (self-hosted)
-1. **Public HTTPS base URL** for webhooks (e.g. `https://n8n.yourdomain.com`)  
-2. Confirmation VPS / Sierra can reach it (firewall / allowlist)  
-3. Preferred auth: shared secret header vs Basic Auth vs n8n webhook token  
-4. Optional: export folder or naming convention for workflow JSON backups in-repo (or keep workflows only in n8n)
-
-### C. Clover (for Phase G4, can wait until G1–G2 done)
-1. Whether **order webhooks** are enabled for this merchant / app  
-2. Sample payload for order create / update / complete (sandbox ok)  
-3. How staff mark an order **completed** today (Register button flow) so we match reality
-
-### D. Product copy / compliance
-1. Draft SMS templates you like (confirm, abandoned, completed) — or ask us to propose English + short Punjabi mix  
-2. Business name for SMS header / CASL-style footer preference  
-3. Abandoned delay (suggestion: **30–60 minutes**) and quiet hours (e.g. no SMS 10pm–9am local)
-
-### E. Environments
-1. Do you want a **GHL test contact / test tag** first (`sierra-test`) before real customers? (Recommended: yes)  
-2. Should production Sierra use `N8N_SYNC_ENABLED=0` until W-Place is verified? (Recommended: yes)
+**Still useful before G4:** Clover order webhook sample + how staff mark completed.
 
 ---
 
 ## 13. Success criteria
 
-### Phase 0 (met)
-- [x] Placed-order test → GHL contact + last-order fields within ~30s  
-- [x] Confirm SMS path (tag → GHL workflow); Conversations shows **Delivered**  
-- [x] Repeat sync re-arms `order-placed` (no manual tag delete)  
-- [x] No-phone → skip GHL, still HTTP 200  
+### Met (G0/G1/G2b)
+- [x] Place → GHL contact + fields + tags  
+- [x] Opportunity Created → confirm SMS (Option B); multi-order verified  
+- [x] One opp per order in Voice Orders / Placed  
+- [x] Live Sierra → n8n on VPS  
+- [x] No-phone skip; fail-open  
 
-### Full v1 (remaining)
-- [ ] Live Sierra `place_order` → same n8n webhook (G1)  
-- [ ] Abandoned session with phone → recovery follow-up (G3)  
-- [ ] Clover **completed** → GHL update + optional SMS (G4)  
-- [ ] Webhook auth + idempotency + error alerts (G5)  
-- [ ] n8n/GHL outage never breaks Sierra place + hang-up (prove under G1 kill switch)  
+### Remaining (v1)
+- [x] Opportunity on each place (`Placed`) + multi-order SMS — **G2b** ✅  
+- [ ] Abandoned → opp + recovery SMS — **G3**  
+- [ ] Clover completed → opp `Completed` + SMS — **G4**  
+- [ ] HMAC / idempotency / alerts — **G5**  
 
 ---
 
@@ -407,19 +432,28 @@ Please gather these so Phase G0 can close without blocking:
 
 | # | Question | Resolution |
 |---|----------|------------|
-| 1 | Abandoned with no phone? | **Skip GHL** (Phase 0); optional owner alert later |
-| 2 | Shadow Clover (`CLOVER_SUBMIT_ORDERS=0`)? | Still sync `order.placed`; `last_order_id` may be session id |
-| 3 | SMS via GHL workflow vs n8n API? | **GHL workflow** (Option A) ✅ |
-| 4 | Supabase crm_sync_events? | Defer to G5; n8n executions enough for G0–G1 |
-| 5 | Naming “sierra” in tags/fields? | **No** — use `voice-order`, `order-placed`, `last_order_*` |
+| 1 | Abandoned with no phone? | **Skip GHL** |
+| 2 | Abandoned with phone, empty cart? | **Skip opp** — require cart nonempty |
+| 3 | Shadow Clover? | Still sync `order.placed` |
+| 4 | SMS via workflow vs n8n API? | **GHL workflow** ✅ — trigger now **opp Placed** (was tag) |
+| 5 | Switch SMS to opportunity? | **Yes — Option B** (§8.1): **Opportunity Created** / Voice Orders |
+| 6 | One opp per order? | **Yes** ✅ |
+| 7 | Pipeline for owner board? | **No** — automation only v1 |
+| 8 | Place failed → opp? | **No** v1 |
+| 9 | Supabase crm_sync_events? | Defer G5 |
+| 10 | Doc updates? | **Always** update this plan before/when shipping |
 
 ---
+
 ## 15. Doc map
 
 | Doc | Role |
 |-----|------|
-| **This file** | Plan + phases + asks |
-| `09-clover-pos.md` | POS submit / webhooks background |
-| `12-admin-analytics-supabase.md` | Do not merge responsibilities into GHL |
-| `vps-config.md` | Will gain n8n env vars at G1 |
-| `pr/pr_rules.md` | Doc-first PRs when code starts |
+| **This file** | Source of truth for GHL/n8n plan + status |
+| `n8n/README.md` | Import / credential / test webhook |
+| `pr/pr_071_n8n-order-placed-webhook.md` | G1 ship record |
+| `pr/pr_072_ghl-opportunity-on-place.md` | G2b ship record |
+| `09-clover-pos.md` | POS / webhooks |
+| `12-admin-analytics-supabase.md` | Ops analytics ≠ GHL |
+| `vps-config.md` | `N8N_*` env on VPS |
+| `pr/pr_rules.md` | Doc-first PRs |
