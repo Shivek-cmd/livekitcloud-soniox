@@ -1,10 +1,10 @@
 {
-  "name": "Bizbull · Voice Order → GHL Sync (Phase 0)",
+  "name": "Bizbull · Voice Order → GHL Sync",
   "nodes": [
     {
       "parameters": {
-        "content": "## Bizbull · Voice Order → GHL\n**Phase 0 · Production sync**\n\n**Purpose**\nReceive placed-order events from Sierra / PowerShell tests → upsert GoHighLevel contact → set last-order custom fields → re-arm + apply tags so **confirm SMS fires on every order**.\n\n**Prod URL**\n`POST /webhook/sierra-ghl-sync`\n\n**Auth**\nHeader Auth credential on all GHL HTTP nodes:\n`Authorization: Bearer <PIT>`\n\n**Docs**\n`docs/plan/13-ghl-n8n-order-sync.md` §7.1 / §8.1",
-        "height": 420,
+        "content": "## Bizbull · Voice Order → GHL\n**G0–G2b · Production sync**\n\n**Purpose**\nReceive placed-order events → upsert GHL contact → re-arm tags (confirm SMS) → create/move **Voice Orders** opportunity to **Placed**.\n\n**Prod URL**\n`POST /webhook/sierra-ghl-sync`\n\n**Auth**\nHeader Auth on all GHL HTTP nodes:\n`Authorization: Bearer <PIT>`\n\n**Docs**\n`docs/plan/13-ghl-n8n-order-sync.md` §7.1 / §7.2 / §8",
+        "height": 440,
         "width": 380,
         "color": 5
       },
@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "content": "## 1 · INGEST\nReceive HTTPS POST.\nPath kept as `sierra-ghl-sync` for stable URL.\nAlways respond via **Respond** node (not webhook default).",
+        "content": "## 1 · INGEST\nReceive HTTPS POST.\nPath `sierra-ghl-sync` kept for stable URL.\nAlways respond via **Respond** node.",
         "height": 200,
         "width": 300,
         "color": 4
@@ -29,7 +29,7 @@
     },
     {
       "parameters": {
-        "content": "## 2 · TRANSFORM\nNormalize envelope → phone, name, tags[], customFields[], upsertBody.\nField IDs locked in plan §7.1.\nNo “sierra” labels — source = **Voice Agent**.",
+        "content": "## 2 · TRANSFORM\nNormalize envelope → phone, name, tags[], contact customFields[], upsertBody.\nField IDs: plan §7.1.\nSource = **Voice Agent**.",
         "height": 220,
         "width": 300,
         "color": 4
@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "content": "## 3 · GATE\n**TRUE** → phone ≥ 7 digits → GHL path.\n**FALSE** → skip CRM (no SMS possible without phone).\nFail-open for caller; we still return HTTP 200.",
+        "content": "## 3 · GATE\n**TRUE** → phone ≥ 7 digits → GHL path.\n**FALSE** → skip CRM.\nAlways HTTP 200 (fail-open).",
         "height": 220,
         "width": 280,
         "color": 3
@@ -55,20 +55,20 @@
     },
     {
       "parameters": {
-        "content": "## 4 · GHL WRITE (happy path)\n1. **Upsert** contact + last-order custom fields\n2. **Remove** `order-placed` (re-arm SMS trigger)\n3. **Add** tags: `voice-order`, `order-placed`, `pickup`|`delivery`\n\nGHL Workflow listens on tag **order-placed** → confirm SMS.\nRemove→re-add = SMS on **every** order (hourly/daily OK).\nTags are appended (other tags preserved).",
-        "height": 300,
-        "width": 520,
+        "content": "## 4 · GHL WRITE\n1. Upsert contact + last-order fields\n2. Remove `order-placed` (SMS re-arm)\n3. Add tags → confirm SMS\n4. Opp: search Abandoned same session → move to Placed, else create Placed\n\nPipeline IDs: plan §7.2",
+        "height": 320,
+        "width": 560,
         "color": 2
       },
       "id": "note-ghl",
       "name": "Sticky · 4 GHL Write",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1020, -340]
+      "position": [1020, -360]
     },
     {
       "parameters": {
-        "content": "## 5 · OUT\nBuild JSON summary for caller/logs.\nAlways **200** so Sierra never blocks on CRM.",
+        "content": "## 5 · OUT\nJSON summary for caller/logs.\nAlways **200** so Sierra never blocks on CRM.",
         "height": 180,
         "width": 260,
         "color": 6
@@ -77,11 +77,11 @@
       "name": "Sticky · 5 Out",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1780, -260]
+      "position": [2680, -260]
     },
     {
       "parameters": {
-        "content": "## SKIP · No phone\nNo GHL upsert / no SMS.\nReturns `{ ok: true, ghl: skipped_no_phone }`.\nOptional later: owner alert only.",
+        "content": "## SKIP · No phone\nNo GHL upsert / SMS / opp.\n`{ ok: true, ghl: skipped_no_phone }`",
         "height": 180,
         "width": 280,
         "color": 7
@@ -90,7 +90,7 @@
       "name": "Sticky · Skip Path",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [980, 200]
+      "position": [980, 280]
     },
     {
       "parameters": {
@@ -134,7 +134,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// 03 · Normalize — read original webhook (Set node must not wipe body)\nconst webhook = $('01 · Receive Order Webhook').first().json;\nconst body = webhook.body ?? webhook;\nconst loc =\n  $('02 · Set GHL Location ID').first().json.locationId ||\n  'uc3GK4buCjDTCkedqWyy';\n\nconst customer = body.customer || {};\nconst order = body.order || {};\nconst phone = (\n  customer.phone_e164 ||\n  customer.phone ||\n  customer.phone_raw ||\n  ''\n)\n  .toString()\n  .trim();\nconst rawName = (customer.name || '').toString().trim();\nconst firstName = rawName.split(/\\s+/)[0] || 'Guest';\nconst lastName = rawName.split(/\\s+/).slice(1).join(' ') || 'Caller';\n\nconst orderType = (order.order_type || '').toString().toLowerCase();\nconst channel = (body.channel || '').toString().toLowerCase() || null;\nconst status = (order.status || 'placed').toString().toLowerCase();\nconst lastOrderId =\n  order.clover_order_id || body.session_id || body.event_id || null;\nconst total = order.total ?? null;\n\nconst items = Array.isArray(order.items) ? order.items : [];\nconst summary =\n  items.length > 0\n    ? items\n        .map((i) => {\n          const qty = i.qty ?? i.quantity ?? 1;\n          const name = i.name || 'item';\n          return `${qty}x ${name}`;\n        })\n        .join(', ')\n    : null;\n\n// Tags applied in step 07 (append). Do NOT send tags on upsert (would risk replace).\nconst tagsToAdd = ['voice-order', 'order-placed'];\nif (orderType === 'pickup') tagsToAdd.push('pickup');\nif (orderType === 'delivery') tagsToAdd.push('delivery');\n\n// Custom field IDs — docs/plan/13-ghl-n8n-order-sync.md §7.1\nconst customFields = [\n  { id: '0QK5vxB5ntrYG44o33Gn', field_value: lastOrderId != null ? String(lastOrderId) : '' },\n  { id: 'nl3jIwfxyUgQHPRlbGZl', field_value: orderType || '' },\n  { id: 'Q59Rb7F84BNHvrL1gzOJ', field_value: status || 'placed' },\n  {\n    id: 'IeLzeT4I8xitx3Jvk9mQ',\n    field_value: total != null && total !== '' ? Number(total) : '',\n  },\n  { id: 'FyLZbBVUDD9TzY7LXlm4', field_value: summary || '' },\n  { id: 'UUqkRGbEl5HjS5Sd2eIz', field_value: channel || '' },\n].filter((f) => f.field_value !== '' && f.field_value !== null && f.field_value !== undefined);\n\nconst upsertBody = {\n  locationId: loc,\n  phone,\n  firstName,\n  lastName,\n  source: 'Voice Agent',\n  customFields,\n};\n\nreturn {\n  json: {\n    locationId: loc,\n    event: body.event || 'unknown',\n    event_id: body.event_id || null,\n    session_id: body.session_id || null,\n    channel,\n    phone,\n    firstName,\n    lastName,\n    fullName: rawName || null,\n    order_type: orderType || null,\n    clover_order_id: order.clover_order_id || null,\n    order_total: total,\n    order_summary: summary,\n    tagsToAdd,\n    upsertBody,\n    hasPhone: phone.length >= 7,\n    raw: body,\n  },\n};"
+        "jsCode": "// 03 · Normalize — read original webhook (Set node must not wipe body)\nconst webhook = $('01 · Receive Order Webhook').item.json;\nconst body = webhook.body ?? webhook;\nconst loc =\n  $('02 · Set GHL Location ID').item.json.locationId ||\n  'uc3GK4buCjDTCkedqWyy';\n\nconst customer = body.customer || {};\nconst order = body.order || {};\nconst phone = (\n  customer.phone_e164 ||\n  customer.phone ||\n  customer.phone_raw ||\n  ''\n)\n  .toString()\n  .trim();\nconst rawName = (customer.name || '').toString().trim();\nconst firstName = rawName.split(/\\s+/)[0] || 'Guest';\nconst lastName = rawName.split(/\\s+/).slice(1).join(' ') || 'Caller';\n\nconst orderType = (order.order_type || '').toString().toLowerCase();\nconst channel = (body.channel || '').toString().toLowerCase() || null;\nconst status = (order.status || 'placed').toString().toLowerCase();\nconst lastOrderId =\n  order.clover_order_id || body.session_id || body.event_id || null;\nconst total = order.total ?? null;\n\nconst items = Array.isArray(order.items) ? order.items : [];\nconst summary =\n  items.length > 0\n    ? items\n        .map((i) => {\n          const qty = i.qty ?? i.quantity ?? 1;\n          const name = i.name || 'item';\n          return `${qty}x ${name}`;\n        })\n        .join(', ')\n    : null;\n\nconst tagsToAdd = ['voice-order', 'order-placed'];\nif (orderType === 'pickup') tagsToAdd.push('pickup');\nif (orderType === 'delivery') tagsToAdd.push('delivery');\n\n// Contact custom field IDs — plan §7.1\nconst customFields = [\n  { id: '0QK5vxB5ntrYG44o33Gn', field_value: lastOrderId != null ? String(lastOrderId) : '' },\n  { id: 'nl3jIwfxyUgQHPRlbGZl', field_value: orderType || '' },\n  { id: 'Q59Rb7F84BNHvrL1gzOJ', field_value: status || 'placed' },\n  {\n    id: 'IeLzeT4I8xitx3Jvk9mQ',\n    field_value: total != null && total !== '' ? Number(total) : '',\n  },\n  { id: 'FyLZbBVUDD9TzY7LXlm4', field_value: summary || '' },\n  { id: 'UUqkRGbEl5HjS5Sd2eIz', field_value: channel || '' },\n].filter((f) => f.field_value !== '' && f.field_value !== null && f.field_value !== undefined);\n\nconst upsertBody = {\n  locationId: loc,\n  phone,\n  firstName,\n  lastName,\n  source: 'Voice Agent',\n  customFields,\n};\n\nreturn {\n  json: {\n    locationId: loc,\n    event: body.event || 'unknown',\n    event_id: body.event_id || null,\n    session_id: body.session_id || null,\n    channel,\n    phone,\n    firstName,\n    lastName,\n    fullName: rawName || null,\n    order_type: orderType || null,\n    clover_order_id: order.clover_order_id || null,\n    order_total: total,\n    order_summary: summary,\n    tagsToAdd,\n    upsertBody,\n    hasPhone: phone.length >= 7,\n    raw: body,\n  },\n};"
       },
       "id": "a1000000-0000-4000-8000-000000000003",
       "name": "03 · Normalize Order Payload",
@@ -311,7 +311,7 @@
       "name": "07 · GHL · Apply Order Tags",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1600, -40],
+      "position": [1580, -40],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_AFTER_IMPORT",
@@ -320,6 +320,202 @@
       },
       "notesInFlow": true,
       "notes": "Appends voice-order, order-placed, pickup|delivery. Triggers confirm SMS workflow."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 08 · Prepare opportunity payload — plan §7.2\nconst norm = $('03 · Normalize Order Payload').item.json;\nconst upsert = $('05 · GHL · Upsert Contact + Fields').item.json;\nconst contactId = upsert.contact?.id || null;\n\nconst PIPELINE_ID = 'wCQVOwUah69xD6KHFrsi';\nconst STAGE_ABANDONED = 'ed4e4d7b-7a77-4e86-9c98-5a4204a046ac';\nconst STAGE_PLACED = 'a6c71988-47c0-4f13-8a2b-40b784a9a72f';\nconst CF_EVENT_ID = 'ebYtqePmkjxB2BFjaEtJ';\nconst CF_CLOVER = 'mqQZGfXEM7Ixbfcpbeej';\nconst CF_SESSION = 'urTkDJuILkxhG4942CmU';\nconst CF_SUMMARY = 'zH1m3iD6sNuy8y22uqMa';\n\nconst typePart = norm.order_type || 'order';\nconst namePart = norm.firstName || 'Guest';\nconst summaryPart = (norm.order_summary || '').toString();\nlet oppName = `${typePart} · ${namePart}`;\nif (summaryPart) oppName += ` · ${summaryPart}`;\nif (oppName.length > 80) oppName = oppName.slice(0, 77) + '...';\n\nconst oppCustomFields = [\n  { id: CF_EVENT_ID, field_value: norm.event_id != null ? String(norm.event_id) : '' },\n  { id: CF_CLOVER, field_value: norm.clover_order_id != null ? String(norm.clover_order_id) : '' },\n  { id: CF_SESSION, field_value: norm.session_id != null ? String(norm.session_id) : '' },\n  { id: CF_SUMMARY, field_value: summaryPart },\n].filter((f) => f.field_value !== '' && f.field_value !== null && f.field_value !== undefined);\n\nconst monetary =\n  norm.order_total != null && norm.order_total !== ''\n    ? Number(norm.order_total)\n    : undefined;\n\nconst createBody = {\n  pipelineId: PIPELINE_ID,\n  locationId: norm.locationId,\n  name: oppName,\n  pipelineStageId: STAGE_PLACED,\n  status: 'open',\n  contactId,\n  customFields: oppCustomFields,\n};\nif (monetary != null && !Number.isNaN(monetary)) {\n  createBody.monetaryValue = monetary;\n}\n\nconst updateBody = {\n  name: oppName,\n  pipelineId: PIPELINE_ID,\n  pipelineStageId: STAGE_PLACED,\n  status: 'open',\n  customFields: oppCustomFields,\n};\nif (monetary != null && !Number.isNaN(monetary)) {\n  updateBody.monetaryValue = monetary;\n}\n\nreturn {\n  json: {\n    contactId,\n    session_id: norm.session_id || null,\n    pipelineId: PIPELINE_ID,\n    stageAbandonedId: STAGE_ABANDONED,\n    stagePlacedId: STAGE_PLACED,\n    locationId: norm.locationId,\n    createBody,\n    updateBody,\n    skipOpp: !contactId,\n  },\n};"
+      },
+      "id": "a1000000-0000-4000-8000-00000000000b",
+      "name": "08 · Prepare Opportunity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1840, -40],
+      "notesInFlow": true,
+      "notes": "Builds create/update bodies + pipeline/stage IDs from plan §7.2."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/opportunities/search?location_id={{ $json.locationId }}&contact_id={{ $json.contactId }}&pipeline_id={{ $json.pipelineId }}&pipeline_stage_id={{ $json.stageAbandonedId }}&status=open&limit=20",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-00000000000c",
+      "name": "09 · GHL · Search Abandoned Opp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2080, -40],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "GHL Private Integration"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Open Abandoned opps for this contact (G3). Match session_id in next node."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 10 · Resolve create vs move Abandoned→Placed\nconst prep = $('08 · Prepare Opportunity').item.json;\nconst search = $input.item.json;\nconst sessionId = prep.session_id ? String(prep.session_id) : null;\nconst CF_SESSION = 'urTkDJuILkxhG4942CmU';\n\nconst list = search.opportunities || search.data?.opportunities || [];\nlet matchId = null;\nif (sessionId && Array.isArray(list)) {\n  for (const opp of list) {\n    const cfs = opp.customFields || opp.customField || [];\n    const hit = cfs.find(\n      (c) =>\n        (c.id === CF_SESSION || c.fieldKey === 'opportunity.session_id' || c.key === 'opportunity.session_id') &&\n        String(c.fieldValue ?? c.field_value ?? c.value ?? '') === sessionId\n    );\n    if (hit) {\n      matchId = opp.id;\n      break;\n    }\n  }\n}\n\nconst moveExisting = Boolean(matchId) && !prep.skipOpp;\nconst createNew = !moveExisting && !prep.skipOpp;\n\nreturn {\n  json: {\n    ...prep,\n    matchOpportunityId: matchId,\n    moveExisting,\n    createNew,\n    searchCount: Array.isArray(list) ? list.length : 0,\n  },\n};"
+      },
+      "id": "a1000000-0000-4000-8000-00000000000d",
+      "name": "10 · Resolve Opp Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2320, -40],
+      "notesInFlow": true,
+      "notes": "If Abandoned opp shares session_id → update to Placed; else create new Placed."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.moveExisting }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-00000000000e",
+      "name": "11 · Gate · Move Existing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2540, -40],
+      "notesInFlow": true,
+      "notes": "TRUE = PUT update Abandoned→Placed. FALSE = POST create Placed."
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{ $json.matchOpportunityId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.updateBody) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-00000000000f",
+      "name": "11a · GHL · Move Opp → Placed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2780, -160],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "GHL Private Integration"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Same-session Abandoned → Placed (G3 path)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/opportunities/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.createBody) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "11b · GHL · Create Opp Placed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2780, 60],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "GHL Private Integration"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "One new opportunity per order at stage Placed."
     },
     {
       "parameters": {
@@ -351,21 +547,21 @@
       "name": "04b · Skip · No Phone",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1060, 220],
+      "position": [1060, 280],
       "notesInFlow": true,
       "notes": "No CRM write. Still HTTP 200 to caller."
     },
     {
       "parameters": {
-        "jsCode": "const norm = $('03 · Normalize Order Payload').item.json;\nconst upsert = $('05 · GHL · Upsert Contact + Fields').first().json;\nconst tagsResp = $input.first().json;\nconst status = upsert.statusCode ?? upsert.status ?? null;\nconst ok =\n  status === undefined ||\n  status === null ||\n  (Number(status) >= 200 && Number(status) < 300);\n\nreturn {\n  json: {\n    ok: true,\n    event: norm.event,\n    event_id: norm.event_id,\n    phone: norm.phone,\n    tags: norm.tagsToAdd,\n    order_summary: norm.order_summary,\n    ghl_http_status: status,\n    ghl_ok: ok,\n    ghl_contact_id: upsert.contact?.id || null,\n    ghl_tags_ok: !(tagsResp.statusCode >= 400),\n    sms_rearm: 'removed order-placed then re-added',\n  },\n};"
+        "jsCode": "const norm = $('03 · Normalize Order Payload').first().json;\nconst upsert = $('05 · GHL · Upsert Contact + Fields').first().json;\nconst resolve = $('10 · Resolve Opp Action').first().json;\nconst oppResp = $input.first().json;\nconst status = upsert.statusCode ?? upsert.status ?? null;\nconst ok =\n  status === undefined ||\n  status === null ||\n  (Number(status) >= 200 && Number(status) < 300);\n\nconst opp =\n  oppResp.opportunity ||\n  oppResp.data?.opportunity ||\n  oppResp;\nconst oppId = opp?.id || resolve.matchOpportunityId || null;\nconst oppHttp = oppResp.statusCode ?? oppResp.status ?? null;\n\nreturn {\n  json: {\n    ok: true,\n    event: norm.event,\n    event_id: norm.event_id,\n    phone: norm.phone,\n    tags: norm.tagsToAdd,\n    order_summary: norm.order_summary,\n    ghl_http_status: status,\n    ghl_ok: ok,\n    ghl_contact_id: upsert.contact?.id || null,\n    sms_rearm: 'removed order-placed then re-added',\n    opp_action: resolve.moveExisting ? 'moved_abandoned_to_placed' : resolve.createNew ? 'created_placed' : 'skipped',\n    opp_id: oppId,\n    opp_http_status: oppHttp,\n  },\n};"
       },
       "id": "a1000000-0000-4000-8000-000000000007",
-      "name": "08 · Build Success Response",
+      "name": "12 · Build Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1860, -40],
+      "position": [3020, -40],
       "notesInFlow": true,
-      "notes": "Compact JSON for Sierra logs / PowerShell tests."
+      "notes": "Compact JSON for Sierra logs / PowerShell tests (includes opp_id)."
     },
     {
       "parameters": {
@@ -376,10 +572,10 @@
         }
       },
       "id": "a1000000-0000-4000-8000-000000000008",
-      "name": "09 · Respond 200 OK",
+      "name": "13 · Respond 200 OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2100, 40],
+      "position": [3260, 40],
       "notesInFlow": true,
       "notes": "Always 200 — CRM must never block the voice path."
     }
@@ -462,18 +658,91 @@
       "main": [
         [
           {
-            "node": "08 · Build Success Response",
+            "node": "08 · Prepare Opportunity",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "08 · Build Success Response": {
+    "08 · Prepare Opportunity": {
       "main": [
         [
           {
-            "node": "09 · Respond 200 OK",
+            "node": "09 · GHL · Search Abandoned Opp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 · GHL · Search Abandoned Opp": {
+      "main": [
+        [
+          {
+            "node": "10 · Resolve Opp Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 · Resolve Opp Action": {
+      "main": [
+        [
+          {
+            "node": "11 · Gate · Move Existing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 · Gate · Move Existing?": {
+      "main": [
+        [
+          {
+            "node": "11a · GHL · Move Opp → Placed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "11b · GHL · Create Opp Placed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11a · GHL · Move Opp → Placed": {
+      "main": [
+        [
+          {
+            "node": "12 · Build Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11b · GHL · Create Opp Placed": {
+      "main": [
+        [
+          {
+            "node": "12 · Build Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 · Build Success Response": {
+      "main": [
+        [
+          {
+            "node": "13 · Respond 200 OK",
             "type": "main",
             "index": 0
           }
@@ -484,7 +753,7 @@
       "main": [
         [
           {
-            "node": "09 · Respond 200 OK",
+            "node": "13 · Respond 200 OK",
             "type": "main",
             "index": 0
           }
@@ -513,7 +782,7 @@
       "name": "voice-order"
     },
     {
-      "name": "phase-0"
+      "name": "g2b"
     }
   ]
 }

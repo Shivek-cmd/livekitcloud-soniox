@@ -81,15 +81,15 @@ Restart after change: `systemctl restart restaurant-agent`.
 
 After successful `place_order`, Sierra POSTs a normalized envelope to self-hosted n8n
 → GHL contact upsert + confirm SMS. **Fail-open** (n8n down does not block the call).
+**Live on VPS** with `N8N_SYNC_ENABLED=1`. G2b verified (opps + Option B SMS). Next: G3 — plan §9.
 
 ```
-N8N_SYNC_ENABLED=0
+N8N_SYNC_ENABLED=1
 N8N_WEBHOOK_ORDERS_URL=https://n8n.bizbull.ai/webhook/sierra-ghl-sync
 #N8N_WEBHOOK_SECRET=optional-shared-secret
 #N8N_WEBHOOK_TIMEOUT_SEC=3.0
 ```
 
-Flip `N8N_SYNC_ENABLED=1` only after n8n workflow is Active and GHL SMS path verified.
 Plan: `docs/plan/13-ghl-n8n-order-sync.md`. Workflow export: `n8n/`.
 
 ### Ambient audio (optional — PR 020 web, PR 022 phone)
