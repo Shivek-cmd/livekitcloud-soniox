@@ -1,0 +1,519 @@
+{
+  "name": "Bizbull · Voice Order → GHL Sync (Phase 0)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Bizbull · Voice Order → GHL\n**Phase 0 · Production sync**\n\n**Purpose**\nReceive placed-order events from Sierra / PowerShell tests → upsert GoHighLevel contact → set last-order custom fields → re-arm + apply tags so **confirm SMS fires on every order**.\n\n**Prod URL**\n`POST /webhook/sierra-ghl-sync`\n\n**Auth**\nHeader Auth credential on all GHL HTTP nodes:\n`Authorization: Bearer <PIT>`\n\n**Docs**\n`docs/plan/13-ghl-n8n-order-sync.md` §7.1 / §8.1",
+        "height": 420,
+        "width": 380,
+        "color": 5
+      },
+      "id": "note-overview",
+      "name": "Sticky · Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-420, -280]
+    },
+    {
+      "parameters": {
+        "content": "## 1 · INGEST\nReceive HTTPS POST.\nPath kept as `sierra-ghl-sync` for stable URL.\nAlways respond via **Respond** node (not webhook default).",
+        "height": 200,
+        "width": 300,
+        "color": 4
+      },
+      "id": "note-ingest",
+      "name": "Sticky · 1 Ingest",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-40, -260]
+    },
+    {
+      "parameters": {
+        "content": "## 2 · TRANSFORM\nNormalize envelope → phone, name, tags[], customFields[], upsertBody.\nField IDs locked in plan §7.1.\nNo “sierra” labels — source = **Voice Agent**.",
+        "height": 220,
+        "width": 300,
+        "color": 4
+      },
+      "id": "note-transform",
+      "name": "Sticky · 2 Transform",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [400, -280]
+    },
+    {
+      "parameters": {
+        "content": "## 3 · GATE\n**TRUE** → phone ≥ 7 digits → GHL path.\n**FALSE** → skip CRM (no SMS possible without phone).\nFail-open for caller; we still return HTTP 200.",
+        "height": 220,
+        "width": 280,
+        "color": 3
+      },
+      "id": "note-gate",
+      "name": "Sticky · 3 Gate",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [740, -280]
+    },
+    {
+      "parameters": {
+        "content": "## 4 · GHL WRITE (happy path)\n1. **Upsert** contact + last-order custom fields\n2. **Remove** `order-placed` (re-arm SMS trigger)\n3. **Add** tags: `voice-order`, `order-placed`, `pickup`|`delivery`\n\nGHL Workflow listens on tag **order-placed** → confirm SMS.\nRemove→re-add = SMS on **every** order (hourly/daily OK).\nTags are appended (other tags preserved).",
+        "height": 300,
+        "width": 520,
+        "color": 2
+      },
+      "id": "note-ghl",
+      "name": "Sticky · 4 GHL Write",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1020, -340]
+    },
+    {
+      "parameters": {
+        "content": "## 5 · OUT\nBuild JSON summary for caller/logs.\nAlways **200** so Sierra never blocks on CRM.",
+        "height": 180,
+        "width": 260,
+        "color": 6
+      },
+      "id": "note-out",
+      "name": "Sticky · 5 Out",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1780, -260]
+    },
+    {
+      "parameters": {
+        "content": "## SKIP · No phone\nNo GHL upsert / no SMS.\nReturns `{ ok: true, ghl: skipped_no_phone }`.\nOptional later: owner alert only.",
+        "height": 180,
+        "width": 280,
+        "color": 7
+      },
+      "id": "note-skip",
+      "name": "Sticky · Skip Path",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [980, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sierra-ghl-sync",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "01 · Receive Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [40, 40],
+      "webhookId": "sierra-ghl-sync",
+      "notesInFlow": true,
+      "notes": "Entry: POST order.placed (and future events). Production: /webhook/sierra-ghl-sync"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "loc1",
+              "name": "locationId",
+              "value": "uc3GK4buCjDTCkedqWyy",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "02 · Set GHL Location ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [280, 40],
+      "notesInFlow": true,
+      "notes": "Bizbull sub-account locationId. includeOtherFields keeps webhook body."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 03 · Normalize — read original webhook (Set node must not wipe body)\nconst webhook = $('01 · Receive Order Webhook').first().json;\nconst body = webhook.body ?? webhook;\nconst loc =\n  $('02 · Set GHL Location ID').first().json.locationId ||\n  'uc3GK4buCjDTCkedqWyy';\n\nconst customer = body.customer || {};\nconst order = body.order || {};\nconst phone = (\n  customer.phone_e164 ||\n  customer.phone ||\n  customer.phone_raw ||\n  ''\n)\n  .toString()\n  .trim();\nconst rawName = (customer.name || '').toString().trim();\nconst firstName = rawName.split(/\\s+/)[0] || 'Guest';\nconst lastName = rawName.split(/\\s+/).slice(1).join(' ') || 'Caller';\n\nconst orderType = (order.order_type || '').toString().toLowerCase();\nconst channel = (body.channel || '').toString().toLowerCase() || null;\nconst status = (order.status || 'placed').toString().toLowerCase();\nconst lastOrderId =\n  order.clover_order_id || body.session_id || body.event_id || null;\nconst total = order.total ?? null;\n\nconst items = Array.isArray(order.items) ? order.items : [];\nconst summary =\n  items.length > 0\n    ? items\n        .map((i) => {\n          const qty = i.qty ?? i.quantity ?? 1;\n          const name = i.name || 'item';\n          return `${qty}x ${name}`;\n        })\n        .join(', ')\n    : null;\n\n// Tags applied in step 07 (append). Do NOT send tags on upsert (would risk replace).\nconst tagsToAdd = ['voice-order', 'order-placed'];\nif (orderType === 'pickup') tagsToAdd.push('pickup');\nif (orderType === 'delivery') tagsToAdd.push('delivery');\n\n// Custom field IDs — docs/plan/13-ghl-n8n-order-sync.md §7.1\nconst customFields = [\n  { id: '0QK5vxB5ntrYG44o33Gn', field_value: lastOrderId != null ? String(lastOrderId) : '' },\n  { id: 'nl3jIwfxyUgQHPRlbGZl', field_value: orderType || '' },\n  { id: 'Q59Rb7F84BNHvrL1gzOJ', field_value: status || 'placed' },\n  {\n    id: 'IeLzeT4I8xitx3Jvk9mQ',\n    field_value: total != null && total !== '' ? Number(total) : '',\n  },\n  { id: 'FyLZbBVUDD9TzY7LXlm4', field_value: summary || '' },\n  { id: 'UUqkRGbEl5HjS5Sd2eIz', field_value: channel || '' },\n].filter((f) => f.field_value !== '' && f.field_value !== null && f.field_value !== undefined);\n\nconst upsertBody = {\n  locationId: loc,\n  phone,\n  firstName,\n  lastName,\n  source: 'Voice Agent',\n  customFields,\n};\n\nreturn {\n  json: {\n    locationId: loc,\n    event: body.event || 'unknown',\n    event_id: body.event_id || null,\n    session_id: body.session_id || null,\n    channel,\n    phone,\n    firstName,\n    lastName,\n    fullName: rawName || null,\n    order_type: orderType || null,\n    clover_order_id: order.clover_order_id || null,\n    order_total: total,\n    order_summary: summary,\n    tagsToAdd,\n    upsertBody,\n    hasPhone: phone.length >= 7,\n    raw: body,\n  },\n};"
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "03 · Normalize Order Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 40],
+      "notesInFlow": true,
+      "notes": "Builds upsertBody + tagsToAdd + hasPhone. Single source of truth for GHL mapping."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.hasPhone }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "04 · Gate · Has Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [780, 40],
+      "notesInFlow": true,
+      "notes": "TRUE = GHL path. FALSE = skip (no reliable contact key / no SMS)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.upsertBody) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "05 · GHL · Upsert Contact + Fields",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1060, -40],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "GHL Private Integration"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Upsert by phone. Sets last_order_* custom fields. Does NOT set tags here."
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $json.contact.id }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tags: ['order-placed'] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-00000000000a",
+      "name": "06 · GHL · Re-arm SMS (remove order-placed)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -40],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "GHL Private Integration"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Clears order-placed so GHL 'tag added' workflow can fire again on next add (multi-order / same day)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $('05 · GHL · Upsert Contact + Fields').item.json.contact.id }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tags: $('03 · Normalize Order Payload').item.json.tagsToAdd }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "07 · GHL · Apply Order Tags",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, -40],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "GHL Private Integration"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Appends voice-order, order-placed, pickup|delivery. Triggers confirm SMS workflow."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "s2",
+              "name": "ghl",
+              "value": "skipped_no_phone",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "event",
+              "value": "={{ $('03 · Normalize Order Payload').item.json.event }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "04b · Skip · No Phone",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1060, 220],
+      "notesInFlow": true,
+      "notes": "No CRM write. Still HTTP 200 to caller."
+    },
+    {
+      "parameters": {
+        "jsCode": "const norm = $('03 · Normalize Order Payload').item.json;\nconst upsert = $('05 · GHL · Upsert Contact + Fields').first().json;\nconst tagsResp = $input.first().json;\nconst status = upsert.statusCode ?? upsert.status ?? null;\nconst ok =\n  status === undefined ||\n  status === null ||\n  (Number(status) >= 200 && Number(status) < 300);\n\nreturn {\n  json: {\n    ok: true,\n    event: norm.event,\n    event_id: norm.event_id,\n    phone: norm.phone,\n    tags: norm.tagsToAdd,\n    order_summary: norm.order_summary,\n    ghl_http_status: status,\n    ghl_ok: ok,\n    ghl_contact_id: upsert.contact?.id || null,\n    ghl_tags_ok: !(tagsResp.statusCode >= 400),\n    sms_rearm: 'removed order-placed then re-added',\n  },\n};"
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "08 · Build Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1860, -40],
+      "notesInFlow": true,
+      "notes": "Compact JSON for Sierra logs / PowerShell tests."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "09 · Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2100, 40],
+      "notesInFlow": true,
+      "notes": "Always 200 — CRM must never block the voice path."
+    }
+  ],
+  "connections": {
+    "01 · Receive Order Webhook": {
+      "main": [
+        [
+          {
+            "node": "02 · Set GHL Location ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 · Set GHL Location ID": {
+      "main": [
+        [
+          {
+            "node": "03 · Normalize Order Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 · Normalize Order Payload": {
+      "main": [
+        [
+          {
+            "node": "04 · Gate · Has Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 · Gate · Has Phone?": {
+      "main": [
+        [
+          {
+            "node": "05 · GHL · Upsert Contact + Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "04b · Skip · No Phone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 · GHL · Upsert Contact + Fields": {
+      "main": [
+        [
+          {
+            "node": "06 · GHL · Re-arm SMS (remove order-placed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 · GHL · Re-arm SMS (remove order-placed)": {
+      "main": [
+        [
+          {
+            "node": "07 · GHL · Apply Order Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 · GHL · Apply Order Tags": {
+      "main": [
+        [
+          {
+            "node": "08 · Build Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 · Build Success Response": {
+      "main": [
+        [
+          {
+            "node": "09 · Respond 200 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04b · Skip · No Phone": {
+      "main": [
+        [
+          {
+            "node": "09 · Respond 200 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {},
+  "tags": [
+    {
+      "name": "bizbull"
+    },
+    {
+      "name": "ghl"
+    },
+    {
+      "name": "voice-order"
+    },
+    {
+      "name": "phase-0"
+    }
+  ]
+}
