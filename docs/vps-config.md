@@ -77,6 +77,21 @@ PHONE_INTERRUPTION_MIN_WORDS=2     # phone only
 
 Restart after change: `systemctl restart restaurant-agent`.
 
+### GHL / n8n order sync (PR 071)
+
+After successful `place_order`, Sierra POSTs a normalized envelope to self-hosted n8n
+→ GHL contact upsert + confirm SMS. **Fail-open** (n8n down does not block the call).
+
+```
+N8N_SYNC_ENABLED=0
+N8N_WEBHOOK_ORDERS_URL=https://n8n.bizbull.ai/webhook/sierra-ghl-sync
+#N8N_WEBHOOK_SECRET=optional-shared-secret
+#N8N_WEBHOOK_TIMEOUT_SEC=3.0
+```
+
+Flip `N8N_SYNC_ENABLED=1` only after n8n workflow is Active and GHL SMS path verified.
+Plan: `docs/plan/13-ghl-n8n-order-sync.md`. Workflow export: `n8n/`.
+
 ### Ambient audio (optional — PR 020 web, PR 022 phone)
 
 Quiet background loop via LiveKit `BackgroundAudioPlayer`. Same `restaurant_ambience.mp3` on web and phone.

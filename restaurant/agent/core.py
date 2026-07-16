@@ -773,6 +773,39 @@ class RestaurantAgent(Agent):
         self.cart.mark_placed(order_id=clover_order_id, eta=eta)
         await self._sync_web()
 
+        # GHL/n8n CRM sync — fail-open; never block goodbye / hang-up.
+        try:
+            from restaurant.integrations.n8n_webhook import notify_order_placed
+
+            await notify_order_placed(
+                channel=self._channel_label(),
+                customer_name=self.cart.customer_name,
+                customer_phone=self.cart.customer_phone,
+                order_type=self.cart.order_type,
+                items=[
+                    {
+                        "name": i.name,
+                        "qty": i.quantity,
+                        "price": i.price,
+                        "note": i.note,
+                    }
+                    for i in self.cart.items
+                ],
+                subtotal=self.cart.subtotal,
+                total=self.cart.total,
+                address=self.cart.delivery_address,
+                allergy_note=self.state.allergy_note or None,
+                clover_order_id=clover_order_id,
+                clover_submitted=bool(clover_order_id),
+                session_id=(
+                    self._recorder.session_id if self._recorder is not None else None
+                ),
+                eta=eta,
+                language=getattr(self.state, "preferred_language", None),
+            )
+        except Exception:
+            logger.exception("n8n order.placed notify raised — ignored")
+
         spoken = order_placed_goodbye(order_type=self.cart.order_type)
         self._record_tool("place_order", {}, "placed")
         self._goodbye_spoken = True

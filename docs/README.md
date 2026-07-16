@@ -12,6 +12,8 @@
 | [plan/06-milestones.md](plan/06-milestones.md) | Build phases 1–8 + web W1–W6 |
 | [plan/11-web-order-with-sierra.md](plan/11-web-order-with-sierra.md) | Web "Order with Sierra" plan (W3–W6 next) |
 | [plan/12-admin-analytics-supabase.md](plan/12-admin-analytics-supabase.md) | Admin dashboard + Supabase call analytics (D0–D8, PR 027+) |
+| [plan/13-ghl-n8n-order-sync.md](plan/13-ghl-n8n-order-sync.md) | GHL + n8n CRM/follow-ups — **G0+G1** (PR 071); G3–G5 next |
+| [../n8n/](../n8n/) | Production n8n workflow export + setup (Phase 0) |
 | [plan/09-clover-pos.md](plan/09-clover-pos.md) | Clover POS integration plan |
 | [plan/10-voice-quality-tier-b.md](plan/10-voice-quality-tier-b.md) | Voice/conversation bugs — PR 015–020 ✅; 016–018 open |
 | [vps-config.md](vps-config.md) | VPS deploy, env, SIP, Caddy, web ambient |

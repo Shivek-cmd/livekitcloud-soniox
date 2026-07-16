@@ -101,6 +101,43 @@ def test_shadow_mode_places_without_clover(agent, monkeypatch):
     assert agent.cart.order_id is None
 
 
+def test_n8n_notify_called_on_successful_place(agent, monkeypatch):
+    monkeypatch.setattr(core, "clover_submit_enabled", lambda: False)
+    seen = {}
+
+    async def _fake_notify(**kwargs):
+        seen["kwargs"] = kwargs
+        return True
+
+    monkeypatch.setattr(
+        "restaurant.integrations.n8n_webhook.notify_order_placed",
+        _fake_notify,
+    )
+    _make_ready(agent)
+    run(agent.place_order())
+    assert seen["kwargs"]["channel"] == "phone"
+    assert seen["kwargs"]["customer_phone"] == "7805551234"
+    assert seen["kwargs"]["order_type"] == "pickup"
+    assert seen["kwargs"]["clover_submitted"] is False
+    assert any(i["name"] == "Garlic Naan" for i in seen["kwargs"]["items"])
+
+
+def test_n8n_notify_failure_does_not_block_place(agent, monkeypatch):
+    monkeypatch.setattr(core, "clover_submit_enabled", lambda: False)
+
+    async def _boom(**kwargs):
+        raise RuntimeError("n8n down")
+
+    monkeypatch.setattr(
+        "restaurant.integrations.n8n_webhook.notify_order_placed",
+        _boom,
+    )
+    _make_ready(agent)
+    result = run(agent.place_order())
+    assert agent.cart.placed
+    assert "ORDER COMPLETE" in result or "Order placed" in result
+
+
 def test_clover_submit_runs_off_event_loop(agent, monkeypatch):
     monkeypatch.setattr(core, "clover_submit_enabled", lambda: True)
     import restaurant.tenants.config as tenants_config
