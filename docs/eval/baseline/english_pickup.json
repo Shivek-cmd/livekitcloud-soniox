@@ -1,0 +1,210 @@
+{
+  "name": "english_pickup",
+  "channel": "phone",
+  "model": "gpt-4.1-mini",
+  "passed": true,
+  "turns": [
+    {
+      "user": "Hi, can I get two butter chicken and one garlic naan please?",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "butter chicken",
+            "quantity": 2,
+            "spice_level": "medium"
+          },
+          "result": "INTERNAL: item saved.\nSAY EXACTLY: \"Yes — two Butter Chicken.\"\nDo NOT mention price, cart, menu, pieces, or say I can add / I've added."
+        },
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "garlic naan",
+            "quantity": 1
+          },
+          "result": "INTERNAL: item saved.\nSAY EXACTLY: \"Yes — one ਗਾਰਲਿਕ ਨਾਨ.\"\nDo NOT mention price, cart, menu, pieces, or say I can add / I've added."
+        }
+      ],
+      "assistant": "Yes — two Butter Chicken. Yes — one ਗਾਰਲਿਕ ਨਾਨ. Anything else?"
+    },
+    {
+      "user": "Medium is fine.",
+      "tool_calls": [],
+      "assistant": "Anything else you want to add?"
+    },
+    {
+      "user": "That's everything, thanks.",
+      "tool_calls": [],
+      "assistant": "Any allergies I should know about?"
+    },
+    {
+      "user": "No allergies.",
+      "tool_calls": [
+        {
+          "name": "record_allergies",
+          "args": {
+            "response": "no allergies"
+          },
+          "result": "Allergies recorded: none. Continue — pickup or delivery?"
+        }
+      ],
+      "assistant": "Pickup or delivery?"
+    },
+    {
+      "user": "Pickup please.",
+      "tool_calls": [
+        {
+          "name": "set_order_type",
+          "args": {
+            "order_type": "pickup"
+          },
+          "result": "Set to pickup. Continue the flow."
+        }
+      ],
+      "assistant": "Can I have your name for the order?"
+    },
+    {
+      "user": "My name is Harpreet.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "name": "Harpreet"
+          },
+          "result": "Name saved: \"Harpreet\"."
+        }
+      ],
+      "assistant": "Please provide your phone number."
+    },
+    {
+      "user": "Six four seven five five five one two one two.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "phone": "6475551212"
+          },
+          "result": "Phone saved. Read it back as English word digits ONLY: \"six, four, seven, five, five, five, one, two, one, two\"."
+        },
+        {
+          "name": "get_order_readback",
+          "args": {},
+          "result": "READ THIS BACK VERBATIM, then wait for the customer's yes:\n\"Okay Harpreet ji — two Butter Chicken (medium) and one ਗਾਰਲਿਕ ਨਾਨ, pickup. All good?\""
+        }
+      ],
+      "assistant": "Okay Harpreet ji — two Butter Chicken (medium) and one ਗਾਰਲਿਕ ਨਾਨ, pickup. All good?"
+    },
+    {
+      "user": "Yes, that's correct.",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "Read-back confirmed. Call place_order now."
+        },
+        {
+          "name": "place_order",
+          "args": {},
+          "result": "Order placed! INTERNAL total $44.97. Tell customer: \"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!\" Do NOT mention price or dollars."
+        }
+      ],
+      "assistant": "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "placed",
+    "items": [
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 2,
+        "unit_price": 19.99,
+        "line_total": 39.98,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      },
+      {
+        "id": "T61J8SX6W8JF2",
+        "name": "Garlic Naan",
+        "voice_line": "ਗਾਰਲਿਕ ਨਾਨ",
+        "qty": 1,
+        "unit_price": 4.99,
+        "line_total": 4.99,
+        "note": "",
+        "modifiers": []
+      }
+    ],
+    "order_type": "pickup",
+    "delivery_address": null,
+    "customer": {
+      "name": "Harpreet",
+      "phone": "6475551212"
+    },
+    "subtotal": 44.97,
+    "delivery_charge": 0,
+    "total": 44.97,
+    "eta": "20-25 min",
+    "order_id": "T5RX2WXD5YTS0"
+  },
+  "assertions": [
+    {
+      "check": "gates: placed order had a confirmed, current readback",
+      "ok": true,
+      "detail": "readback_confirmed=True readback_revision=3 cart.revision=3"
+    },
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=True"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken', 'Garlic Naan']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 2",
+      "ok": true,
+      "detail": "got qty=2"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    },
+    {
+      "check": "items: Garlic Naan qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "order_type",
+      "ok": true,
+      "detail": "got 'pickup'"
+    },
+    {
+      "check": "customer_name",
+      "ok": true,
+      "detail": "got 'Harpreet'"
+    },
+    {
+      "check": "customer_phone",
+      "ok": true,
+      "detail": "got '6475551212'"
+    },
+    {
+      "check": "allergies_recorded",
+      "ok": true,
+      "detail": "got True"
+    },
+    {
+      "check": "readbacks: at least 1 successful",
+      "ok": true,
+      "detail": "got 1"
+    }
+  ]
+}

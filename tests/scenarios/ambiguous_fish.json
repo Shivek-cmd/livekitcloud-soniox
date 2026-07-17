@@ -1,0 +1,17 @@
+{
+  "name": "ambiguous_fish",
+  "channel": "phone",
+  "turns": [
+    "Can I get the fish?",
+    "The fish pakora please.",
+    "Medium.",
+    "That's it for now."
+  ],
+  "expect": {
+    "placed": false,
+    "items": [
+      { "name": "Amritsari Fish Pakora", "qty": 1 }
+    ],
+    "transcript_none": ["Punjabi Fish Curry ਅਤੇ", "both fish"]
+  }
+}

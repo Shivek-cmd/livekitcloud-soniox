@@ -1,0 +1,84 @@
+{
+  "name": "price_ask_phone",
+  "channel": "phone",
+  "model": "gpt-4.1-mini",
+  "passed": true,
+  "turns": [
+    {
+      "user": "One butter chicken please, medium.",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "butter chicken",
+            "quantity": 1,
+            "spice_level": "medium"
+          },
+          "result": "INTERNAL: item saved.\nSAY EXACTLY: \"Yes — one Butter Chicken.\"\nDo NOT mention price, cart, menu, pieces, or say I can add / I've added."
+        }
+      ],
+      "assistant": "Yes — one Butter Chicken. Anything else?"
+    },
+    {
+      "user": "How much will that be?",
+      "tool_calls": [],
+      "assistant": "I can share the price if you want, but first, would you like to add anything else to your order?"
+    },
+    {
+      "user": "Okay, that's all I need for now, thanks.",
+      "tool_calls": [],
+      "assistant": "Any allergies I should know about?"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "building",
+    "items": [
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 1,
+        "unit_price": 19.99,
+        "line_total": 19.99,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": null,
+    "delivery_address": null,
+    "customer": {
+      "name": null,
+      "phone": null
+    },
+    "subtotal": 19.99,
+    "delivery_charge": 0,
+    "total": 19.99,
+    "eta": null,
+    "order_id": null
+  },
+  "assertions": [
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=False"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    }
+  ]
+}

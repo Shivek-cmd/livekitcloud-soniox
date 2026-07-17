@@ -1,0 +1,39 @@
+{
+  "name": "delivery_split_phone",
+  "channel": "phone",
+  "turns": [
+    "Hello, one dal makhani and two butter naan please.",
+    "Make the dal spicy.",
+    "That's all.",
+    "Nope, no allergies.",
+    "Navdeep.",
+    "Six four seven five five five...",
+    "Sorry — six four seven five five five one two one two.",
+    "Yes, that's right.",
+    "Yes."
+  ],
+  "reactive": [
+    {
+      "when": "(?i)(pickup or delivery|delivery or pickup|for delivery|pickup ya delivery)",
+      "say": "Delivery please.",
+      "max_uses": 2
+    },
+    {
+      "when": "(?i)address",
+      "say": "It's 12 Main Street, Brampton.",
+      "max_uses": 2
+    }
+  ],
+  "expect": {
+    "placed": true,
+    "items": [
+      { "name": "Dal Makhani", "qty": 1, "note_contains": "spicy" },
+      { "name": "Butter Naan", "qty": 2 }
+    ],
+    "order_type": "delivery",
+    "customer_name": "Navdeep",
+    "customer_phone": "6475551212",
+    "allergies_recorded": true,
+    "min_readbacks": 1
+  }
+}

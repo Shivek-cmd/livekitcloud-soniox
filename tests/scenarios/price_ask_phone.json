@@ -1,0 +1,15 @@
+{
+  "name": "price_ask_phone",
+  "channel": "phone",
+  "turns": [
+    "One butter chicken please, medium.",
+    "How much will that be?",
+    "Okay, that's all I need for now, thanks."
+  ],
+  "expect": {
+    "placed": false,
+    "items": [
+      { "name": "Butter Chicken", "qty": 1, "note_contains": "medium" }
+    ]
+  }
+}

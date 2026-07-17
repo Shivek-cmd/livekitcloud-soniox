@@ -1,0 +1,26 @@
+{
+  "name": "hindi_order",
+  "channel": "phone",
+  "turns": [
+    "नमस्ते, एक पनीर टिक्का और एक गुलाब जामुन चाहिए।",
+    "मीडियम ठीक है।",
+    "बस, और कुछ नहीं।",
+    "नहीं, कोई एलर्जी नहीं है।",
+    "Pickup कर लूंगा।",
+    "मेरा नाम Rohan है।",
+    "Four one six five five five seven eight nine zero.",
+    "हाँ, बिल्कुल सही है।"
+  ],
+  "expect": {
+    "placed": true,
+    "items": [
+      { "name": "Paneer Tikka", "qty": 1, "note_contains": "medium" },
+      { "name": "Gulab Jamun (2 pcs)", "qty": 1 }
+    ],
+    "order_type": "pickup",
+    "customer_name": "Rohan",
+    "customer_phone": "4165557890",
+    "allergies_recorded": true,
+    "min_readbacks": 1
+  }
+}

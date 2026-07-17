@@ -1,0 +1,26 @@
+{
+  "name": "quantity_correction",
+  "channel": "phone",
+  "turns": [
+    "Two butter chicken please, medium spice.",
+    "Wait — I said one, not two.",
+    "That's all.",
+    "No allergies.",
+    "Pickup.",
+    "It's Simran.",
+    "Nine zero five five five five one one two two.",
+    "Yes, perfect.",
+    "Yes."
+  ],
+  "expect": {
+    "placed": true,
+    "items": [
+      { "name": "Butter Chicken", "qty": 1, "note_contains": "medium" }
+    ],
+    "order_type": "pickup",
+    "customer_name": "Simran",
+    "customer_phone": "9055551122",
+    "allergies_recorded": true,
+    "min_readbacks": 1
+  }
+}

@@ -1,265 +1,226 @@
-# Conversation Architecture Rebuild — Plan + Session Handoff
+# Human Conversation Rebuild — Persona-Driven Conversational Layer
 
-> **Read this first if you're a new session picking up the rebuild.**
-> Written 2026-07-10. `main` @ `27c2d74` (PR #95 merge, engine rebuild stages 1–4).
-> **Numbering correction (2026-07-11):** PR 059 was taken by the web-UI theme PR (#96),
-> so the staged PRs below shift by one: salvage = **060**, brain = **061**,
-> cutover = **062**, reorg = **063**. Read "PR 059" as 060, etc.
-> Companion docs: `docs/HANDOFF.md` (project-wide state), `pr/pr_rules.md` (workflow), `restaurant/engine/README.md` (the engine being replaced).
+**Working doc for the conversation-system refactor. One step per session.**
 
----
+## How to use this doc (read this first in every fresh session)
 
-## Part I — Session handoff context (why this plan exists)
+1. Read **Standing context** below, then find the first step whose status is not ✅ DONE.
+2. Read ONLY that step (plus the previous step's *Checkpoint* notes) — everything a fresh session needs is in those two places.
+3. Do the step: branch per repo convention (`pr/pr_NNN_*.md` doc first, matching branch, tests listed in the doc). Commit locally — **never push or open a PR without explicit user approval**.
+4. When the step is verified done, fill in its **Checkpoint** block (commit, deviations, findings, notes for the next session), flip its status to ✅ DONE, and commit the doc update.
+5. Stop. The next step belongs to the next session.
 
-### The situation
-
-Sierra has **two complete conversation systems** in the tree, and neither is right:
-
-1. **Old path — DEPLOYED.** `deploy/restaurant-agent.service` runs root `agent.py` (1534 lines: 13 function tools + a huge regex "checkout ladder" in `on_user_turn_completed`) + `restaurant/order_flow.py` + intent regexes in `restaurant/conversation.py`. The LLM drives conversation AND mutates the cart while parallel regex authorities fight it. This produced the "one fish → two invented dishes with invented quantity" live bug. **PR 030 tried to fix it with more prompt rules; live calls got worse; it was reverted** (see `docs/HANDOFF.md` "PR 030 — what happened").
-2. **New engine — BUILT, NEVER WIRED.** `restaurant/engine/` (stages 1–4, 27 passing tests): deterministic phase machine, LLM demoted to a stateless JSON extractor. Bulletproof cart, but robotic and has real gaps found in audit: drops items added during checkout phases (`core.py:168` — adds only handled in COLLECTING/CLARIFY), 10-digit-only phone loop (`core.py:359`), no retry ceiling, extractor blind to cart ("make it two of those" unresolvable), no filler → latency regression, Hindi promised in greeting but unimplemented in renderer. **Nothing imports it except its own tests; there is no shadow-mode toggle; it never answered a call.**
-
-### The decision (made with the user in this session)
-
-Replace **both** with one hybrid: **LLM owns the conversation, code owns the cart.**
-
-- A natural function-calling LiveKit agent (full chat context) drives: greet → items loop ("anything else?") → allergies → customization (spice/modifiers) → pickup/delivery (+address) → name/phone → readback → place.
-- The LLM can only touch the order through **validating/resolving tools**: ambiguous dish → tool returns candidate options and refuses; unknown → NOT FOUND; missing spice/required modifier → tool refuses with what's needed. The LLM can never write an arbitrary item/price into the cart.
-- **Readback text and the Clover order are always generated from the code cart, never from the LLM's memory** — the readback stays an independent check against ground truth. `place_order` is hard-gated in code.
-- Why not pure-context LLM (user asked): readback generated from the same context that holds the order verifies nothing — a drifted quantity survives to the kitchen ticket. Why not keep the engine: PR 030's lesson cuts both ways — prompt-only rules fail, but a phase machine that fights natural conversation fails UX. Validation-at-the-tool-boundary is the piece the old design never had.
-
-### User decisions (locked)
-
-| Question | Decision |
-|---|---|
-| Per-item confirmation | **Natural echo per add + ONE hard code-generated final readback** (no per-item "yes?" gate) |
-| Codebase reorg | **Full restructure**: `restaurant/agent/`, `restaurant/channels/`, `restaurant/analytics/` (git mv, history preserved) |
-| Delivery | **Staged PRs** per `pr/pr_rules.md` — doc first, branch = doc name, never on main. Next PR number: **059** |
-
-### Plan-level decisions (taken here; revisit if wrong)
-
-- **Allergies = hard `place_order` gate** (`record_allergies` must run) — "never asks allergies" is a recorded prod bug; prompt-only rules proved regressive.
-- **Required modifiers (incl. Spice Level) enforced at add-time** — tool refuses incomplete items; cart completeness is an invariant, asked at the natural moment, and `order_submit.py`'s note→modifier mapping expects the note at submit.
-- **"No preference" spice → Medium** (in prompt; make configurable later).
-- **`fillers.py` deleted** (env-gated OFF in prod; hard-coupled to `UserIntent`/`OrderPhase`; restore path noted in PR doc).
-- **Static-menu fallback (`USE_CLOVER_MENU=0`) stays** — `menu_provider` abstracts it for free.
-- **Web tap-to-add may insert spice-less items** — readback exposes the note; revisit after shadow logs.
-
-### Gotchas a new session MUST know (verified by exploration)
-
-1. **You cannot delete `conversation.py` wholesale.** Kept modules top-level-import it: `fillers.py:11`, `phone_background.py:8`, `stt_noise.py:7`; and lazily: `orders.py:52,78,94` (formatters), `menu_provider.py:136` (`is_availability_question`), `customer_info.py:210,222,263` (circular). Salvage first (PR 059), delete later (PR 061).
-2. **`engine/` is a clean delete** — only its own tests import it. `engine/live.py` also imports `conversation.OPENING_GREETING`/`detect_customer_language` (dies with the package).
-3. **`"Spice Level"` is a magic string** matched literally in 4 places (`clover/models.py describe()`, `menu.py catalog()`, `order_submit.py:126`, `menu_provider.py:339`). Define once in `gates.py`, don't rename.
-4. **`submit_cart_to_clover` is SYNCHRONOUS urllib** (`clover/order_submit.py:304`). Must be called via `asyncio.to_thread` from async tool code (old agent + engine live.py both block the loop today).
-5. **Systemd runs `python agent.py start`** (`deploy/restaurant-agent.service`) and **`scripts/setup_sip.py` dispatches on `agent_name="restaurant-agent"`** — keep both the filename and the agent name; root `agent.py` becomes a thin shim.
-6. **`web_sync.py` reads `agent.cart`** (`to_state_dict`, `add_item`, `set_quantity_by_id`, `remove_by_id`) — the new agent must expose `.cart: OrderCart`, and web RPC mutations must bump `cart.revision` (forces re-readback).
-7. **`token_server.py` `/menu`** depends only on `menu_provider.catalog()` — keep that working; web/admin have zero Python coupling to the agent.
-8. **`session_recorder.finalize(cart, flow)`** reads `flow.state.preferred_language` — signature changes to `finalize(cart, *, preferred_language)`.
-9. Matcher confidence landscape: `MenuCache.find_item_scored` abstains < `MENU_MATCH_MIN_CONF` (0.55); old add gate `ADD_CLARIFY_MIN_CONF` = 0.7 (keep); `menu_provider.disambiguation_options(name, limit=3)` (`menu_provider.py:253`) is the ambiguity→options primitive; `required_modifier_groups()` (`:285`), `item_has_spice_level()` (`:333`).
-10. Menu data: `data/menu_cache_bizbull.json` — 61 items; "Spice Level" on 38 (Mild/Medium/Spicy/Extra Spicy); required groups exist (e.g. "Choose Curry" min_required>0). Voice pronunciation via `data/clover_voice_labels.json` overlay at `MenuCache.load`.
-11. Env flags that matter: `USE_CLOVER_MENU`, `CLOVER_SUBMIT_ORDERS` (0 = shadow/log-only — the rollout gate), `CLOVER_PRINT_ORDERS`, `MENU_MATCH_MIN_CONF`, `ADD_CLARIFY_MIN_CONF`, `AUTO_HANGUP_AFTER_ORDER`, `SESSION_ANALYTICS_ENABLED`, `FILLERS_ENABLED` (dies with fillers.py).
-12. Rollout doctrine (docs + engine README): **shadow mode → ONE pilot restaurant → rest.** Never flip `CLOVER_SUBMIT_ORDERS=1` without reviewing recorded calls in admin analytics first.
+Statuses: ☐ TODO · 🔶 IN PROGRESS · ✅ DONE
 
 ---
 
-## Part II — The plan
+## Standing context (true for every step)
 
-## 1. Target tree (K=keep, N=new, M=moved `git mv`, R=rewritten/modified, D=deleted)
+**Problem:** the agent's conversation sounds scripted/robotic. The skeleton is right — *LLM talks, code owns the cart* — but the "LLM talks" half is scripted: hard prompt rules ("ONE short sentence per turn", arrow-chain ORDER FLOW), `SAY EXACTLY:` cue-card tool replies (`replies.py`, returned from inside `OrderCart` methods), per-dish spice interrogation (NEEDS SPICE refusal in `add_item`), a VERBATIM readback template, code-spoken canned lines (greeting, goodbye, recovery), and a regex speech guard.
 
-```
-agent.py                          R  ~10-line shim: re-export entrypoint from restaurant.agent.worker,
-                                     cli.run_app(agent_name="restaurant-agent")  ← systemd + setup_sip.py unchanged
-token_server.py                   K  (menu_provider.catalog() untouched)
-restaurant/
-├── agent/                        N  ── the new brain ──
-│   ├── __init__.py               N
-│   ├── worker.py                 N  entrypoint(): plumbing carried 1:1 from old agent.py:1386-1534
-│   ├── core.py                   N  RestaurantAgent(Agent): .cart, .state, tools, hygiene-only turn hook
-│   ├── gates.py                  N  OrderSessionState + pure gate functions (place_order_blockers, readback staleness)
-│   ├── prompt.py                 N  build_system_prompt(is_phone) — salvaged persona/language/no-price rules + new FLOW section
-│   ├── replies.py                N  salvaged formatters: format_add/remove/update_tool_reply, format_order_readback,
-│   │                                format_order_status, _cart_items_str, order_placed_goodbye, slim sanitize_assistant_speech
-│   └── language.py               N  OPENING_GREETING, CustomerLanguage, detect_customer_language, update_preferred_language
-├── channels/                     M  ── channel hygiene ── (PR 062)
-│   ├── phone_echo.py             M+R  drop UserIntent coupling
-│   ├── phone_background.py       M+R  drop UserIntent param
-│   ├── stt_noise.py              M+R  inline looks_like_order_phrasing + _QTY_WORDS/_extract_qty
-│   ├── ambient_audio.py          M
-│   ├── call_control.py           M
-│   └── web_sync.py               M   (needs agent.cart: OrderCart — new agent exposes it)
-├── analytics/                    M  (PR 062)
-│   ├── session_recorder.py       M+R  finalize(cart, *, preferred_language: str | None)
-│   ├── analytics_store.py        M
-│   └── turn_latency.py           M
-├── clover/                       K  untouched: menu.py (MenuCache), match.py (phonetic matcher+abstain),
-│                                    order_submit.py (sync Clover submit), speech_policy.py, client.py, models.py, …
-├── tenants/                      K  untouched (get_default_tenant, SQLite store)
-├── menu.py                       K  static fallback + DELIVERY_CHARGE constants
-├── menu_provider.py              R  sever ONE lazy import (inline is_availability_question regex, :136); rest untouched
-├── menu_browse.py                K  (menu_provider:188 depends on it)
-├── orders.py                     R  formatters imported from restaurant.agent.replies; + revision:int counter
-├── customer_info.py              R  sever 3 lazy circular imports back into conversation (:210,:222,:263)
-├── text_match.py                 K
-├── voice_stack.py                K  (Soniox STT/TTS, gpt-4o-mini)
-├── session_config.py             K  (TurnDetector, endpointing, BVC, preemptive TTS)
-├── llm_warmup.py                 R  import restaurant.agent.prompt.build_system_prompt
-├── reservations.py               K
-│
-├── conversation.py               D  (1039 lines — after salvage)
-├── order_flow.py                 D  (540 lines)
-├── order_parse.py                D  (after _QTY_WORDS/_extract_qty move to stt_noise)
-├── prompts.py                    D  (after salvage into agent/prompt.py)
-├── fillers.py                    D
-└── engine/                       D  entire package (core, extractor, renderer, resolver, live) — self-contained
-```
+**Verified facts (don't re-derive):**
+- `sanitize_assistant_speech` is **log-only** today — `worker.py:166` computes `cleaned` but never alters spoken output. Deleting it changes nothing at runtime.
+- `enforce_english_phone_in_speech` is therefore NOT currently a hard guarantee; it becomes one only when moved into the TTS path (Step 6).
+- `orders.py` imports formatters from `replies.py` — cart mutations return pre-formatted speech strings (inversion to fix in Step 2).
+- Model is `gpt-4o-mini` at `voice_stack.py:build_llm`.
+- `_recent_agent_lines` / `note_agent_speech` / the `conversation_item_added` hook are an existing assistant-utterance capture path (reused by the readback verifier in Step 5).
 
-## 2. The new agent in depth
+**User decisions (fixed — do not relitigate):**
+- LLM → `gpt-4.1-mini` via `OPENAI_LLM_MODEL` env var; bump to `gpt-4.1` only if Step 7 data says so.
+- Persona: keep **Sierra**, as an **AI cashier** — warm, quick Punjabi-restaurant counter manner, trilingual code-mix; NOT a fake-human backstory. Persona doc drafted by Claude, **user approves before it ships**.
+- Flow (kept, enforced as a hard code checklist, never trusted to LLM context): items → **one final additional-requests question** (spice preferences + allergies + special instructions, asked once at end of ordering) → pickup/delivery (+address) → name/phone → readback → confirm → place. Adds get a natural one-liner confirm; **no per-dish spice interrogation**.
+- Readback: grounded-but-natural — code emits canonical facts, LLM phrases them in the customer's language, a code verifier checks every item/qty/order-type was spoken before `confirm_readback` succeeds.
+- Guardrails: delete SAY EXACTLY scripts + phrase-strip regexes; keep only hard TTS-correctness rules.
 
-### 2.1 `restaurant/agent/gates.py` — state + hard gates (pure, LLM-free, unit-testable)
+**Invariants (PR 030 lesson — money path lives in code, never prompt):**
+- `_resolve_menu_item` choke point + refusal strings (AMBIGUOUS / NOT FOUND / NEEDS INFO / blockers) stay as-is.
+- `gates.readback_blockers` / `place_order_blockers` remain THE hard checklist; cart revision counter keeps invalidating stale readbacks.
+- Item names/prices enter the cart only via resolved menu payloads. Spice defaults applied by code, never LLM guess.
+- Hard TTS rules survive in the prompt: Punjabi→Gurmukhi / Hindi→Devanagari, never Roman; phone digits as English words; dish names = `voice_line` exactly; checkout terms (pickup/delivery/confirm) stay English; no volunteered price on phone.
+- Untouched: turn system, channel filters (`on_user_turn_completed` hygiene), STT/TTS stack, turn detection, analytics, web sync.
 
-```python
-SPICE_GROUP = "Spice Level"   # the magic string, defined once (order_submit.py uses the same literal)
+**Key files:** `restaurant/agent/core.py` (agent + tools), `gates.py`, `prompt.py`, `replies.py`, `language.py`, `worker.py`, `restaurant/orders.py`, `restaurant/voice_stack.py`. Tests mirror modules in `tests/`.
 
-@dataclass
-class OrderSessionState:
-    preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH  # sticky; goodbye + recorder only
-    allergies_recorded: bool = False
-    allergy_note: str = ""
-    readback_revision: int | None = None    # cart.revision at last get_order_readback()
-    readback_confirmed: bool = False
-    real_user_turns: int = 0
-```
-
-- `place_order_blockers(cart, state) -> list[str]` — empty means go. Checks in order:
-  no items · order_type unset · delivery without address · invalid name (`customer_info.is_valid_customer_name`)
-  · phone not exactly 10 digits (`extract_phone_digits`; strip leading `1` on 11) · allergies not recorded
-  · `not (state.readback_confirmed and state.readback_revision == cart.revision)`.
-- `invalidate_readback(state)` — reset confirmed flag; called on **every** cart mutation.
-- `OrderCart` gains `revision: int = 0`; every mutating path bumps it — **including `web_sync.py` RPC adds** — so a mid-checkout web add forces re-readback.
-
-### 2.2 `restaurant/agent/core.py` — `RestaurantAgent` + tool schema
-
-Holds `self.cart = OrderCart(delivery_charge=tenant.delivery_charge)`, `self.state = OrderSessionState()`, `self.is_phone`, `bind_*` methods (session/recorder/web_sync/job_context), `note_agent_speech` (echo-filter feed), `_record_tool`, `_sync_web`. Constructible without a session → tools directly unit-testable.
-
-**Single resolution choke point** (all item tools route through it):
-
-```python
-def _resolve_menu_item(self, query) -> tuple[dict | None, str | None]:
-    item = menu_provider.find_item(query)                      # matcher abstains < MENU_MATCH_MIN_CONF (0.55)
-    if item and item.get("unavailable"): return None, "…not available right now. Offer an alternative."
-    if item and item["match_confidence"] >= ADD_CLARIFY_MIN_CONF:   # keep 0.7 env gate
-        return item, None
-    options = menu_provider.disambiguation_options(query, limit=3)  # menu_provider.py:253
-    if options:  return None, "AMBIGUOUS — '<q>' could mean: <opts>. Ask which one. Do NOT add anything yet."
-    return None, "NOT FOUND — '<q>' is not on our menu. Never invent a dish."
-```
-
-The LLM can never write a name/price into the cart: adds go through the resolved `to_cart_dict()` payload only.
-
-**Tools** (all `@function_tool` async methods; every mutation → bump `cart.revision`, `invalidate_readback`, `_sync_web`, `_record_tool`):
-
-| # | Tool | Validation / behavior |
-|---|------|----------------------|
-| 1 | `add_item(item_query, quantity=1, spice_level=None, note="")` | qty clamp 1–20; `_resolve_menu_item`; **refuse** if `required_modifier_groups(id)` unmet ("NEEDS INFO — ask, then re-call with note") or `item_has_spice_level(name)` and no `spice_level` ("NEEDS SPICE — Mild/Medium/Spicy/Extra Spicy"). Spice validated against the 4 values; written into the note in the shape `order_submit._match_spice_modifier` maps. Returns `format_add_tool_reply` (no price). |
-| 2 | `set_item_quantity(item_query, quantity)` | exact set, never additive; ≤0 removes; cart-line match by name substring → resolved id. |
-| 3 | `remove_item(item_query)` | cart-line match; `format_remove_tool_reply`. |
-| 4 | `set_item_spice(item_query, spice_level)` | "make the butter chicken spicy" corrections; validates; rewrites note. |
-| 5 | `check_menu_item(name)` | wraps `menu_provider.check_item` (veg/desc; price INTERNAL semantics preserved). |
-| 6 | `search_menu(query)` | wraps `menu_provider.search_menu` ("at most TWO in one casual sentence" rule preserved). |
-| 7 | `record_allergies(response)` | sets `allergies_recorded=True`; non-"no" note stored + threaded to Clover submit note. |
-| 8 | `set_order_type("pickup"\|"delivery")` | literal-validated; reply steers next step (address vs contact). |
-| 9 | `set_delivery_address(address)` | min-length sanity; refuses empty/one-word. |
-| 10 | `set_customer_contact(name=None, phone=None)` | `parse_customer_name`/`is_valid_customer_name` (refuse junk); `extract_phone_digits` must be 10 (accept 11 with leading 1 → strip); success returns `format_phone_spoken` English-word digits. **Not** gated on readback (contact precedes readback in the new flow; blockers enforce completeness regardless). |
-| 11 | `get_order_readback()` | **the only source of readback text** — refuses with blocker text if anything's missing; else builds `format_order_readback(cart)` (channel price policy), sets `readback_revision = cart.revision`, returns "READ THIS BACK VERBATIM, then ask: Is that correct?" |
-| 12 | `confirm_readback()` | refuses if `readback_revision != cart.revision` ("cart changed — read back again"); else `readback_confirmed=True`. |
-| 13 | `place_order()` | runs `place_order_blockers`; any blocker returned verbatim. Clear → `await asyncio.to_thread(submit_cart_to_clover, cart, tenant=…, session_id=…, channel=…)`; honors `clover_submit_enabled()` shadow gate; Clover failure → spoken failure path, **never** a false "order's in"; `cart.mark_placed`; speaks `order_placed_goodbye(order_type, lang)` via `session.say`; schedules `call_control` auto-hangup (phone); returns "ORDER COMPLETE" sentinel (prompt: no further speech). |
-| 14 | `transfer_to_human(reason)` | carried over. |
-| 15–16 | `check_table_availability` / `book_reservation` | carried over, wrap `reservations.py`. |
-| 17 | `get_order_summary()` | mid-call status from `cart.summary()`; phone no-price policy. |
-
-**`on_user_turn_completed` — channel hygiene ONLY, no ladder:**
-1. `phone_echo` rejection (+ existing greeting-tail reprompt scheduling) → `StopResponse`
-2. `phone_background` chatter rejection (UserIntent param removed)
-3. `stt_noise` rejection
-4. `state.preferred_language = update_preferred_language(…)` (sticky; the LLM handles in-conversation language naturally from the transcript)
-5. `real_user_turns += 1`; recorder turn hook.
-Nothing else — no intent regexes, no auto-add, no ladder says, no turn-guidance injection.
-
-### 2.3 `restaurant/agent/prompt.py`
-
-Salvage verbatim from `prompts.py` (hard-won call lessons): persona, LANGUAGE block (Gurmukhi/Devanagari never Roman Indic; quantities as words never "2x"; phone digits as English words; checkout lines in English), voice_line/speech_mode rule, phone no-price block, web block, TRANSFER, NEVER list, ORDER COMPLETE sentinel. Drop all `[TURN GUIDANCE]` machinery.
-
-New FLOW section (guidance — the *gates* are in code):
-
-```
-ORDER FLOW (natural, one question per turn):
-greet → take items (after each add, "anything else?") → done → allergies (record_allergies)
-→ pickup or delivery (set_order_type; delivery → set_delivery_address) → name, then phone (set_customer_contact)
-→ get_order_readback, read it VERBATIM → on yes: confirm_readback, then place_order.
-Handle changes at ANY point — after any cart change you must re-run get_order_readback before placing.
-TRUST TOOL RESULTS: if a tool says AMBIGUOUS / NEEDS / NOT FOUND / a blocker, relay it and ask —
-never work around it, never state items or totals from memory. "No preference" on spice = Medium.
-```
-
-Keep signature `build_system_prompt(*, is_phone: bool) -> str` so `llm_warmup.py` needs only an import change.
-
-### 2.4 `restaurant/agent/worker.py` — entrypoint, carried 1:1 from `agent.py:1386-1534`
-
-ctx.connect + wait_for_participant; `is_phone` detection (`sip_` prefix / `sip.callStatus`); `_sip_caller_phone`; `SessionRecorder` start + idempotent analytics flush on close/shutdown (now `finalize(cart, preferred_language=state.preferred_language.value)`); `TurnLatencyTracker.attach`; `schedule_llm_warmup(is_phone, tools=agent.tools)`; `build_agent_session` / `build_room_options`; ambient audio start/stop; `WebSync(room, agent)` on web; `user_input_transcribed` / `conversation_item_added` recorder hooks with slim `sanitize_assistant_speech`; `session.say(OPENING_GREETING)`; phone greeting settle + echo reprompt. Root `agent.py` shim keeps `agent_name="restaurant-agent"` and filename.
-
-## 3. Migration in dependency-safe order = the staged PRs
-
-### PR 059 — `pr_059_salvage-and-decouple` (zero behavior change; old agent keeps running)
-1. Create `restaurant/agent/{__init__,language,replies,gates}.py`. Copy from `conversation.py`: greeting/language (:23-89) → `language.py`; formatters (:839-927) + `order_placed_goodbye` (:29) + slim `sanitize_assistant_speech` (:988) → `replies.py`. `conversation.py` re-imports these names as aliases → deployed agent byte-for-byte unchanged.
-2. `orders.py`: formatters imported from `restaurant.agent.replies`; `customer_info` import top-level; add `revision` counter (bump in add/remove/update/set_quantity_by_id/remove_by_id).
-3. `customer_info.py`: inline `_DELIVERY_RE/_PICKUP_RE/_QTY_ITEM_RE`; replace `menu_item_hint_in_text` with `menu_provider.extract_dish_query` — all 3 lazy conversation imports severed.
-4. `stt_noise.py`: absorb `looks_like_order_phrasing` (conversation) + `_QTY_WORDS`/`_extract_qty` (order_parse).
-5. `phone_background.py` / `phone_echo.py`: remove `UserIntent` from signatures (plain flags / internal regex).
-6. `menu_provider.py:136`: inline the availability-question regex privately.
-7. `session_recorder.py`: `finalize(cart, *, preferred_language: str | None = None)`; old agent.py call site updated.
-8. Delete `restaurant/fillers.py` + `tests/test_fillers.py` (restore path noted in PR doc).
-
-### PR 060 — `pr_060_hybrid-agent-brain` (new brain, unwired; no deletions)
-`restaurant/agent/core.py`, `prompt.py`, `worker.py` + the full new test suite (§5). Old agent still the deployed entrypoint.
-
-### PR 061 — `pr_061_agent-cutover-and-teardown`
-Root `agent.py` → shim; `llm_warmup.py` import re-pointed; **delete** `conversation.py`, `order_flow.py`, `order_parse.py`, `prompts.py`, `restaurant/engine/` + their tests; rewrite broken keeper tests (§5); e2e verification (§6); deploy in shadow mode (`CLOVER_SUBMIT_ORDERS=0`).
-
-### PR 062 — `pr_062_package-reorg`
-`git mv` into `channels/` and `analytics/`; mechanical import updates across restaurant/, tests, scripts. No logic changes.
-
-## 4. Exact deletion & modification lists
-
-**Deleted source:** `restaurant/conversation.py`, `restaurant/order_flow.py`, `restaurant/order_parse.py`, `restaurant/prompts.py`, `restaurant/fillers.py`, `restaurant/engine/` (all files + README); old body of root `agent.py` (file kept as shim).
-**Deleted tests:** `test_engine.py`, `test_engine_renderer.py`, `test_engine_resolver.py`, `test_conversation.py`, `test_order_flow.py`, `test_order_parse.py`, `test_fillers.py`, `test_item_availability.py`.
-**Modified:** `agent.py`, `orders.py`, `customer_info.py`, `stt_noise.py`, `phone_background.py`, `phone_echo.py`, `menu_provider.py`, `session_recorder.py`, `llm_warmup.py`.
-**New:** `restaurant/agent/*` (7 files) + new tests.
-**Untouched keepers:** `clover/*`, `tenants/*`, `menu.py`, `menu_browse.py`, `text_match.py`, `voice_stack.py`, `session_config.py`, `reservations.py`, `ambient_audio.py`, `call_control.py`, `turn_latency.py`, `analytics_store.py`, `web_sync.py`, `token_server.py`, `data/*`, `web/`, `admin/`, all of `scripts/`, `deploy/` (both systemd units unchanged).
-
-## 5. Test plan
-
-**New (tools are plain async methods on a session-less agent — no LLM needed):**
-- `tests/test_agent_tools.py` — add happy path (resolved to_cart_dict, no LLM price); AMBIGUOUS → options + cart unchanged; NOT FOUND; unavailable; spice refusal → retry with spice_level succeeds; required-group ("Choose Curry") refusal; qty clamp; exact-set quantity; remove; contact rejects 9-digit / junk name, accepts 10 and 11-with-leading-1; order type / address validation.
-- `tests/test_agent_gates.py` — `place_order_blockers` matrix (each precondition individually missing); **readback staleness**: mutate cart after `get_order_readback` → `confirm_readback` refused → re-readback → place OK; revision bumps on every mutation incl. web-RPC path.
-- `tests/test_agent_replies.py` / `tests/test_agent_language.py` — ported cases from `test_conversation.py` / `test_language.py` for salvaged formatters + `detect_customer_language`.
-- `tests/test_agent_place_order.py` — monkeypatched `submit_cart_to_clover`: to_thread path, shadow-mode gate, goodbye + hangup scheduling, sentinel return, Clover error → spoken failure (no false "order's in").
-**Rewritten keepers:** `test_customer_info.py`, `test_text_match.py`, `test_stt_noise.py`, `test_phone_echo.py`, `test_phone_background.py`, `test_session_recorder.py`, `test_llm_warmup.py`, `test_orders.py`, `test_menu_match.py` (against `clover.match` directly), `test_menu_browse.py`, `test_language.py`.
-**Untouched keepers:** `test_ambient_audio`, `test_call_control`, `test_clover_order_submit`, `test_menu_cache_load`, `test_voice_labels`, `test_speech_policy`, `test_session_config`.
-
-## 6. End-to-end verification
-
-1. `python -m pytest tests/ -q` green at each PR boundary.
-2. `USE_CLOVER_MENU=1 CLOVER_SUBMIT_ORDERS=0 python agent.py console` — scripted call: ambiguous "fish" (must ask, not add) · spice refusal → answer · late add after readback (must force re-readback) · 9-digit phone (must re-ask) · "no allergies" · full readback → place → shadow log shows correct Clover payload.
-3. `scripts/test_call.py` outbound SIP call against a deployed worker (phone channel: echo filter, greeting settle, hangup).
-4. `curl :8001/menu` — token_server catalog unchanged.
-5. Web channel: tap-to-add then voice checkout — revision gate forces fresh readback.
-6. Rollout: pilot restaurant in shadow (`CLOVER_SUBMIT_ORDERS=0`), review N real recorded calls in admin analytics, then flip the env var. Rollback = `git revert` + `scripts/vps_deploy.sh` (env untouched).
+**PR numbering:** steps map to PRs 074–080. Highest existing doc is `pr/pr_069_*`; 070–073 are claimed by parked plans (current_fixes.md, echo_gaps.md) — verify free numbers against branches before creating each doc.
 
 ---
 
-## Part III — Resuming this work in a new session
+## Step 1 (PR 074) — Model switch + dialogue eval harness + baseline — ✅ DONE
 
-- **Where you are:** check which PRs of 059–062 have merged (`git log --oneline`, `ls pr/`). Each PR has a doc `pr/pr_0NN_*.md` per `pr/pr_rules.md` (doc first, branch = doc name, Files Added/Modified/Deleted enumerated, never commit to main).
-- **Run tests:** `python -m pytest tests/ -q` (pytest may need `pip install pytest` — not in pyproject deps).
-- **Deployed reality:** VPS `89.117.18.192`, `/opt/livekit-sarvam/`, deploy `bash scripts/vps_deploy.sh`; systemd `restaurant-agent.service` runs `python agent.py start`. Phone `+15878175156` (Twilio → LiveKit SIP). Web `voice.bizbull.ai`, admin `admin.bizbull.ai`.
-- **Do not** re-apply PR 030, re-wire `restaurant/engine/` (it's being deleted), or flip `CLOVER_SUBMIT_ORDERS=1` before reviewing shadow-mode calls.
-- **Audit findings that motivated this** (from the 2026-07-10 session): engine drops adds during checkout phases; 10-digit-only phone loop; no retry ceiling/escalation anywhere; extraction guarantee only tested against FakeResolver; sync Clover submit blocks the event loop; success spoken even on Clover failure; readback rejection re-asks allergies; Hindi promised but unimplemented; extractor blind to cart. The new tool design addresses each (blockers, 11-digit strip, tool refusals with reasons, to_thread, failure path, revision-gated readback, LLM-native context).
+**Goal:** switch to gpt-4.1-mini and build the measurement tool *before* changing behavior, so every later step has a before/after.
+
+**Changes**
+- `restaurant/voice_stack.py:build_llm` → `openai.LLM(model=os.getenv("OPENAI_LLM_MODEL", "gpt-4.1-mini"))`.
+- New `scripts/dialogue_harness.py` (dev-only, real OpenAI calls, no audio): instantiate `RestaurantAgent` without a session (already null-safe: `_sync_web`/`_record_tool` no-op; `place_order` has a no-session branch near `core.py:840`); manual LLM tool-loop over scripted customer turns at temperature 0; execute tool calls against the real agent; emit transcript + tool log + final `cart.to_state_dict()` + machine assertions (cart contents, gates respected, order placed/not).
+- New `tests/scenarios/` (~8): English order; Punjabi (Gurmukhi) order; Hindi order; quantity correction ("I said one not two"); ambiguous dish ("fish"); delivery with phone spoken across two turns; cart change after readback (must force re-read); price-ask on phone.
+- Run harness against the CURRENT prompt+model; commit baseline transcripts under `docs/eval/baseline/`.
+
+**Verify:** full existing suite green untouched; new model-env test in `tests/test_voice_stack.py`; 2–3 live calls — check gpt-4.1-mini turn latency via `TurnLatencyTracker` logs. Rollback: `OPENAI_LLM_MODEL=gpt-4o-mini`.
+
+**Definition of done:** harness runs all scenarios green against current behavior; baseline transcripts committed; latency acceptable on live call.
+
+### Checkpoint (fill in when done)
+- Date / branch / commit: 2026-07-17 / `pr_074_model-switch-dialogue-harness` / see branch tip (committed locally, NOT pushed — user approval required).
+- What shipped vs plan (deviations):
+  - `build_llm` env switch shipped as planned via new `llm_model_name()` (tested: default / override / blank).
+  - Harness shipped with one addition the plan didn't anticipate: a **reactive turn layer**. Even at temperature 0 the agent non-deterministically asks optional clarifying questions (e.g. reads the phone number back and asks "is that correct?"), which shifts a fixed script one question off. Built-in rule auto-answers "Yes." to the phone-digit confirm (≥6 English digit words + "?"); scenarios may declare `reactive` regex→reply rules answered without consuming the scripted queue. Without this the suite is flaky run-to-run.
+  - `ambiguous_fish` works as planned ("fish" → Amritsari Fish Pakora / Punjabi Fish Curry) — but only because the harness runs on the Clover cache (`.env` `USE_CLOVER_MENU=1`, committed `data/menu_cache_bizbull.json`); the static menu has no fish ambiguity, no spice flags, no voice_lines.
+  - `price_ask_phone` originally asserted a dollar amount is spoken when asked; the CURRENT agent structurally cannot answer price on phone (refuses "Sorry, I can't share prices right now" — price stripped from all phone-facing tool replies). Assertion relaxed to cart-only so the baseline is green; the refusal is documented in the transcript + PR doc as the "before" evidence for Step 2's `total=` facts line.
+- Harness/scenario results & latency numbers: 8/8 machine-green on gpt-4.1-mini, twice in a row (committed run + stability re-run). Full pytest suite 274 passed. **Live-call latency NOT yet measured** — needs 2–3 real calls after deploy; check TurnLatencyTracker logs; rollback `OPENAI_LLM_MODEL=gpt-4o-mini`.
+- Notes for next session:
+  - Baseline findings for Steps 2–3 (transcripts in `docs/eval/baseline/`): phone price-ask refused even when asked (Step 2); model skips `set_order_type` on "Delivery please" until the readback blocker forces a re-ask, costing 2–4 turns (prompt/flow work, Step 3/4); model silently passes `spice_level="medium"` for unstated spice instead of asking (the per-dish interrogation Step 3 deletes — note the model already dodges it).
+  - Run tests with `PYTHONPATH=. uv run --with pytest pytest tests` (pytest is not in the project venv; bare `uv run pytest` picks up miniconda's and can't import `restaurant`/`livekit`).
+  - Harness: `uv run python scripts/dialogue_harness.py [--scenario NAME] [--out DIR] [--model ID]` (needs `OPENAI_API_KEY`; default out dir IS `docs/eval/baseline/` — pass `--out` when re-running for comparison so the baseline isn't overwritten).
+
+---
+
+## Step 2 (PR 075) — Tool replies: SAY EXACTLY → structured facts — ☐ TODO
+
+**Goal:** tools stop scripting speech; they return facts the LLM phrases itself. Ships BEFORE the persona prompt so scripts and persona-freedom never coexist contradictorily.
+
+**Reply pattern** (every mutating tool):
+```
+ADDED: 2 x ਬਟਰ ਚਿਕਨ (Butter Chicken), spice medium.
+ORDER NOW: 2 x ਬਟਰ ਚਿਕਨ; 1 x Garlic Naan. total=$34
+GUIDE: confirm the add briefly in the customer's language using the exact dish name and quantity above, then keep the order moving.
+```
+Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (answers "how much?" without a tool call); the no-price-on-phone policy lives in the prompt only. Same shape for `set_item_quantity` ("CORRECTED (not added): Garlic Naan is now 3 total.") and `get_order_summary` ("ORDER SO FAR (state ONLY these items — never from memory): …").
+
+**Changes**
+- `restaurant/orders.py`: `add_item`/`remove_item`/`update_item_quantity` return a `CartMutation` dataclass (kind added/updated/removed/merged, name, voice_line, qty, note) or error sentinel — drop the `replies` import entirely.
+- New `restaurant/agent/facts.py`: `format_mutation_reply(mutation, cart)`, `format_cart_facts(cart)` (the ORDER NOW line), reuse `_qty_word`.
+- `core.py`: `add_item`, `set_item_quantity`, `remove_item`, `set_item_spice` (inline SAY EXACTLY ~`core.py:510`), `get_order_summary` → facts pattern. Refusal strings unchanged.
+- `replies.py`: delete `format_add/remove/update_tool_reply`, `confirm_items_added`; keep readback/status formatters (until Step 5) and canned lines (until Steps 4/6).
+- `prompt.py` minimal touch: delete only "confirm like a cashier (…)" exact-wording clause; add "confirm using the exact names/quantities from ORDER NOW".
+
+**Verify:** rewrite `tests/test_orders.py` mutation-return assertions; `test_agent_replies.py` formatter tests → new `facts.py` tests (qty words, note rendering, Gurmukhi voice_lines pass through untouched); `test_agent_tools.py` money-path assertions (refusals, additive-add guard, revision invalidation) unchanged. Harness re-run: machine assertions green; spot-check confirms state correct qty+name.
+
+**Definition of done:** no `SAY EXACTLY` remains in any tool reply; orders.py has no speech imports; suite + harness green.
+
+### Checkpoint (fill in when done)
+- Date / branch / commit:
+- Deviations:
+- Harness diff vs baseline (notable phrasing changes / regressions):
+- Notes for next session:
+
+---
+
+## Step 3 (PR 076) — Additional-requests step; kill per-dish spice interrogation — ☐ TODO
+
+**Goal:** adds are frictionless one-liners; spice/allergies/special instructions collected in ONE natural wrap-up question at end of ordering, before customer details. Enforced by gates, not prompt.
+
+**Changes**
+- `core.py add_item`: drop the NEEDS SPICE refusal. Spice stated at add time ("spicy butter chicken") passes through as today; otherwise item is added with spice unset. Non-spice required modifier groups (NEEDS INFO, e.g. naan choice in combos) STILL block — genuine choices with no sane default.
+- New tool `record_additional_requests(response)` replacing `record_allergies`:
+  - sets `state.additional_requests_recorded = True`; stores allergy/special-instruction text (reuse `_NO_ALLERGIES_RE`-style "no" detection; text still flows to Clover/n8n as `allergy_note`);
+  - on completion, code-side: every spiced dish still without spice gets **Medium** (existing "no preference = Medium" rule, applied once, deterministically);
+  - GUIDE in reply: apply specific spice mentions via existing `set_item_spice` first.
+- `gates.py`: `allergies_recorded` → `additional_requests_recorded` (keep `allergy_note`); swap the allergies blocker in `readback_blockers` for: "The final additional-requests question (spice preferences, allergies, special instructions) has not been asked — ask it and call record_additional_requests." This IS the hard checklist — the agent cannot reach readback/place with a skipped step regardless of context.
+- `prompt.py`: flow section = the checklist in fixed order (items → additional requests → pickup/delivery → name/phone → readback → confirm), phrased as goals; "the tools tell you what's still missing — trust them."
+- `_note_with_spice` / Clover submit path unchanged (spice still lands in the note).
+
+**Verify:** `test_agent_gates.py`: readback blocked until `record_additional_requests`; Medium default only fills unset spiced items; explicit spice never overwritten. `test_agent_tools.py`: add without spice succeeds; NEEDS INFO still blocks; spice-at-add passes through. Harness: scenarios updated to new flow + new scenario "customer never mentions spice" (ends Medium, wrap-up question still asked).
+
+**Definition of done:** no spice question ever needed mid-ordering; wrap-up step gate-enforced; suite + harness green.
+
+### Checkpoint (fill in when done)
+- Date / branch / commit:
+- Deviations:
+- Live-call feel of the new flow:
+- Notes for next session:
+
+---
+
+## Step 4 (PR 077) — Persona + checklist-driven prompt — ☐ TODO
+
+**Goal:** replace the scripted prompt with the approved AI-cashier persona + goal checklist.
+
+**4a — Persona doc (USER APPROVAL REQUIRED before 4b):** draft Sierra as an AI cashier — warm, quick, Punjabi-restaurant counter manner; speech habits and fillers (ਹਾਂ ਜੀ, acha ji, bilkul); code-mix patterns per language; how she handles confusion, indecision, menu questions; 3–4 few-shot micro-dialogues (≥1 each English/Punjabi/Hindi — few-shot is the strongest tone lever). Lives in new `restaurant/agent/persona.py`. **Stop and get sign-off on the text before wiring it in.**
+
+**4b — Prompt architecture** (`build_system_prompt` assembles ordered sections):
+1. PERSONA — approved doc; delivery guidance replaces "ONE sentence per turn": "This is a live call — keep turns short and natural to say aloud, usually one idea and at most one question. Vary your phrasing; never repeat the same acknowledgement twice in a row."
+2. HARD SPEECH RULES — carried verbatim from today's prompt (scripts, digits, voice_line, English checkout terms, quantity words). Step 5's verifier depends on the voice_line + English-checkout rules.
+3. YOUR JOB — the Step 3 checklist as goals, not lines.
+4. TOOL CONTRACT — tool list, TRUST TOOL RESULTS, NEVER GUESS, additive-add warning: content unchanged.
+5. CHANNEL — phone/web blocks, price policy unchanged.
+
+**Canned lines (all rewritten in persona voice):** opening greeting — keep fixed (latency-critical, pre-LLM `session.say`); `order_placed_goodbye` — keep fixed (wired into hang-up choreography ~`core.py:809`), add language variants keyed off `state.preferred_language`; echo/background reprompts — keep fixed (spoken under `StopResponse`, no LLM turn exists), 2–3 variant pools, no immediate repeats; reservation confirm (~`core.py:949`) — hand to LLM as facts (ref digits as English words); transfer exact line — relax to guidance.
+
+**Rollback:** `PROMPT_STYLE=legacy` env flag keeps the old builder for one release.
+
+**Verify:** prompt unit tests assert non-negotiables present in the assembled prompt (both styles); full harness scored side-by-side vs Step 1 baseline; 5+ live calls per language; transcript review for re-greeting/meta-speech regressions (the old regexes never actually fired on speech — review replaces them).
+
+**Definition of done:** persona approved by user; new prompt live behind flag default-on; harness + live calls reviewed.
+
+### Checkpoint (fill in when done)
+- Date / branch / commit:
+- Final approved persona summary (one paragraph):
+- Deviations:
+- Live-call review findings:
+- Notes for next session:
+
+---
+
+## Step 5 (PR 078) — Grounded natural readback + post-speech verifier (money path) — ☐ TODO
+
+**Goal:** LLM phrases the readback in the customer's language; code verifies every item/qty/order-type was actually spoken before `confirm_readback` can succeed. `place_order_blockers` unchanged — `readback_confirmed` is simply only set after verification passes.
+
+**`get_order_readback` new return:** `READBACK FACTS` list — per item `2 x ਬਟਰ ਚਿਕਨ (Butter Chicken)`; `order type: pickup (say "pickup" in English)`; name; total (web only) — plus: "read ALL of these in the customer's language, then ask if everything is correct. Your spoken readback is checked — anything missing forces a re-read." Still sets `readback_revision`, clears `readback_confirmed`; new: `readback_pending = True`, clears spoken buffer.
+
+**New pure module `restaurant/agent/readback_verify.py`:**
+- Trilingual qty lexicon 1–20 (`_MAX_ITEM_QTY`): English words, Gurmukhi words (ਇੱਕ, ਦੋ…), Devanagari words (एक, दो…), ASCII digits, Indic numerals.
+- Normalize: NFC → casefold Latin → strip punctuation preserving Indic codepoints → collapse whitespace.
+- Per item aliases: normalized voice_line + English name, parentheticals ("(2 pcs)") stripped.
+- Checks: **item presence** (alias substring; missing → `MISSING: you never said 'X' / 'Y'`); **quantity window** (≤3 tokens before alias: found-but-wrong → fail; absent with qty ≥2 → fail; absent with qty 1 → OK, so "and a Garlic Naan" passes); **order type** (closed English vocab anywhere — the reason checkout-English survives in the prompt); **total** (web, warn-level: if a dollar amount is spoken it must equal `cart.total`).
+- NOT verified (unverifiable across languages, not money-corrupting): inflection, honorifics, notes/spice, phrasing order. False negatives fail safe → re-read.
+
+**Plumbing:** `OrderSessionState` += `readback_pending: bool`, `readback_spoken: list[str]` (field adds only). `note_agent_speech` appends to buffer while pending (existing `conversation_item_added` path feeds it; barge-in truncation → verifier fails → re-read = safe direction; same-turn readback+confirm → empty buffer → fails). `confirm_readback` runs verifier after revision checks; `READBACK_VERIFY` env: `warn` (log + analytics event, allow — **initial live default**), `strict` (return `READBACK INCOMPLETE: <problems>` + clear buffer, keep unconfirmed), `off` (emergency rollback). `invalidate_readback` also clears pending + buffer.
+
+**Verify:** new `tests/test_readback_verify.py` — passing phrasings ×3 languages; missing item fails; wrong qty fails; qty-1 omission passes; Gurmukhi dish + English qty passes; Devanagari qty passes; empty/truncated buffer fails. `test_agent_tools.py`/`test_agent_place_order.py`: strict-mode confirm blocked until verified speech recorded (simulated `note_agent_speech` feed); warn/off modes. `test_agent_gates.py` blocker functions untouched. Harness: adversarial "sloppy readback" scenario (inject readback missing an item → confirm refused). Live: run `warn`, measure false-negative rate per language from analytics before flipping strict.
+
+**Definition of done:** verifier live in `warn` on real calls; adversarial scenario green; false-negative measurement started.
+
+### Checkpoint (fill in when done)
+- Date / branch / commit:
+- Deviations (esp. verifier heuristics tuned):
+- warn-mode stats so far (per language):
+- Notes for next session:
+
+---
+
+## Step 6 (PR 079) — Delete speech guard; real TTS phone-digit enforcement — ☐ TODO
+
+**Goal:** remove dead regex machinery; promote phone-digit enforcement into the actual audio path (first-time hard guarantee).
+
+**Changes**
+- `replies.py`: delete `sanitize_assistant_speech` + all `_*_RE` regexes (verified log-only). `worker.py:_on_conv_item` simplifies to note/record/log.
+- `core.py`: `tts_node` override on `RestaurantAgent` applying `enforce_english_phone_in_speech` as a streaming filter — pass text through untouched unless a digit-run/digit-word token appears, then buffer to the run boundary (bounded buffering, no latency on normal text). Behind `TTS_PHONE_ENFORCE` env, default on.
+- Optional, only if trivially reliable: word fixups (Dhanyavaad→ਧੰਨਵਾਦ) in the same filter. NO general Roman→Gurmukhi transliteration.
+
+**Verify:** migrate/delete `test_speech_policy.py` sanitizer cases; new `tests/test_tts_transform.py` (digit run split across chunks, Indic numerals, word-digit chains ≥7). Live phone call with number readback. Rollback: `TTS_PHONE_ENFORCE=0`; sanitizer deletion needs none.
+
+**Definition of done:** sanitizer gone; phone readback enforced in TTS path on a live call.
+
+### Checkpoint (fill in when done)
+- Date / branch / commit:
+- Deviations:
+- Notes for next session:
+
+---
+
+## Step 7 (PR 080) — Calibration: rubric, judge, model decision — ☐ TODO
+
+**Goal:** systematize "sounds natural"; decide gpt-4.1-mini vs gpt-4.1; finish rollout flags.
+
+- `docs/eval/naturalness_rubric.md`: score 1–5 on acknowledgement variety (no stock phrase >2×/call), sentence-length variety, code-mix appropriateness, zero meta-speech, confusion-handling grace, checkout efficiency (turns-to-place not inflated >20% vs baseline).
+- `scripts/judge_transcripts.py` (dev-only LLM-as-judge; human review remains authority).
+- Compare harness + live scores vs Step 1 baseline; if flat → `OPENAI_LLM_MODEL=gpt-4.1`, re-measure latency.
+- Persona/prompt micro-tuning from findings; flip `READBACK_VERIFY` default to `strict` if Step 5 warn-mode data supports it; consider removing `PROMPT_STYLE=legacy`.
+
+**Definition of done:** rubric + judge committed; model decision made with data; verifier default decided.
+
+### Checkpoint (fill in when done)
+- Date / branch / commit:
+- Model decision + evidence:
+- READBACK_VERIFY final default:
+- Remaining known gaps / follow-ups:

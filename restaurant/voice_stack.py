@@ -204,8 +204,18 @@ def build_stt(is_phone: bool):
     )
 
 
+def llm_model_name() -> str:
+    """LLM model id (OPENAI_LLM_MODEL). PR 074 default: gpt-4.1-mini.
+
+    Rollback knob for the conversation rebuild — set OPENAI_LLM_MODEL=gpt-4o-mini
+    to restore the previous model without a deploy.
+    """
+    raw = os.getenv("OPENAI_LLM_MODEL", "").strip()
+    return raw or "gpt-4.1-mini"
+
+
 def build_llm():
-    return openai.LLM(model="gpt-4o-mini")
+    return openai.LLM(model=llm_model_name())
 
 
 def build_tts(is_phone: bool):
