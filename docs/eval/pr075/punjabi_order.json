@@ -1,0 +1,194 @@
+{
+  "name": "punjabi_order",
+  "channel": "phone",
+  "model": "gpt-4.1-mini",
+  "passed": true,
+  "turns": [
+    {
+      "user": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ, ਦੋ ਬਟਰ ਚਿਕਨ ਲਗਾ ਦਿਓ।",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "Butter Chicken",
+            "quantity": 2,
+            "spice_level": "medium"
+          },
+          "result": "ADDED: 2 x Butter Chicken, note: medium.\nORDER NOW: 2 x Butter Chicken [medium]. total=$39.98\nGUIDE: confirm the add briefly in the customer's language using the exact dish name and quantity above (quantity spoken as \"two\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "ਦੋ ਬਟਰ ਚਿਕਨ medium spice ਨਾਲ ਜੋੜ ਦਿੱਤੇ। ਹੋਰ ਕੁਝ?"
+    },
+    {
+      "user": "ਮੀਡੀਅਮ ਠੀਕ ਹੈ ਜੀ।",
+      "tool_calls": [],
+      "assistant": "ਹੋਰ ਕੁਝ ਚਾਹੀਦਾ ਹੈ?"
+    },
+    {
+      "user": "ਬੱਸ ਜੀ, ਹੋਰ ਕੁਝ ਨਹੀਂ।",
+      "tool_calls": [],
+      "assistant": "ਕੋਈ allergy ਤਾਂ ਨਹੀਂ?"
+    },
+    {
+      "user": "ਨਹੀਂ ਜੀ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ।",
+      "tool_calls": [
+        {
+          "name": "record_allergies",
+          "args": {
+            "response": "no"
+          },
+          "result": "Allergies recorded: none. Continue — pickup or delivery?"
+        }
+      ],
+      "assistant": "pickup ਕਰਨਾ ਹੈ ਜਾਂ delivery?"
+    },
+    {
+      "user": "Pickup ਜੀ।",
+      "tool_calls": [
+        {
+          "name": "set_order_type",
+          "args": {
+            "order_type": "pickup"
+          },
+          "result": "Set to pickup. Continue the flow."
+        }
+      ],
+      "assistant": "ਆਪਣਾ ਨਾਮ ਦੱਸੋ ਜੀ।"
+    },
+    {
+      "user": "ਮੇਰਾ ਨਾਮ Gurpreet ਹੈ।",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "name": "Gurpreet"
+          },
+          "result": "Name saved: \"Gurpreet\"."
+        }
+      ],
+      "assistant": "ਫੋਨ ਨੰਬਰ ਦੱਸੋ ਜੀ।"
+    },
+    {
+      "user": "Six four seven five five five three four five six.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "phone": "6475553456"
+          },
+          "result": "Phone saved. Read it back as English word digits ONLY: \"six, four, seven, five, five, five, three, four, five, six\"."
+        }
+      ],
+      "assistant": "Your phone number is six, four, seven, five, five, five, three, four, five, six. Is that correct?"
+    },
+    {
+      "user": "Yes.",
+      "tool_calls": [
+        {
+          "name": "get_order_readback",
+          "args": {},
+          "result": "READ THIS BACK VERBATIM, then wait for the customer's yes:\n\"Okay Gurpreet ji — two Butter Chicken (medium), pickup. All good?\""
+        }
+      ],
+      "assistant": "Okay Gurpreet ji — two Butter Chicken (medium), pickup. All good?",
+      "injected": true
+    },
+    {
+      "user": "ਹਾਂ ਜੀ, ਬਿਲਕੁਲ ਠੀਕ ਹੈ।",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "Read-back confirmed. Call place_order now."
+        },
+        {
+          "name": "place_order",
+          "args": {},
+          "result": "Order placed! INTERNAL total $39.98. Tell customer: \"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!\" Do NOT mention price or dollars."
+        }
+      ],
+      "assistant": "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "placed",
+    "items": [
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 2,
+        "unit_price": 19.99,
+        "line_total": 39.98,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": "pickup",
+    "delivery_address": null,
+    "customer": {
+      "name": "Gurpreet",
+      "phone": "6475553456"
+    },
+    "subtotal": 39.98,
+    "delivery_charge": 0,
+    "total": 39.98,
+    "eta": "20-25 min",
+    "order_id": "S29AHQGTXG1SG"
+  },
+  "assertions": [
+    {
+      "check": "gates: placed order had a confirmed, current readback",
+      "ok": true,
+      "detail": "readback_confirmed=True readback_revision=2 cart.revision=2"
+    },
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=True"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 2",
+      "ok": true,
+      "detail": "got qty=2"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    },
+    {
+      "check": "order_type",
+      "ok": true,
+      "detail": "got 'pickup'"
+    },
+    {
+      "check": "customer_name",
+      "ok": true,
+      "detail": "got 'Gurpreet'"
+    },
+    {
+      "check": "customer_phone",
+      "ok": true,
+      "detail": "got '6475553456'"
+    },
+    {
+      "check": "allergies_recorded",
+      "ok": true,
+      "detail": "got True"
+    },
+    {
+      "check": "readbacks: at least 1 successful",
+      "ok": true,
+      "detail": "got 1"
+    }
+  ]
+}

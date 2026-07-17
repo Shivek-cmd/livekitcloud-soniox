@@ -1,8 +1,9 @@
-"""Tool-reply formatters, readback templates, and the assistant speech guard.
+"""Readback/status templates, canned lines, and the assistant speech guard.
 
-Salvaged verbatim from conversation.py — these encode hard-won live-call
-lessons (no price on phone, no cart/menu meta-speech, English phone digits,
-exact readback text generated from the code cart).
+Salvaged from conversation.py — these encode hard-won live-call lessons
+(no price on phone, English phone digits, exact readback text generated from
+the code cart). The SAY EXACTLY tool-reply formatters were replaced by
+structured facts in restaurant/agent/facts.py (PR 075).
 """
 
 from __future__ import annotations
@@ -10,30 +11,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from restaurant.agent.language import CustomerLanguage
+from restaurant.agent.facts import _qty_word
 from restaurant.customer_info import enforce_english_phone_in_speech
 
 if TYPE_CHECKING:
     from restaurant.orders import OrderCart
 
 CONFIRM_CLOSE = "All good?"
-
-_QTY_WORDS = {
-    1: "one",
-    2: "two",
-    3: "three",
-    4: "four",
-    5: "five",
-    6: "six",
-    7: "seven",
-    8: "eight",
-    9: "nine",
-    10: "ten",
-}
-
-
-def _qty_word(n: int) -> str:
-    return _QTY_WORDS.get(n, str(n))
 
 
 def _format_dollars(amount: float) -> str:
@@ -47,76 +31,6 @@ def order_placed_goodbye(*, order_type: str | None) -> str:
     wait = "30-40 ਮਿੰਟ" if order_type == "delivery" else "20-25 ਮਿੰਟ"
     return (
         f"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। {wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
-    )
-
-
-def confirm_items_added(
-    entries: list[tuple[int, str]],
-    lang: CustomerLanguage,
-    *,
-    updated: bool = False,
-) -> str:
-    """Cashier-style add confirm — no price, no cart/menu language."""
-    if not entries:
-        return "Sure."
-
-    if updated and len(entries) == 1:
-        qty, voice = entries[0]
-        word = _qty_word(qty)
-        if lang == CustomerLanguage.PUNJABI:
-            return f"ਠੀਕ ਹੈ — {word} {voice} ਹੁਣ।"
-        if lang == CustomerLanguage.HINDI:
-            return f"ठीक है — {word} {voice} अब।"
-        return f"Sure — {word} {voice} now."
-
-    parts = [f"{_qty_word(qty)} {voice}" for qty, voice in entries]
-
-    if lang == CustomerLanguage.PUNJABI:
-        prefix, joiner = "ਠੀਕ ਹੈ — ", " ਤੇ "
-    elif lang == CustomerLanguage.HINDI:
-        prefix, joiner = "ठीक है — ", " और "
-    else:
-        prefix, joiner = "Yes — ", " and "
-
-    if len(parts) == 1:
-        body = parts[0]
-    elif len(parts) == 2:
-        body = f"{parts[0]}{joiner}{parts[1]}"
-    else:
-        body = ", ".join(parts[:-1]) + joiner + parts[-1]
-    return f"{prefix}{body}."
-
-
-def format_add_tool_reply(
-    entries: list[tuple[int, str]],
-    *,
-    updated: bool = False,
-) -> str:
-    confirm = confirm_items_added(entries, CustomerLanguage.ENGLISH, updated=updated)
-    return (
-        "INTERNAL: item saved.\n"
-        f'SAY EXACTLY: "{confirm}"\n'
-        "Do NOT mention price, cart, menu, pieces, or say I can add / I've added."
-    )
-
-
-def format_remove_tool_reply(voice_line: str) -> str:
-    confirm = f"Sure — removed {voice_line}."
-    return (
-        "INTERNAL: item removed.\n"
-        f'SAY EXACTLY: "{confirm}"\n'
-        "Do NOT mention cart or menu."
-    )
-
-
-def format_update_tool_reply(quantity: int, voice_line: str) -> str:
-    """Correction confirm — distinct from add so it never reads as a second add."""
-    word = _qty_word(quantity)
-    confirm = f"Got it — {word} {voice_line}, fixed."
-    return (
-        "INTERNAL: quantity corrected (not added).\n"
-        f'SAY EXACTLY: "{confirm}"\n'
-        "Do NOT mention price, cart, or menu."
     )
 
 

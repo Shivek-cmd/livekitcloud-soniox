@@ -1,11 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from restaurant.agent.replies import (
-    format_add_tool_reply,
-    format_remove_tool_reply,
-    format_update_tool_reply,
-)
 from restaurant.customer_info import is_valid_customer_name
 from restaurant.menu import DELIVERY_CHARGE
 
@@ -14,6 +9,22 @@ def _money(amount: float) -> str:
     if abs(amount - round(amount)) < 0.001:
         return f"${int(round(amount))}"
     return f"${amount:.2f}"
+
+
+@dataclass
+class CartMutation:
+    """Result of a cart mutation — facts only, no speech (PR 075).
+
+    kind: "added" (new line) | "merged" (add onto an existing line) |
+    "updated" (exact quantity correction) | "removed".
+    quantity is the line's resulting TOTAL (0 for removed).
+    """
+
+    kind: str
+    name: str
+    voice_line: str
+    quantity: int = 0
+    note: str = ""
 
 
 @dataclass
@@ -54,7 +65,7 @@ class OrderCart:
     def total(self) -> float:
         return self.subtotal + (self.delivery_charge if self.order_type == "delivery" else 0)
 
-    def add_item(self, item: dict, quantity: int, note: str = "") -> str:
+    def add_item(self, item: dict, quantity: int, note: str = "") -> CartMutation | str:
         if item.get("unavailable"):
             return f"Sorry, {item['name']} is not available right now. Ask the customer to pick something else."
 
@@ -66,9 +77,12 @@ class OrderCart:
                 if note:
                     existing.note = note
                 self.revision += 1
-                return format_add_tool_reply(
-                    [(existing.quantity, existing.voice_line or voice)],
-                    updated=True,
+                return CartMutation(
+                    kind="merged",
+                    name=existing.name,
+                    voice_line=existing.voice_line or voice,
+                    quantity=existing.quantity,
+                    note=existing.note,
                 )
 
         self.items.append(CartItem(
@@ -81,18 +95,27 @@ class OrderCart:
             speech_mode=item.get("speech_mode") or "mixed",
         ))
         self.revision += 1
-        return format_add_tool_reply([(quantity, voice)])
+        return CartMutation(
+            kind="added",
+            name=item["name"],
+            voice_line=voice,
+            quantity=quantity,
+            note=note,
+        )
 
-    def remove_item(self, name: str) -> str:
+    def remove_item(self, name: str) -> CartMutation | str:
         for i, item in enumerate(self.items):
             if name.lower() in item.name.lower():
                 removed = self.items.pop(i)
-                voice = removed.voice_line or removed.name
                 self.revision += 1
-                return format_remove_tool_reply(voice)
-        return f"INTERNAL: not found. Ask customer to clarify the item name."
+                return CartMutation(
+                    kind="removed",
+                    name=removed.name,
+                    voice_line=removed.voice_line or removed.name,
+                )
+        return "INTERNAL: not found. Ask customer to clarify the item name."
 
-    def update_item_quantity(self, name: str, quantity: int) -> str:
+    def update_item_quantity(self, name: str, quantity: int) -> CartMutation | str:
         """Set a cart line to an exact quantity (correction — not additive).
 
         Use this when the customer corrects a quantity already in the cart
@@ -103,13 +126,21 @@ class OrderCart:
             if name.lower() in item.name.lower():
                 if quantity <= 0:
                     removed = self.items.pop(i)
-                    voice = removed.voice_line or removed.name
                     self.revision += 1
-                    return format_remove_tool_reply(voice)
+                    return CartMutation(
+                        kind="removed",
+                        name=removed.name,
+                        voice_line=removed.voice_line or removed.name,
+                    )
                 item.quantity = quantity
-                voice = item.voice_line or item.name
                 self.revision += 1
-                return format_update_tool_reply(quantity, voice)
+                return CartMutation(
+                    kind="updated",
+                    name=item.name,
+                    voice_line=item.voice_line or item.name,
+                    quantity=quantity,
+                    note=item.note,
+                )
         return "INTERNAL: not found. Ask customer to clarify the item name."
 
     def set_quantity_by_id(self, clover_item_id: str, quantity: int) -> bool:
