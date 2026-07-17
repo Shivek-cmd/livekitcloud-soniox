@@ -74,7 +74,7 @@ Statuses: ☐ TODO · 🔶 IN PROGRESS · ✅ DONE
 
 ---
 
-## Step 2 (PR 075) — Tool replies: SAY EXACTLY → structured facts — ☐ TODO
+## Step 2 (PR 075) — Tool replies: SAY EXACTLY → structured facts — ✅ DONE
 
 **Goal:** tools stop scripting speech; they return facts the LLM phrases itself. Ships BEFORE the persona prompt so scripts and persona-freedom never coexist contradictorily.
 
@@ -98,10 +98,17 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 **Definition of done:** no `SAY EXACTLY` remains in any tool reply; orders.py has no speech imports; suite + harness green.
 
 ### Checkpoint (fill in when done)
-- Date / branch / commit:
+- Date / branch / commit: 2026-07-17 / `pr_075_tool-replies-structured-facts` / `cd981c1` (committed locally, NOT pushed — user approval required).
 - Deviations:
-- Harness diff vs baseline (notable phrasing changes / regressions):
+  - `CartMutation` gained a distinct `merged` kind (add onto an existing line) so the reply can say "ADDED MORE: X is now N total" instead of reading as a fresh add — the plan's dataclass sketch listed the kind but not the wording. Unavailable/not-found still return the unchanged refusal strings (`CartMutation | str` union), so core formats only real mutations.
+  - `_qty_word` moved to `facts.py` (its long-term home); `replies.py` now imports it — no duplication, no circular import.
+  - `get_order_summary` also dropped its per-reply "Do NOT mention price" phone suffix (plan implied only the SAY EXACTLY swap) — consistent with the decision that the price policy lives in the prompt only; the channel prompt already carries it.
+  - `set_item_spice` reply head is `SPICE SET:` (plan didn't specify a name).
+- Harness diff vs baseline (notable phrasing changes / regressions): 8/8 machine-green (`docs/eval/pr075/`, committed). Phone price-ask now ANSWERED from `total=` ("nineteen dollars ninety-nine cents"; baseline refused) and still never volunteered unasked. Confirms are LLM-phrased but grounded ("Two Butter Chicken with medium spice, anything else?"; "ਦੋ ਬਟਰ ਚਿਕਨ medium spice ਨਾਲ ਜੋੜ ਦਿੱਤੇ। ਹੋਰ ਕੁਝ?"); corrections read as fixes ("Butter Chicken changed to one…"). No regressions found. Full suite 285 passed.
 - Notes for next session:
+  - Non-blocking env issue seen during harness delivery scenario: Clover customer upsert HTTP 400 (missing city/state/zip/country) — fail-open, order still submitted; may predate this step (worth a look someday, unrelated to the rebuild).
+  - `format_cart_facts(cart, label=...)` is the reusable snapshot line — Step 3's `record_additional_requests` reply and Step 5's facts can build on it.
+  - `test_agent_tools.py::test_readback_refuses_while_incomplete` still asserts the allergies blocker — Step 3 renames it (`additional_requests_recorded`) and must update that test plus `record_allergies` call sites in the harness scenarios' expectations (`allergies_recorded`).
 
 ---
 
