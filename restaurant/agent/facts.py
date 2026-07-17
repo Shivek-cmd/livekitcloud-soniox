@@ -104,3 +104,14 @@ def format_mutation_reply(mutation: "CartMutation", cart: "OrderCart") -> str:
             _mutation_guide(mutation),
         ]
     )
+
+
+def format_contact_reply(facts: list[str], guides: list[str]) -> str:
+    """Fact line(s) + one merged GUIDE line for set_customer_contact results.
+
+    Same shape as mutation replies — the old prose ("Phone saved. Read it
+    back as English word digits ONLY: ...") read as an instruction the model
+    relayed to the CUSTOMER ("please say your number as separate English
+    digits") instead of a confirmation it should speak itself.
+    """
+    return "\n".join([*facts, "GUIDE: " + " ".join(guides)])

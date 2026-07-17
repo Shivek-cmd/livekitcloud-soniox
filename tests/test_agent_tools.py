@@ -238,21 +238,26 @@ def test_set_delivery_address_rejects_junk(agent):
 
 def test_contact_rejects_junk_name(agent):
     result = run(agent.set_customer_contact(name="pickup"))
+    assert "NAME NOT SAVED" in result
     assert "does not look like a real name" in result
     assert not agent.cart.customer_name
 
 
 def test_contact_rejects_nine_digit_phone(agent):
     result = run(agent.set_customer_contact(phone="123456789"))
-    assert "NOT saved" in result
+    assert "PHONE NOT SAVED" in result
+    assert "9 digit(s)" in result
     assert not agent.cart.customer_phone
 
 
 def test_contact_accepts_ten_digit_phone(agent):
     result = run(agent.set_customer_contact(phone="780-555-1234"))
     assert agent.cart.customer_phone == "7805551234"
-    # Read-back guidance uses English word digits.
+    # PHONE SAVED fact carries the English word digits the LLM must speak.
+    assert "PHONE SAVED" in result
     assert "seven, eight, zero" in result
+    # The guide must not read as "make the customer say it".
+    assert "do NOT ask the customer to repeat" in result
 
 
 def test_contact_accepts_eleven_digits_with_leading_one(agent):
@@ -262,7 +267,7 @@ def test_contact_accepts_eleven_digits_with_leading_one(agent):
 
 def test_contact_saves_valid_name(agent):
     result = run(agent.set_customer_contact(name="Aman Singh"))
-    assert "Name saved" in result
+    assert 'NAME SAVED: "Aman Singh"' in result
     assert agent.cart.customer_name == "Aman Singh"
 
 

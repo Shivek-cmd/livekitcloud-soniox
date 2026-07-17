@@ -33,7 +33,11 @@ from restaurant.agent.gates import (
     place_order_blockers,
     readback_blockers,
 )
-from restaurant.agent.facts import format_cart_facts, format_mutation_reply
+from restaurant.agent.facts import (
+    format_cart_facts,
+    format_contact_reply,
+    format_mutation_reply,
+)
 from restaurant.agent.language import update_preferred_language
 from restaurant.agent.prompt import build_system_prompt
 from restaurant.agent.replies import (
@@ -617,14 +621,15 @@ class RestaurantAgent(Agent):
     ) -> str:
         """Save the customer's name and/or phone for the order. Ask for the
         name first, then the phone on the next turn."""
-        replies: list[str] = []
+        facts: list[str] = []
+        guides: list[str] = []
 
         if name and name.strip():
             clean = parse_customer_name(name) or name.strip()
             if not is_valid_customer_name(clean):
-                result = (
-                    f"'{name}' does not look like a real name — ask for the "
-                    "customer's name again. Do NOT save it."
+                result = format_contact_reply(
+                    [f'NAME NOT SAVED: "{name}" does not look like a real name.'],
+                    ["ask for the customer's name again."],
                 )
                 self._record_tool("set_customer_contact", {"name": name}, result)
                 return result
@@ -633,7 +638,12 @@ class RestaurantAgent(Agent):
                 self.cart.revision += 1
                 invalidate_readback(self.state)
             self.cart.customer_name = clean
-            replies.append(f'Name saved: "{clean}".')
+            facts.append(f'NAME SAVED: "{clean}".')
+            guides.append(
+                "confirm the name briefly in the customer's language."
+            )
+            if not self.cart.customer_phone and not (phone and phone.strip()):
+                guides.append("Then ask for their phone number.")
 
         if phone and phone.strip():
             digits = extract_phone_digits(phone)
@@ -646,30 +656,36 @@ class RestaurantAgent(Agent):
                 )
                 captured = re.sub(r"\D", "", normalized)
                 if captured:
-                    replies.append(
-                        f"Phone NOT saved — heard only {len(captured)} "
-                        f"digit(s) ({captured}). Ask the customer for the "
-                        "full 10-digit number, then pass ALL digits "
-                        "together in one call."
+                    facts.append(
+                        f"PHONE NOT SAVED: heard only {len(captured)} "
+                        f"digit(s) ({captured})."
+                    )
+                    guides.append(
+                        "ask for the full 10-digit number, then pass ALL "
+                        "digits together in one call."
                     )
                 else:
-                    replies.append(
-                        "Phone NOT saved — need a valid 10-digit number. "
-                        "Ask the customer to repeat it slowly."
+                    facts.append("PHONE NOT SAVED: no usable digits heard.")
+                    guides.append(
+                        "ask the customer to repeat the number slowly."
                     )
             else:
                 self.cart.customer_phone = digits
                 spoken = format_phone_spoken(digits)
-                replies.append(
-                    f"Phone saved. Read it back as English word digits ONLY: "
-                    f'"{spoken}".'
+                facts.append(f"PHONE SAVED: {spoken}.")
+                guides.append(
+                    "the number is already saved — do NOT ask the customer "
+                    "to repeat or re-say it. Confirm it back once yourself, "
+                    "speaking it as English word digits exactly as in PHONE "
+                    "SAVED (never numerals, never Punjabi/Hindi number "
+                    "words), then continue the order."
                 )
 
-        if not replies:
+        if not facts:
             return "Nothing to save — pass name and/or phone."
 
         await self._sync_web()
-        result = " ".join(replies)
+        result = format_contact_reply(facts, guides)
         self._record_tool(
             "set_customer_contact", {"name": name, "phone": phone}, result
         )
