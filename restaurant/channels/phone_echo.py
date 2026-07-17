@@ -19,6 +19,12 @@ _RECOVERY_ECHO_PHRASES: tuple[str, ...] = (
     "sorry ji",
     "ਮੈਂ ਸੁਣ ਰਹੀ",
     "ਸੁਣ ਰਹੀ",
+    # PR 077 reprompt-pool fragment. Deliberately NOT listing caller-plausible
+    # fragments from the pools ("one more time", "ਇੱਕ ਵਾਰ ਫਿਰ", "a little
+    # noisy") — a caller asking us to repeat must never be dropped (PR 073);
+    # exact/truncated echoes of the full reprompt lines are already caught via
+    # _recent_agent_lines.
+    "take your time",
 )
 
 # Fragments commonly transcribed from the opening greeting on mobile/outbound echo.
