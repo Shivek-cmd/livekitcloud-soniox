@@ -3,9 +3,8 @@
   "channel": "phone",
   "turns": [
     "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ, ਦੋ ਬਟਰ ਚਿਕਨ ਲਗਾ ਦਿਓ।",
-    "ਮੀਡੀਅਮ ਠੀਕ ਹੈ ਜੀ।",
     "ਬੱਸ ਜੀ, ਹੋਰ ਕੁਝ ਨਹੀਂ।",
-    "ਨਹੀਂ ਜੀ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ।",
+    "ਮੀਡੀਅਮ ਠੀਕ ਹੈ ਜੀ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ।",
     "Pickup ਜੀ।",
     "ਮੇਰਾ ਨਾਮ Gurpreet ਹੈ।",
     "Six four seven five five five three four five six.",
@@ -19,7 +18,7 @@
     "order_type": "pickup",
     "customer_name": "Gurpreet",
     "customer_phone": "6475553456",
-    "allergies_recorded": true,
+    "additional_requests_recorded": true,
     "min_readbacks": 1
   }
 }

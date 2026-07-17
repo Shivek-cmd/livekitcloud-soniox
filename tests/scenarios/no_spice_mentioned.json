@@ -1,0 +1,25 @@
+{
+  "name": "no_spice_mentioned",
+  "channel": "phone",
+  "turns": [
+    "Hi, one butter chicken and one garlic naan please.",
+    "That's everything.",
+    "No, nothing — all good.",
+    "Pickup.",
+    "My name is Karan.",
+    "Four one six five five five one two three four.",
+    "Yes, that's right."
+  ],
+  "expect": {
+    "placed": true,
+    "items": [
+      { "name": "Butter Chicken", "qty": 1, "note_contains": "medium" },
+      { "name": "Garlic Naan", "qty": 1 }
+    ],
+    "order_type": "pickup",
+    "customer_name": "Karan",
+    "customer_phone": "4165551234",
+    "additional_requests_recorded": true,
+    "min_readbacks": 1
+  }
+}

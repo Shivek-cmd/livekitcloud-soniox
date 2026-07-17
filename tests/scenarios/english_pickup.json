@@ -3,9 +3,8 @@
   "channel": "phone",
   "turns": [
     "Hi, can I get two butter chicken and one garlic naan please?",
-    "Medium is fine.",
     "That's everything, thanks.",
-    "No allergies.",
+    "Medium spice is fine, and no allergies.",
     "Pickup please.",
     "My name is Harpreet.",
     "Six four seven five five five one two one two.",
@@ -20,7 +19,7 @@
     "order_type": "pickup",
     "customer_name": "Harpreet",
     "customer_phone": "6475551212",
-    "allergies_recorded": true,
+    "additional_requests_recorded": true,
     "min_readbacks": 1
   }
 }

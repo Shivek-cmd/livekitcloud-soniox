@@ -21,7 +21,7 @@ def _complete_cart() -> OrderCart:
 
 def _confirmed_state(cart: OrderCart) -> OrderSessionState:
     state = OrderSessionState()
-    state.allergies_recorded = True
+    state.additional_requests_recorded = True
     state.readback_revision = cart.revision
     state.readback_confirmed = True
     return state
@@ -74,12 +74,12 @@ def test_eleven_digit_phone_with_leading_one_ok():
     assert place_order_blockers(cart, _confirmed_state(cart)) == []
 
 
-def test_allergies_not_recorded_blocks():
+def test_additional_requests_not_recorded_blocks():
     cart = _complete_cart()
     state = _confirmed_state(cart)
-    state.allergies_recorded = False
+    state.additional_requests_recorded = False
     blockers = place_order_blockers(cart, state)
-    assert any("llerg" in b for b in blockers)
+    assert any("record_additional_requests" in b for b in blockers)
 
 
 def test_unconfirmed_readback_blocks():

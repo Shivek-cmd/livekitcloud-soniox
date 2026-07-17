@@ -31,7 +31,7 @@ Scenario files live in tests/scenarios/*.json:
         "order_type": "pickup",
         "customer_name": "Harpreet",
         "customer_phone": "6475551212",
-        "allergies_recorded": true,
+        "additional_requests_recorded": true,
         "min_readbacks": 1,
         "transcript_any": ["..."],        # ≥1 substring must appear in agent speech
         "transcript_none": ["..."]        # none of these may appear
@@ -330,12 +330,12 @@ def _run_assertions(expect: dict, agent: RestaurantAgent, run: ScenarioRun) -> l
         if key in expect:
             checks.append(_check(key, actual == expect[key], f"got {actual!r}"))
 
-    if "allergies_recorded" in expect:
+    if "additional_requests_recorded" in expect:
         checks.append(
             _check(
-                "allergies_recorded",
-                state.allergies_recorded == expect["allergies_recorded"],
-                f"got {state.allergies_recorded}",
+                "additional_requests_recorded",
+                state.additional_requests_recorded == expect["additional_requests_recorded"],
+                f"got {state.additional_requests_recorded}",
             )
         )
 

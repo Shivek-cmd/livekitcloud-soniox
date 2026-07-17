@@ -27,7 +27,7 @@ SPICE_LEVELS = ("Mild", "Medium", "Spicy", "Extra Spicy")
 @dataclass
 class OrderSessionState:
     preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
-    allergies_recorded: bool = False
+    additional_requests_recorded: bool = False
     allergy_note: str = ""
     readback_revision: int | None = None  # cart.revision at last get_order_readback()
     readback_confirmed: bool = False
@@ -57,8 +57,12 @@ def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
         blockers.append("A valid customer name is missing — ask and call set_customer_contact.")
     if not (cart.customer_phone and extract_phone_digits(cart.customer_phone)):
         blockers.append("A valid 10-digit phone number is missing — ask and call set_customer_contact.")
-    if not state.allergies_recorded:
-        blockers.append("Allergies have not been asked — ask and call record_allergies.")
+    if not state.additional_requests_recorded:
+        blockers.append(
+            "The final additional-requests question (spice preferences, allergies, "
+            "special instructions) has not been asked — ask it and call "
+            "record_additional_requests."
+        )
     return blockers
 
 
