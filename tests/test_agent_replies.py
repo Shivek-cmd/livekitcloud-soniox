@@ -1,12 +1,8 @@
-"""Tests for restaurant.agent.replies — salvaged formatters + speech guard."""
+"""Tests for restaurant.agent.replies — readback/status templates + speech guard."""
 
-from restaurant.agent.language import CustomerLanguage
 from restaurant.agent.replies import (
-    format_add_tool_reply,
     format_order_readback,
     format_order_status,
-    format_remove_tool_reply,
-    format_update_tool_reply,
     order_placed_goodbye,
     sanitize_assistant_speech,
 )
@@ -22,26 +18,6 @@ def _cart() -> OrderCart:
     cart.add_item(_NAAN, 2)
     cart.order_type = "pickup"
     return cart
-
-
-def test_add_tool_reply_no_price_no_meta():
-    reply = format_add_tool_reply([(2, "Garlic Naan")])
-    assert "two Garlic Naan" in reply
-    assert "SAY EXACTLY" in reply
-    assert "price" in reply  # the do-NOT instruction
-    assert "$" not in reply
-
-
-def test_update_tool_reply_reads_as_correction():
-    reply = format_update_tool_reply(3, "Garlic Naan")
-    assert "three Garlic Naan" in reply
-    assert "fixed" in reply
-    assert "corrected (not added)" in reply
-
-
-def test_remove_tool_reply():
-    reply = format_remove_tool_reply("Garlic Naan")
-    assert "removed Garlic Naan" in reply
 
 
 def test_order_status_grounded():

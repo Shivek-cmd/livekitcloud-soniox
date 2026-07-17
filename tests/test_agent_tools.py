@@ -87,7 +87,9 @@ def run(coro):
 
 def test_add_happy_path_uses_resolved_payload(agent):
     result = run(agent.add_item("garlic naan", quantity=2))
-    assert "INTERNAL: item saved" in result
+    assert "ADDED: 2 x Garlic Naan" in result
+    assert "ORDER NOW: " in result and "GUIDE: " in result
+    assert "SAY EXACTLY" not in result
     assert len(agent.cart.items) == 1
     line = agent.cart.items[0]
     # Price comes from the resolved menu payload, never from the LLM.
@@ -141,7 +143,7 @@ def test_spice_refusal_then_retry_with_spice_succeeds(agent):
     assert agent.cart.is_empty
 
     result = run(agent.add_item("butter chicken", spice_level="Medium"))
-    assert "INTERNAL: item saved" in result
+    assert "ADDED: 1 x Butter Chicken" in result
     assert agent.cart.items[0].note == "medium"
 
 
@@ -163,7 +165,7 @@ def test_required_group_refused_without_note(agent):
     assert agent.cart.is_empty
 
     result = run(agent.add_item("curry combo", note="butter chicken curry"))
-    assert "INTERNAL: item saved" in result
+    assert "ADDED: 1 x Curry Combo" in result
 
 
 def test_quantity_clamped(agent):
@@ -179,7 +181,7 @@ def test_quantity_clamped(agent):
 def test_set_item_quantity_is_exact_not_additive(agent):
     run(agent.add_item("garlic naan", quantity=2))
     result = run(agent.set_item_quantity("garlic naan", 3))
-    assert "corrected" in result
+    assert "CORRECTED (not added): Garlic Naan is now 3 total" in result
     assert agent.cart.items[0].quantity == 3
 
 
@@ -197,14 +199,14 @@ def test_set_item_quantity_unknown_item(agent):
 def test_remove_item(agent):
     run(agent.add_item("garlic naan"))
     result = run(agent.remove_item("naan"))
-    assert "removed" in result
+    assert "REMOVED: Garlic Naan" in result
     assert agent.cart.is_empty
 
 
 def test_set_item_spice_rewrites_note(agent):
     run(agent.add_item("butter chicken", spice_level="Medium", note="no onions"))
     result = run(agent.set_item_spice("butter chicken", "Spicy"))
-    assert "spice updated" in result
+    assert "SPICE SET: Butter Chicken is now spicy" in result
     assert agent.cart.items[0].note == "spicy, no onions"
 
 
@@ -346,6 +348,7 @@ def test_order_type_change_invalidates_confirmed_readback(agent):
 def test_order_summary_grounded_in_cart(agent):
     run(agent.add_item("garlic naan", quantity=2))
     result = run(agent.get_order_summary())
-    assert "SAY EXACTLY" in result
-    assert "two Garlic Naan" in result
-    assert "Do NOT mention price" in result  # phone channel
+    assert "ORDER SO FAR (state ONLY these items" in result
+    assert "2 x Garlic Naan" in result
+    assert "total=$7" in result  # total stays in facts; price policy lives in the prompt
+    assert "SAY EXACTLY" not in result
