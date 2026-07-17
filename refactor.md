@@ -41,7 +41,7 @@ Statuses: ☐ TODO · 🔶 IN PROGRESS · ✅ DONE
 
 **Key files:** `restaurant/agent/core.py` (agent + tools), `gates.py`, `prompt.py`, `replies.py`, `language.py`, `worker.py`, `restaurant/orders.py`, `restaurant/voice_stack.py`. Tests mirror modules in `tests/`.
 
-**PR numbering:** steps map to PRs 074–080. Highest existing doc is `pr/pr_069_*`; 070–073 are claimed by parked plans (current_fixes.md, echo_gaps.md) — verify free numbers against branches before creating each doc.
+**PR numbering:** steps map to PRs 074–086. Highest existing doc is `pr/pr_069_*`; 070–073 are claimed by parked plans (current_fixes.md, echo_gaps.md) — verify free numbers against branches before creating each doc.
 
 ---
 
@@ -224,7 +224,7 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 
 ---
 
-## Step 7 (PR 080) — Calibration: rubric, judge, model decision — ☐ TODO
+## Step 7 (PR 086) — Calibration: rubric, judge, model decision — ☐ TODO
 
 **Goal:** systematize "sounds natural"; decide gpt-4.1-mini vs gpt-4.1; finish rollout flags.
 
