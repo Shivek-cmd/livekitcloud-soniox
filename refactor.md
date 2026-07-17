@@ -191,7 +191,7 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 
 ---
 
-## Step 5 (PR 078) — Grounded natural readback + post-speech verifier (money path) — ☐ TODO
+## Step 5 (PR 078) — Grounded natural readback + post-speech verifier (money path) — ✅ DONE
 
 **Goal:** LLM phrases the readback in the customer's language; code verifies every item/qty/order-type was actually spoken before `confirm_readback` can succeed. `place_order_blockers` unchanged — `readback_confirmed` is simply only set after verification passes.
 
@@ -211,10 +211,19 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 **Definition of done:** verifier live in `warn` on real calls; adversarial scenario green; false-negative measurement started.
 
 ### Checkpoint (fill in when done)
-- Date / branch / commit:
+- Date / branch / commit: 2026-07-18 / `pr_078_grounded-readback-verifier` (off pr_077) / `137863b` (committed locally, NOT pushed — user approval required).
 - Deviations (esp. verifier heuristics tuned):
-- warn-mode stats so far (per language):
+  - **Order-type vocab widened beyond English** (tuned same-day from harness data): every pa/hi harness readback said the order type as a phonetic transliteration ("ਪਿਕਅਪ"/"पिकअप"), which the customer plainly heard — the closed vocab now includes those exact Gurmukhi/Devanagari renditions of pickup/delivery (still a closed list, never fuzzy). Checkout-English rule unchanged in the prompt.
+  - Indic matras are combining marks (Mn/Mc), not `isalnum()` — normalization keeps them or ਚਿਕਨ shreds into pieces (first implementation bug, unit-caught).
+  - Prompt readback wording updated in BOTH styles incl. legacy (plan implied persona-only, but the tool's return shape changed for everyone — legacy's "read VERBATIM" would now be wrong).
+  - Harness turn-selection reordered: scenario reactive rules now beat the built-in phone-digit "Yes." (model asked a combined "number right? pickup or delivery?" question; the generic "Yes." made it guess pickup on a delivery order — delivery_split_phone failed until fixed).
+  - Strict-mode refusal keeps `readback_pending` (buffer cleared) so the forced re-read is captured without another get_order_readback call.
+- warn-mode stats so far (per language): live NOT yet measured (deploy pending). Pre-live replay of the committed pr078 transcripts: en clean; **4/9 regular scenarios would fail strict, all one cause** — model renders an English voice_line in Gurmukhi/Devanagari mid-pa/hi speech ("ਬਟਰ ਚਿਕਨ" for "Butter Chicken", "पनीर टिक्का"), outside the voice_line+English alias set. Known 077 watch item (voice_line-exactly rule bent); dish-name transliteration in the verifier explicitly rejected — Step 7 decides (fix rule-following vs warn-forever for pa/hi).
 - Notes for next session:
+  - Harness 10/10 twice (committed `docs/eval/pr078/`, incl. adversarial `sloppy_readback`: censored spoken readback → strict READBACK INCOMPLETE names the missing dish → model re-reads → confirm succeeds → placed). Full suite 327 passed.
+  - Adversarial harness knobs: scenario keys `readback_verify` (env pin), `censor_speech` (strip text from spoken readback while pending), expect `tool_result_contains`.
+  - Step 6 untouched surface confirmed: `sanitize_assistant_speech` still log-only in worker `_on_conv_item`; replies.py readback formatter deleted this step, sanitizer + status formatter remain.
+  - Clover customer upsert HTTP 400 (city/state/zip) still in delivery harness runs — pre-existing, fail-open, unrelated.
 
 ---
 
