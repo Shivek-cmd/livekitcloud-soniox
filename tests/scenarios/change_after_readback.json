@@ -1,0 +1,27 @@
+{
+  "name": "change_after_readback",
+  "channel": "phone",
+  "turns": [
+    "Hi, one butter chicken please, medium.",
+    "That's everything.",
+    "No allergies.",
+    "Pickup.",
+    "Jasleen.",
+    "Four one six five five five two two three three.",
+    "Actually, add a garlic naan too.",
+    "Yes, that's all correct now.",
+    "Yes, perfect."
+  ],
+  "expect": {
+    "placed": true,
+    "items": [
+      { "name": "Butter Chicken", "qty": 1, "note_contains": "medium" },
+      { "name": "Garlic Naan", "qty": 1 }
+    ],
+    "order_type": "pickup",
+    "customer_name": "Jasleen",
+    "customer_phone": "4165552233",
+    "allergies_recorded": true,
+    "min_readbacks": 2
+  }
+}

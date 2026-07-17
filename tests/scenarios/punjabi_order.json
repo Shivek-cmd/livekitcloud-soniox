@@ -1,0 +1,25 @@
+{
+  "name": "punjabi_order",
+  "channel": "phone",
+  "turns": [
+    "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ, ਦੋ ਬਟਰ ਚਿਕਨ ਲਗਾ ਦਿਓ।",
+    "ਮੀਡੀਅਮ ਠੀਕ ਹੈ ਜੀ।",
+    "ਬੱਸ ਜੀ, ਹੋਰ ਕੁਝ ਨਹੀਂ।",
+    "ਨਹੀਂ ਜੀ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ।",
+    "Pickup ਜੀ।",
+    "ਮੇਰਾ ਨਾਮ Gurpreet ਹੈ।",
+    "Six four seven five five five three four five six.",
+    "ਹਾਂ ਜੀ, ਬਿਲਕੁਲ ਠੀਕ ਹੈ।"
+  ],
+  "expect": {
+    "placed": true,
+    "items": [
+      { "name": "Butter Chicken", "qty": 2, "note_contains": "medium" }
+    ],
+    "order_type": "pickup",
+    "customer_name": "Gurpreet",
+    "customer_phone": "6475553456",
+    "allergies_recorded": true,
+    "min_readbacks": 1
+  }
+}

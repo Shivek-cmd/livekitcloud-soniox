@@ -6,10 +6,29 @@ import json
 from restaurant.voice_stack import (
     _ConfigInjectingWS,
     _WSConnectHandle,
+    llm_model_name,
     stt_endpoint_latency_adjustment_level,
     stt_endpoint_sensitivity,
     stt_max_endpoint_delay_ms,
 )
+
+
+# ── OPENAI_LLM_MODEL (PR 074) ────────────────────────────────────────────────
+
+
+def test_llm_model_default(monkeypatch):
+    monkeypatch.delenv("OPENAI_LLM_MODEL", raising=False)
+    assert llm_model_name() == "gpt-4.1-mini"
+
+
+def test_llm_model_override(monkeypatch):
+    monkeypatch.setenv("OPENAI_LLM_MODEL", "gpt-4o-mini")
+    assert llm_model_name() == "gpt-4o-mini"
+
+
+def test_llm_model_blank_falls_back(monkeypatch):
+    monkeypatch.setenv("OPENAI_LLM_MODEL", "   ")
+    assert llm_model_name() == "gpt-4.1-mini"
 
 
 # ── SONIOX_MAX_ENDPOINT_DELAY_MS ──────────────────────────────────────────────
