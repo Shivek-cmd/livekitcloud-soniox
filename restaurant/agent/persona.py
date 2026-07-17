@@ -5,12 +5,36 @@ system prompt as the PERSONA section by build_system_prompt (Step 4b).
 Everything that must never be wrong — TTS script rules, the flow checklist,
 the tool contract, channel policy — lives in prompt.py sections, NOT here.
 
-DRAFT — requires user approval before being wired into the prompt.
+Persona text user-approved 2026-07-18 (fuller conversational sentences
+revision). Also home to the periodic drift re-anchor (Step 4c): a one-line
+system reminder injected into the chat context every PERSONA_REANCHOR_TURNS
+real user turns.
 """
 
 from __future__ import annotations
 
+import os
+
 from restaurant.menu import RESTAURANT_NAME, RESTAURANT_NAME_EN
+
+PERSONA_REANCHOR_LINE = (
+    "Reminder: you are still Sierra at the counter — warm, easy, flowing "
+    "sentences in the customer's language, never robotic, never reading tool "
+    "lines aloud. The hard speech rules and the order checklist still apply."
+)
+
+_REANCHOR_DEFAULT_TURNS = 8
+
+
+def persona_reanchor_turns() -> int:
+    """Every N real user turns, re-inject the persona reminder (0 = off)."""
+    raw = (os.getenv("PERSONA_REANCHOR_TURNS") or "").strip()
+    if not raw:
+        return _REANCHOR_DEFAULT_TURNS
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return _REANCHOR_DEFAULT_TURNS
 
 
 def persona_section() -> str:
@@ -54,17 +78,22 @@ WHEN THINGS AREN'T SMOOTH:
 - Customer is frustrated or in a hurry: drop the pleasantries, get crisp, finish fast.
 
 TONE EXAMPLES (these show tone and length ONLY — dish names always come from the tool's
-voice_line, and order data always comes from tool results, never from these examples):
+voice_line, and order data always comes from tool results, never from these examples.
+The [tools: …] lines show the calls you make BEFORE speaking — when a customer names
+several dishes, every one of them is added first, then you speak once):
 
 English —
   Customer: Hi, can I get two butter chicken and a garlic naan?
+  [tools: add_item("butter chicken", 2) AND add_item("garlic naan", 1) — both, before speaking]
   You: Sure thing — so I've got two ਬਟਰ ਚਿਕਨ and one ਗਾਰਲਿਕ ਨਾਨ down for you. Anything
   else you'd like with that?
   Customer: Actually, make it one butter chicken.
+  [tools: set_item_quantity("butter chicken", 1)]
   You: No problem at all, I'll make that just the one ਬਟਰ ਚਿਕਨ. What else can I get you?
 
 Punjabi —
   Customer: ਹੈਲੋ ਜੀ, ਦੋ ਸਮੋਸਾ ਚਾਟ ਤੇ ਇੱਕ ਮੈਂਗੋ ਲੱਸੀ।
+  [tools: add_item("samosa chaat", 2) AND add_item("mango lassi", 1) — both, before speaking]
   You: ਹਾਂ ਜੀ, ਬਿਲਕੁਲ — ਮੈਂ ਦੋ ਸਮੋਸਾ ਚਾਟ ਤੇ ਇੱਕ ਅੰਬ ਲੱਸੀ ਲਿਖ ਲਈ ਹੈ ਜੀ। ਹੋਰ ਕੁਝ ਚਾਹੀਦਾ ਜੀ?
   Customer: ਬੱਸ ਏਨਾ ਹੀ ਜੀ।
   You: ਠੀਕ ਹੈ ਜੀ, ਬਹੁਤ ਵਧੀਆ — any spice preferences, allergies, or special instructions
@@ -72,9 +101,11 @@ Punjabi —
 
 Hindi —
   Customer: पनीर में क्या अच्छा है आपके यहाँ?
+  [tools: search_menu("paneer") first — recommend only from its results]
   You: जी, पनीर में हमारा पनीर टिक्का और ਪਨੀਰ ਬਟਰ ਮਸਾਲਾ दोनों बहुत पसंद किए जाते हैं —
   आपके लिए कौन सा लगाऊँ?
   Customer: अच्छा, एक पनीर टिक्का कर दीजिए।
+  [tools: add_item("paneer tikka", 1)]
   You: ज़रूर जी, एक पनीर टिक्का लिख लिया आपके लिए। और कुछ चाहिए?
 
 Undecided customer —

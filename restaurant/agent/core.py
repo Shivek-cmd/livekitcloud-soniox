@@ -39,7 +39,8 @@ from restaurant.agent.facts import (
     format_mutation_reply,
 )
 from restaurant.agent.language import update_preferred_language
-from restaurant.agent.prompt import build_system_prompt
+from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
+from restaurant.agent.prompt import build_system_prompt, prompt_style
 from restaurant.agent.replies import (
     background_repeat_phrase,
     echo_recovery_phrase,
@@ -298,6 +299,16 @@ class RestaurantAgent(Agent):
         self._echo_recovery_scheduled = False
         self._background_ignore_streak = 0
 
+        # Persona drift re-anchor (PR 077, 4c): every N real turns, re-inject a
+        # one-line reminder next to the generation point — the system prompt
+        # loses gravity as context grows and one robotic turn breeds more.
+        n = persona_reanchor_turns()
+        if n > 0 and prompt_style() == "persona" and self.state.real_user_turns % n == 0:
+            try:
+                turn_ctx.add_message(role="system", content=PERSONA_REANCHOR_LINE)
+            except Exception:
+                logger.exception("Persona re-anchor injection failed")
+
         if self._recorder is not None:
             self._recorder.complete_turn(cart_snapshot=self._cart_snapshot())
 
@@ -524,8 +535,8 @@ class RestaurantAgent(Agent):
         result = (
             f"SPICE SET: {voice} is now {spice.lower()}.\n"
             f"{format_cart_facts(self.cart)}\n"
-            "GUIDE: confirm the spice change briefly in the customer's "
-            "language, then keep the order moving."
+            "GUIDE: confirm the spice change in the customer's language, "
+            "warm and in your own words, then keep the order moving."
         )
         self._record_tool(
             "set_item_spice", {"item_query": item_query, "spice_level": spice}, result
@@ -578,9 +589,9 @@ class RestaurantAgent(Agent):
             )
         lines.append(format_cart_facts(self.cart))
         lines.append(
-            "GUIDE: acknowledge briefly in the customer's language — do NOT "
-            "re-ask about spice or allergies — then keep the order moving "
-            "(pickup or delivery next if not set yet)."
+            "GUIDE: acknowledge warmly in the customer's language, in your "
+            "own words — do NOT re-ask about spice or allergies — then keep "
+            "the order moving (pickup or delivery next if not set yet)."
         )
         result = "\n".join(lines)
         await self._sync_web()
@@ -871,7 +882,10 @@ class RestaurantAgent(Agent):
         except Exception:
             logger.exception("n8n order.placed notify raised — ignored")
 
-        spoken = order_placed_goodbye(order_type=self.cart.order_type)
+        spoken = order_placed_goodbye(
+            order_type=self.cart.order_type,
+            language=getattr(self.state, "preferred_language", None),
+        )
         self._record_tool("place_order", {}, "placed")
         self._goodbye_spoken = True
 
@@ -955,8 +969,9 @@ class RestaurantAgent(Agent):
         current order mid-call. Never state the order from memory."""
         result = (
             f"{format_cart_facts(self.cart, label='ORDER SO FAR (state ONLY these items — never from memory)')}\n"
-            "GUIDE: state the order in the customer's language using exactly "
-            "these dish names and quantities (quantities as words, never digits)."
+            "GUIDE: state the order conversationally in the customer's "
+            "language, in your own words, using exactly these dish names and "
+            "quantities (quantities as words, never digits)."
         )
         self._record_tool("get_order_summary", {}, result)
         return result
@@ -973,8 +988,10 @@ class RestaurantAgent(Agent):
         if self._recorder is not None:
             self._recorder.set_transfer(reason or "unspecified")
         return (
-            "Transfer logged. Tell the customer to please hold, then stay quiet. "
-            "A staff member will take over."
+            "TRANSFER STARTED.\n"
+            "GUIDE: tell the customer in their language, one short warm line, "
+            "that you're connecting them to a staff member — then stay quiet; "
+            "a human takes over."
         )
 
     # ── RESERVATION TOOLS ────────────────────────────────────────────────────
@@ -1009,8 +1026,14 @@ class RestaurantAgent(Agent):
         if self._recorder is not None:
             self._recorder.add_event("reservation_booked", record)
 
+        ref = record["ref"]
+        ref_spoken = ", ".join(
+            format_phone_spoken(ch) if ch.isdigit() else ch for ch in ref
+        )
         return (
-            f"Reservation confirmed! Ref: {record['ref']}. "
-            f"Tell customer: ਤੁਹਾਡੀ ਬੁਕਿੰਗ ਹੋ ਗਈ ਜੀ! "
-            f"Reference number ਹੈ {record['ref']}। ਧੰਨਵਾਦ ਜੀ!"
+            f"RESERVATION BOOKED: table for {party_size} on {date} at {time}, "
+            f"name {customer_name}. ref={ref}\n"
+            "GUIDE: confirm the booking warmly in the customer's language and "
+            f'give the reference spoken character by character as "{ref_spoken}" '
+            "— digits ALWAYS as English words, never numerals."
         )
