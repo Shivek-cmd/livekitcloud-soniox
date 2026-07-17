@@ -7,7 +7,7 @@ mutation after get_order_readback() invalidates the confirmation.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from restaurant.agent.language import CustomerLanguage
@@ -31,12 +31,20 @@ class OrderSessionState:
     allergy_note: str = ""
     readback_revision: int | None = None  # cart.revision at last get_order_readback()
     readback_confirmed: bool = False
+    # PR 078 — spoken-readback capture: pending is set by get_order_readback,
+    # every assistant line while pending lands in readback_spoken, and the
+    # verifier checks the buffer at confirm_readback.
+    readback_pending: bool = False
+    readback_spoken: list[str] = field(default_factory=list)
     real_user_turns: int = 0
 
 
 def invalidate_readback(state: OrderSessionState) -> None:
-    """Any cart mutation voids a previously confirmed readback."""
+    """Any cart mutation voids a previously confirmed readback — and any
+    in-flight spoken-readback capture (the customer heard a stale order)."""
     state.readback_confirmed = False
+    state.readback_pending = False
+    state.readback_spoken.clear()
 
 
 def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:

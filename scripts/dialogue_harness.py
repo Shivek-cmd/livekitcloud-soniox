@@ -25,6 +25,10 @@ Scenario files live in tests/scenarios/*.json:
       "reactive": [                        # optional: answered BEFORE the queue
         {"when": "(?i)address", "say": "12 Main St", "max_uses": 2}
       ],
+      "readback_verify": "strict",        # optional: pin READBACK_VERIFY for this run
+      "censor_speech": [                   # optional: strip text from the SPOKEN
+        {"text": "Garlic Naan", "max_uses": 1}   # readback fed to the verifier
+      ],
       "expect": {
         "placed": true,
         "items": [{"name": "Butter Chicken", "qty": 2, "note_contains": "medium"}],
@@ -34,16 +38,20 @@ Scenario files live in tests/scenarios/*.json:
         "additional_requests_recorded": true,
         "min_readbacks": 1,
         "transcript_any": ["..."],        # ≥1 substring must appear in agent speech
-        "transcript_none": ["..."]        # none of these may appear
+        "transcript_none": ["..."],       # none of these may appear
+        "tool_result_contains": [          # ≥min tool results must contain substring
+          {"tool": "confirm_readback", "contains": "READBACK INCOMPLETE", "min": 1}
+        ]
       }
     }
 All expect keys are optional. One invariant runs on every scenario regardless:
 a placed order implies the readback was confirmed at the final cart revision.
 
 Turn selection: before consuming the next scripted line, the harness checks the
-agent's last reply against (a) a built-in phone-digit confirm ("...six, four,
-seven... — is that correct?" → injected "Yes."), then (b) the scenario's
-"reactive" rules. Injected replies do NOT consume the scripted queue. This
+agent's last reply against (a) the scenario's "reactive" rules (specific
+answers win — a combined "is that number right? pickup or delivery?" must get
+"Delivery please.", not a bare "Yes."), then (b) a built-in phone-digit
+confirm ("...six, four, seven... — is that correct?" → injected "Yes."). Injected replies do NOT consume the scripted queue. This
 absorbs the agent's optional clarifying questions (whether it double-checks the
 phone number varies run to run even at temperature 0), which would otherwise
 shift every following scripted line one question off.
@@ -54,6 +62,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import re
 import sys
 from collections import deque
@@ -148,6 +157,25 @@ async def _exec_tool(tool, args: dict) -> str:
 
 
 async def run_scenario(scenario: dict, model: str) -> ScenarioRun:
+    # PR 078 — adversarial readback testing: "readback_verify" pins the env
+    # mode for this run; "censor_speech" entries strip a substring from what
+    # is fed to note_agent_speech while a readback is pending, simulating a
+    # sloppy/truncated SPOKEN readback without touching the LLM context.
+    env_mode = scenario.get("readback_verify")
+    prev_mode = os.environ.get("READBACK_VERIFY")
+    if env_mode:
+        os.environ["READBACK_VERIFY"] = env_mode
+    try:
+        return await _run_scenario_inner(scenario, model)
+    finally:
+        if env_mode:
+            if prev_mode is None:
+                os.environ.pop("READBACK_VERIFY", None)
+            else:
+                os.environ["READBACK_VERIFY"] = prev_mode
+
+
+async def _run_scenario_inner(scenario: dict, model: str) -> ScenarioRun:
     channel = scenario.get("channel", "phone")
     agent = RestaurantAgent(is_phone=channel == "phone")
     tools, tools_by_name = _build_tools(agent)
@@ -170,6 +198,10 @@ async def run_scenario(scenario: dict, model: str) -> ScenarioRun:
         }
         for r in scenario.get("reactive", [])
     ]
+    censor = [
+        {"text": c["text"], "uses_left": int(c.get("max_uses", 1))}
+        for c in scenario.get("censor_speech", [])
+    ]
     pending = deque(scenario["turns"])
     injected_count = 0
     last_assistant = ""
@@ -178,14 +210,18 @@ async def run_scenario(scenario: dict, model: str) -> ScenarioRun:
         user_text: str | None = None
         injected = False
         if injected_count < MAX_INJECTED_TURNS:
-            if _is_phone_confirm_question(last_assistant):
+            # Scenario reactive rules first — they are specific ("Delivery
+            # please." to a pickup-or-delivery question) while the built-in
+            # phone confirm is generic. A combined question ("…is that number
+            # right? Pickup or delivery?") answered with a bare "Yes." makes
+            # the model guess the order type.
+            for rule in reactive:
+                if rule["uses_left"] > 0 and rule["when"].search(last_assistant):
+                    rule["uses_left"] -= 1
+                    user_text, injected = rule["say"], True
+                    break
+            if user_text is None and _is_phone_confirm_question(last_assistant):
                 user_text, injected = "Yes.", True
-            else:
-                for rule in reactive:
-                    if rule["uses_left"] > 0 and rule["when"].search(last_assistant):
-                        rule["uses_left"] -= 1
-                        user_text, injected = rule["say"], True
-                        break
         if user_text is None:
             user_text = pending.popleft()
         else:
@@ -217,7 +253,13 @@ async def run_scenario(scenario: dict, model: str) -> ScenarioRun:
             if not msg.tool_calls:
                 turn.assistant = (msg.content or "").strip()
                 messages.append({"role": "assistant", "content": turn.assistant})
-                agent.note_agent_speech(turn.assistant)
+                noted = turn.assistant
+                if agent.state.readback_pending:
+                    for c in censor:
+                        if c["uses_left"] > 0 and c["text"] in noted:
+                            noted = noted.replace(c["text"], "")
+                            c["uses_left"] -= 1
+                agent.note_agent_speech(noted)
                 break
 
             messages.append(
@@ -349,6 +391,22 @@ def _run_assertions(expect: dict, agent: RestaurantAgent, run: ScenarioRun) -> l
             _check(
                 f"readbacks: at least {expect['min_readbacks']} successful",
                 n >= expect["min_readbacks"],
+                f"got {n}",
+            )
+        )
+
+    for spec in expect.get("tool_result_contains", []):
+        wanted = int(spec.get("min", 1))
+        n = sum(
+            1
+            for tc in all_tool_calls
+            if tc.name == spec["tool"] and spec["contains"] in tc.result
+        )
+        checks.append(
+            _check(
+                f"tool {spec['tool']} result contains '{spec['contains']}' "
+                f"at least {wanted}x",
+                n >= wanted,
                 f"got {n}",
             )
         )
