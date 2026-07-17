@@ -132,7 +132,7 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 **Definition of done:** no spice question ever needed mid-ordering; wrap-up step gate-enforced; suite + harness green.
 
 ### Checkpoint (fill in when done)
-- Date / branch / commit: 2026-07-18 / `pr_076_additional-requests-step` (off pr_075) / `94a4281` (committed locally, NOT pushed — user approval required).
+- Date / branch / commit: 2026-07-18 / `pr_076_additional-requests-step` (off pr_075) / `94a4281` — pushed, PR #115 open against main (https://github.com/Shivek-cmd/livekitcloud-soniox/pull/115), awaiting merge.
 - Deviations:
   - `_apply_default_spice()` (the Medium fill) also runs at the top of a successful `get_order_readback`, not only at `record_additional_requests` — safety net so a spiced dish added AFTER the wrap-up can never reach placement spice-unset (the plan didn't cover late adds). It bumps revision + invalidates readback only when it actually fills something, before `readback_revision` is set, so it never wedges the confirm cycle.
   - INVALID SPICE refusal kept in `add_item` for a stated-but-unparseable spice value (plan silent on it; silently dropping a stated spice felt worse).
