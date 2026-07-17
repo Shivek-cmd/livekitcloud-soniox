@@ -12,6 +12,12 @@ flow checklist carry over unchanged in content. Canned code-spoken lines (goodby
 reprompts, reservation confirm, transfer line) are rewritten in persona voice. Old prompt builder
 kept behind `PROMPT_STYLE=legacy` for one release.
 
+Also adds persona drift enforcement (4c): style nudges in every `facts.py` GUIDE line
+(re-anchors persona at the generation point on each cart mutation), and a periodic one-line
+system-role persona reminder injected into the chat context every N turns via the before-LLM
+hook (`PERSONA_REANCHOR_TURNS`, default ~8, `0` = off). A robotic-marker detection watchdog is
+deliberately deferred to Step 7 (needs live transcripts to calibrate).
+
 **Status: 4a — persona draft awaiting user approval. No prompt wiring yet.**
 
 ## Files Added
@@ -28,6 +34,11 @@ before it is wired into the prompt (4b)**.
 ### `restaurant/agent/replies.py` / `restaurant/agent/core.py`
 Canned lines rewritten in persona voice; goodbye gets language variants; echo/background reprompt
 variant pools; reservation confirm handed to LLM as facts; transfer line relaxed to guidance.
+Core also gains the periodic persona re-anchor (before-LLM chat-ctx injection every
+`PERSONA_REANCHOR_TURNS` turns).
+### `restaurant/agent/facts.py`
+GUIDE lines gain short persona style nudges ("confirm this warmly in the customer's language,
+in your own words") — facts stay facts.
 
 ## Files Deleted
 None.

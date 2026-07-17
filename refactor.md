@@ -160,11 +160,16 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 4. TOOL CONTRACT — tool list, TRUST TOOL RESULTS, NEVER GUESS, additive-add warning: content unchanged.
 5. CHANNEL — phone/web blocks, price policy unchanged.
 
+**4c — Persona drift enforcement (user-requested 2026-07-18; style can't be hard-gated like the money path, so prevent + re-anchor):**
+- **GUIDE-line style nudges:** every `facts.py` GUIDE line carries a persona re-anchor ("confirm this warmly in the customer's language, in your own words") — the text closest to the generation point re-injects style on every cart mutation. Keep nudges short; facts stay facts.
+- **Periodic context re-anchoring:** inject a one-line system-role reminder ("you're still Sierra at the counter — warm, flowing, never robotic") into the chat context every N turns via the before-LLM hook (LiveKit chat-ctx edit). N configurable (`PERSONA_REANCHOR_TURNS`, default ~8; `0` = off). No latency cost, no turn regeneration.
+- Explicitly OUT of this step: a robotic-marker detection watchdog (revisit in Step 7 once live transcripts exist to calibrate markers).
+
 **Canned lines (all rewritten in persona voice):** opening greeting — keep fixed (latency-critical, pre-LLM `session.say`); `order_placed_goodbye` — keep fixed (wired into hang-up choreography ~`core.py:809`), add language variants keyed off `state.preferred_language`; echo/background reprompts — keep fixed (spoken under `StopResponse`, no LLM turn exists), 2–3 variant pools, no immediate repeats; reservation confirm (~`core.py:949`) — hand to LLM as facts (ref digits as English words); transfer exact line — relax to guidance.
 
 **Rollback:** `PROMPT_STYLE=legacy` env flag keeps the old builder for one release.
 
-**Verify:** prompt unit tests assert non-negotiables present in the assembled prompt (both styles); full harness scored side-by-side vs Step 1 baseline; 5+ live calls per language; transcript review for re-greeting/meta-speech regressions (the old regexes never actually fired on speech — review replaces them).
+**Verify:** prompt unit tests assert non-negotiables present in the assembled prompt (both styles); re-anchor unit test (reminder appears at turn N, absent before, `0` disables); GUIDE nudges covered by existing `facts.py` tests; full harness scored side-by-side vs Step 1 baseline; 5+ live calls per language; transcript review for re-greeting/meta-speech regressions (the old regexes never actually fired on speech — review replaces them).
 
 **Definition of done:** persona approved by user; new prompt live behind flag default-on; harness + live calls reviewed.
 
