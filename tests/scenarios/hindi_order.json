@@ -3,9 +3,8 @@
   "channel": "phone",
   "turns": [
     "नमस्ते, एक पनीर टिक्का और एक गुलाब जामुन चाहिए।",
-    "मीडियम ठीक है।",
     "बस, और कुछ नहीं।",
-    "नहीं, कोई एलर्जी नहीं है।",
+    "मीडियम ठीक है, कोई एलर्जी नहीं।",
     "Pickup कर लूंगा।",
     "मेरा नाम Rohan है।",
     "Four one six five five five seven eight nine zero.",
@@ -20,7 +19,7 @@
     "order_type": "pickup",
     "customer_name": "Rohan",
     "customer_phone": "4165557890",
-    "allergies_recorded": true,
+    "additional_requests_recorded": true,
     "min_readbacks": 1
   }
 }

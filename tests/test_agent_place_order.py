@@ -69,7 +69,7 @@ def agent(monkeypatch) -> RestaurantAgent:
 
 def _make_ready(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_allergies("no"))
+    run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7805551234"))

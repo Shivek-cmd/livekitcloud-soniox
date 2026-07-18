@@ -136,12 +136,14 @@ def test_low_confidence_match_asks_first(agent, monkeypatch):
     assert agent.cart.is_empty
 
 
-def test_spice_refusal_then_retry_with_spice_succeeds(agent):
+def test_add_without_spice_succeeds_spice_unset(agent):
     result = run(agent.add_item("butter chicken"))
-    assert "NEEDS SPICE" in result
-    assert "Mild, Medium, Spicy" in result
-    assert agent.cart.is_empty
+    assert "ADDED: 1 x Butter Chicken" in result
+    assert "NEEDS SPICE" not in result
+    assert agent.cart.items[0].note == ""
 
+
+def test_spice_at_add_still_passes_through(agent):
     result = run(agent.add_item("butter chicken", spice_level="Medium"))
     assert "ADDED: 1 x Butter Chicken" in result
     assert agent.cart.items[0].note == "medium"
@@ -271,22 +273,49 @@ def test_contact_saves_valid_name(agent):
     assert agent.cart.customer_name == "Aman Singh"
 
 
-def test_record_allergies_none_and_note(agent):
-    result = run(agent.record_allergies("no"))
-    assert agent.state.allergies_recorded
+def test_record_additional_requests_none_and_note(agent):
+    result = run(agent.record_additional_requests("no"))
+    assert agent.state.additional_requests_recorded
     assert agent.state.allergy_note == ""
     assert "none" in result
 
-    result = run(agent.record_allergies("peanut allergy"))
+    result = run(agent.record_additional_requests("peanut allergy"))
     assert agent.state.allergy_note == "peanut allergy"
     assert "peanut allergy" in result
+
+
+def test_wrapup_defaults_unset_spice_to_medium(agent):
+    run(agent.add_item("butter chicken"))
+    run(agent.add_item("garlic naan"))
+    rev = agent.cart.revision
+    result = run(agent.record_additional_requests("no"))
+    assert "SPICE DEFAULTED" in result and "Butter Chicken" in result
+    assert agent.cart.items[0].note == "medium"  # spiced dish filled
+    assert agent.cart.items[1].note == ""  # non-spiced dish untouched
+    assert agent.cart.revision == rev + 1  # note change invalidates readbacks
+
+
+def test_wrapup_never_overwrites_explicit_spice(agent):
+    run(agent.add_item("butter chicken", spice_level="Spicy"))
+    result = run(agent.record_additional_requests("no allergies"))
+    assert "SPICE DEFAULTED" not in result
+    assert agent.cart.items[0].note == "spicy"
+
+
+def test_late_added_spiced_dish_defaulted_at_readback(agent):
+    _complete_order(agent)
+    run(agent.add_item("butter chicken"))  # after the wrap-up, spice unset
+    result = run(agent.get_order_readback())
+    assert "READ THIS BACK VERBATIM" in result
+    line = next(i for i in agent.cart.items if i.name == "Butter Chicken")
+    assert line.note == "medium"
 
 
 # ── readback / confirm cycle ──────────────────────────────────────────────────
 
 def _complete_order(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_allergies("no"))
+    run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7805551234"))
@@ -296,7 +325,7 @@ def test_readback_refuses_while_incomplete(agent):
     run(agent.add_item("garlic naan"))
     result = run(agent.get_order_readback())
     assert "Cannot read back yet" in result
-    assert "llerg" in result  # allergies still owed
+    assert "record_additional_requests" in result  # wrap-up question still owed
 
 
 def test_readback_is_generated_from_cart(agent):

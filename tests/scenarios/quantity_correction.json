@@ -5,7 +5,7 @@
     "Two butter chicken please, medium spice.",
     "Wait — I said one, not two.",
     "That's all.",
-    "No allergies.",
+    "No allergies, nothing else.",
     "Pickup.",
     "It's Simran.",
     "Nine zero five five five five one one two two.",
@@ -20,7 +20,7 @@
     "order_type": "pickup",
     "customer_name": "Simran",
     "customer_phone": "9055551122",
-    "allergies_recorded": true,
+    "additional_requests_recorded": true,
     "min_readbacks": 1
   }
 }

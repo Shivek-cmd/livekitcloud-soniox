@@ -113,7 +113,7 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 
 ---
 
-## Step 3 (PR 076) — Additional-requests step; kill per-dish spice interrogation — ☐ TODO
+## Step 3 (PR 076) — Additional-requests step; kill per-dish spice interrogation — ✅ DONE
 
 **Goal:** adds are frictionless one-liners; spice/allergies/special instructions collected in ONE natural wrap-up question at end of ordering, before customer details. Enforced by gates, not prompt.
 
@@ -132,10 +132,18 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 **Definition of done:** no spice question ever needed mid-ordering; wrap-up step gate-enforced; suite + harness green.
 
 ### Checkpoint (fill in when done)
-- Date / branch / commit:
+- Date / branch / commit: 2026-07-18 / `pr_076_additional-requests-step` (off pr_075) / `94a4281` (committed locally, NOT pushed — user approval required).
 - Deviations:
-- Live-call feel of the new flow:
+  - `_apply_default_spice()` (the Medium fill) also runs at the top of a successful `get_order_readback`, not only at `record_additional_requests` — safety net so a spiced dish added AFTER the wrap-up can never reach placement spice-unset (the plan didn't cover late adds). It bumps revision + invalidates readback only when it actually fills something, before `readback_revision` is set, so it never wedges the confirm cycle.
+  - INVALID SPICE refusal kept in `add_item` for a stated-but-unparseable spice value (plan silent on it; silently dropping a stated spice felt worse).
+  - `record_additional_requests` stores the WHOLE wrap-up answer as `allergy_note` when it isn't a plain "no" — e.g. "Medium spice is fine, and no allergies." lands verbatim in the kitchen note. Per plan ("text still flows as allergy_note") but noisier than the old allergies-only answer; revisit if kitchen tickets complain.
+  - Prompt checkout-English rule reworded "allergies" → "additional requests/allergies"; otherwise prompt touch limited to flow/tool sections as planned.
+- Live-call feel of the new flow: NOT yet live-tested — harness only. 9/9 scenarios green twice (run committed at `docs/eval/pr076/`, stability re-run in scratch). Adds are one-liners ("Two Butter Chicken and one ਗਾਰਲਿਕ ਨਾਨ added. Anything else?"), wrap-up question asked naturally once ("Any spice preferences, allergies, or special instructions?"), code fills Medium (`SPICE DEFAULTED` line) and gpt-4.1-mini respects the do-NOT-re-ask GUIDE.
 - Notes for next session:
+  - Full suite 289 passed. New scenario `no_spice_mentioned` covers the never-mentions-spice path end-to-end.
+  - Known gap (harness-uncovered): if the customer's wrap-up answer names a NON-medium level ("make everything spicy") and the model records without calling `set_item_spice` first, code defaults to medium while the text only lands in `allergy_note`. GUIDE + tool docstring push set_item_spice-first; watch live calls / consider a Step 7 scenario.
+  - Step 4 (persona prompt) now owns the flow-section wording rewritten here; `record_additional_requests` GUIDE text is fair game for persona phrasing.
+  - Clover customer upsert HTTP 400 (missing city/state/zip) still appearing in delivery harness runs — pre-existing, fail-open, unrelated.
 
 ---
 

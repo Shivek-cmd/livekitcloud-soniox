@@ -1,0 +1,84 @@
+{
+  "name": "price_ask_phone",
+  "channel": "phone",
+  "model": "gpt-4.1-mini",
+  "passed": true,
+  "turns": [
+    {
+      "user": "One butter chicken please, medium.",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "butter chicken",
+            "quantity": 1,
+            "spice_level": "medium"
+          },
+          "result": "ADDED: 1 x Butter Chicken, note: medium.\nORDER NOW: 1 x Butter Chicken [medium]. total=$19.99\nGUIDE: confirm the add briefly in the customer's language using the exact dish name and quantity above (quantity spoken as \"one\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "One Butter Chicken added, anything else?"
+    },
+    {
+      "user": "How much will that be?",
+      "tool_calls": [],
+      "assistant": "Butter Chicken is nineteen dollars ninety-nine cents. Anything else?"
+    },
+    {
+      "user": "Okay, that's all I need for now, thanks.",
+      "tool_calls": [],
+      "assistant": "Any spice preferences, allergies, or special instructions for your order?"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "building",
+    "items": [
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 1,
+        "unit_price": 19.99,
+        "line_total": 19.99,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": null,
+    "delivery_address": null,
+    "customer": {
+      "name": null,
+      "phone": null
+    },
+    "subtotal": 19.99,
+    "delivery_charge": 0,
+    "total": 19.99,
+    "eta": null,
+    "order_id": null
+  },
+  "assertions": [
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=False"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    }
+  ]
+}

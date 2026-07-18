@@ -5,7 +5,7 @@
     "Hello, one dal makhani and two butter naan please.",
     "Make the dal spicy.",
     "That's all.",
-    "Nope, no allergies.",
+    "Nope, no allergies, nothing else.",
     "Navdeep.",
     "Six four seven five five five...",
     "Sorry — six four seven five five five one two one two.",
@@ -33,7 +33,7 @@
     "order_type": "delivery",
     "customer_name": "Navdeep",
     "customer_phone": "6475551212",
-    "allergies_recorded": true,
+    "additional_requests_recorded": true,
     "min_readbacks": 1
   }
 }

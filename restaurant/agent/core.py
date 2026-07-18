@@ -379,7 +379,7 @@ class RestaurantAgent(Agent):
         self,
         item_query: Annotated[str, "The dish the customer named, in their words (English or Punjabi)"],
         quantity: Annotated[int, "How many — exactly what the customer said; 1 if they gave no number"] = 1,
-        spice_level: Annotated[str, "Mild, Medium, Spicy, or Extra Spicy — required for dishes that take a spice level ('no preference' = Medium)"] = "",
+        spice_level: Annotated[str, "Mild, Medium, Spicy, or Extra Spicy — ONLY if the customer already stated one; leave empty otherwise (never ask for spice at add time)"] = "",
         note: Annotated[str, "Required modifier choices and special instructions, e.g. 'butter naan, no onions'"] = "",
     ) -> str:
         """Add one menu item to the order. Works at ANY point in the call — a
@@ -395,17 +395,11 @@ class RestaurantAgent(Agent):
             return refusal
         assert item is not None
 
+        # No per-dish spice interrogation: a spice level stated at add time
+        # passes through; otherwise the item is added spice-unset and the
+        # final additional-requests step fills Medium deterministically.
         spice: str | None = None
-        if menu_provider.item_has_spice_level(item["name"]):
-            if not spice_level:
-                result = (
-                    f"NEEDS SPICE — {item['name']} needs a spice level. Ask the "
-                    "customer: Mild, Medium, Spicy, or Extra Spicy? ('No "
-                    "preference' = Medium.) Then re-call add_item with "
-                    "spice_level. Do NOT add without it."
-                )
-                self._record_tool("add_item", {"item_query": item_query}, result)
-                return result
+        if spice_level and menu_provider.item_has_spice_level(item["name"]):
             spice = _canonical_spice(spice_level)
             if spice is None:
                 result = (
@@ -538,25 +532,59 @@ class RestaurantAgent(Agent):
         )
         return result
 
+    def _apply_default_spice(self) -> list[str]:
+        """'No preference = Medium': fill Medium on every spiced dish whose
+        note still has no spice word. Deterministic, code-side — never an LLM
+        guess. Returns the voice labels of the lines it filled."""
+        defaulted: list[str] = []
+        for line in self.cart.items:
+            if not menu_provider.item_has_spice_level(line.name):
+                continue
+            if _SPICE_NOTE_RE.search(line.note or ""):
+                continue
+            line.note = _note_with_spice("Medium", line.note)
+            defaulted.append(line.voice_line or line.name)
+        if defaulted:
+            self.cart.revision += 1
+            invalidate_readback(self.state)
+        return defaulted
+
     @function_tool
-    async def record_allergies(
+    async def record_additional_requests(
         self,
-        response: Annotated[str, "The customer's answer to the allergies question, e.g. 'no' or 'peanut allergy'"],
+        response: Annotated[str, "The customer's answer to the final additional-requests question (spice preferences, allergies, special instructions), e.g. 'no', 'peanut allergy', 'make everything mild'"],
     ) -> str:
-        """Record the customer's answer after asking about allergies. Must be
-        called (even for 'no') before the order can be placed."""
+        """Record the customer's answer to the ONE final additional-requests
+        question (spice preferences + allergies + special instructions), asked
+        once when they are done adding items. Must be called (even for 'no')
+        before the order can be read back or placed. If the customer named a
+        spice level for specific dishes, call set_item_spice for each FIRST,
+        then call this."""
         text = (response or "").strip()
-        self.state.allergies_recorded = True
+        self.state.additional_requests_recorded = True
         if not text or _NO_ALLERGIES_RE.match(text):
             self.state.allergy_note = ""
-            result = "Allergies recorded: none. Continue — pickup or delivery?"
+            lines = ["ADDITIONAL REQUESTS RECORDED: none."]
         else:
             self.state.allergy_note = text
-            result = (
-                f'Allergy noted for the kitchen: "{text}". '
-                "Continue — pickup or delivery?"
+            lines = [f'ADDITIONAL REQUESTS RECORDED for the kitchen: "{text}".']
+        defaulted = self._apply_default_spice()
+        if defaulted:
+            lines.append(
+                "SPICE DEFAULTED: "
+                + "; ".join(defaulted)
+                + " set to medium (no preference stated — use set_item_spice "
+                "if the customer actually named a level)."
             )
-        self._record_tool("record_allergies", {"response": text}, result)
+        lines.append(format_cart_facts(self.cart))
+        lines.append(
+            "GUIDE: acknowledge briefly in the customer's language — do NOT "
+            "re-ask about spice or allergies — then keep the order moving "
+            "(pickup or delivery next if not set yet)."
+        )
+        result = "\n".join(lines)
+        await self._sync_web()
+        self._record_tool("record_additional_requests", {"response": text}, result)
         return result
 
     @function_tool
@@ -701,6 +729,10 @@ class RestaurantAgent(Agent):
             result = "Cannot read back yet:\n- " + "\n- ".join(blockers)
             self._record_tool("get_order_readback", {}, result)
             return result
+        # Safety net for spiced dishes added AFTER the additional-requests
+        # step — they must never reach placement spice-unset.
+        if self._apply_default_spice():
+            await self._sync_web()
         text = format_order_readback(self.cart, include_price=not self.is_phone)
         self.state.readback_revision = self.cart.revision
         self.state.readback_confirmed = False

@@ -4,7 +4,7 @@
   "turns": [
     "Hi, one butter chicken please, medium.",
     "That's everything.",
-    "No allergies.",
+    "No allergies, nothing else.",
     "Pickup.",
     "Jasleen.",
     "Four one six five five five two two three three.",
@@ -21,7 +21,7 @@
     "order_type": "pickup",
     "customer_name": "Jasleen",
     "customer_phone": "4165552233",
-    "allergies_recorded": true,
+    "additional_requests_recorded": true,
     "min_readbacks": 2
   }
 }
