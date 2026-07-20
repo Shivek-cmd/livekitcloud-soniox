@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import re
 
-# 10-digit local, optional +1 / +91 country prefix.
-_PHONEISH = re.compile(r"^[\d\s\-\+\(\)\.]+$")
+# 10-digit local, optional +1 / +91 country prefix. Includes Devanagari/Gurmukhi
+# danda (। ॥) — STT ends spoken digit fragments with it (PR 082).
+_PHONEISH = re.compile(r"^[\d\s\-\+\(\)\.।॥]+$")
 
 # Gurmukhi / Devanagari numerals → ASCII (Sierra must never speak these for phone).
 _INDIC_NUMERAL_MAP = str.maketrans(
@@ -130,6 +132,106 @@ def looks_like_phone_utterance(text: str) -> bool:
         return True
     normalized = _spoken_words_to_digits(raw.translate(_INDIC_NUMERAL_MAP))
     return bool(_PHONEISH.match(raw) and sum(c.isdigit() for c in normalized) >= 7)
+
+
+# ── PR 082 — code-side phone digit custody ───────────────────────────────────
+# The LLM is an unreliable courier for digits (in the live repro it never called
+# set_customer_contact with a phone during the whole retry loop). Code owns
+# capture: a pure fragment extractor + a pure reducer that stitches digits
+# spoken across turns, both exhaustively unit-tested (money-path).
+
+# Words that may sit alongside digits in a phone utterance without making it
+# "not a phone number". Anything else (a menu item, "two samosas") disqualifies.
+_PHONE_FILLER = frozenset(
+    {
+        "it's", "its", "it", "is", "the", "my", "there's", "theres",
+        "number", "phone", "and", "then", "ok", "okay", "yes",
+        "haan", "han", "ji", "ਜੀ", "ਹੈ", "है", "ਨੰਬਰ", "नंबर",
+    }
+)
+
+# Correction cues — the customer is fixing a wrong digit; the buffer resets to
+# what they just said. Allowed alongside digits in a fragment too.
+_PHONE_CORRECTION = frozenset(
+    {
+        "no", "nahi", "nahin", "not", "wrong", "galat", "actually",
+        "ਨਹੀਂ", "ਗਲਤ", "नहीं", "गलत",
+    }
+)
+
+_PHONE_PUNCT_RE = re.compile(r"[.,।॥\-()/:;!?]+")
+
+
+def phone_digit_custody_enabled() -> bool:
+    """`PHONE_DIGIT_CUSTODY` env — default ON; `0`/`false`/`off` is the rollback."""
+    raw = (os.getenv("PHONE_DIGIT_CUSTODY") or "").strip().lower()
+    return raw not in ("0", "false", "off")
+
+
+def _phone_tokens(text: str) -> list[str]:
+    """Normalize (Indic numerals + spoken digit words → ASCII), drop danda and
+    punctuation, and split into tokens."""
+    normalized = _spoken_words_to_digits((text or "").translate(_INDIC_NUMERAL_MAP))
+    spaced = _PHONE_PUNCT_RE.sub(" ", normalized)
+    return [t for t in spaced.split() if t]
+
+
+def phone_fragment_digits(text: str) -> str | None:
+    """Digits from a phone-collection fragment, or None if the utterance is not
+    purely a phone fragment. Returns the digit string only when every non-digit
+    token is a known filler/correction word and at least 2 digits were heard —
+    "two samosas" → None, "there's zero. 39800।" → "039800"."""
+    tokens = _phone_tokens(text)
+    if not tokens:
+        return None
+    digits: list[str] = []
+    for tok in tokens:
+        if tok.isdigit():
+            digits.append(tok)
+            continue
+        key = tok.lower()
+        if key in _PHONE_FILLER or key in _PHONE_CORRECTION:
+            continue
+        return None
+    joined = "".join(digits)
+    return joined if len(joined) >= 2 else None
+
+
+def _has_phone_correction(text: str) -> bool:
+    return any(t.lower() in _PHONE_CORRECTION for t in _phone_tokens(text))
+
+
+def accumulate_phone(buffer: str, utterance: str) -> tuple[str, str]:
+    """Pure reducer folding a phone-collection utterance into the running digit
+    buffer. Returns (new_buffer, event), event ∈ {saved, reset, append, repeat,
+    none}. Rules apply in order (see gap_fixes.md Step 2)."""
+    buf = re.sub(r"\D", "", buffer or "")
+
+    # 1. A complete number (10, or 11/12 with country prefix) → save outright.
+    full = extract_phone_digits(utterance)
+    if full:
+        return full, "saved"
+
+    # 2. Not a phone fragment at all → leave the buffer untouched.
+    fragment = phone_fragment_digits(utterance)
+    if fragment is None:
+        return buf, "none"
+
+    # 3. Correction ("no, it's 90770…") → the buffer becomes the new digits.
+    if _has_phone_correction(utterance):
+        return fragment, "reset"
+
+    # 4. STT restated the same progress → ignore.
+    if len(fragment) >= 2 and fragment == buf:
+        return buf, "repeat"
+
+    # 5. Appending would overflow 10 → treat the fragment as a restatement.
+    if len(buf) + len(fragment) > 10:
+        return (fragment if len(fragment) <= 10 else ""), "reset"
+
+    # 6. Otherwise append; saved the moment we reach exactly 10.
+    new = buf + fragment
+    return new, ("saved" if len(new) == 10 else "append")
 
 
 _DIGIT_ENGLISH = (

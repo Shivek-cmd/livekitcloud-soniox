@@ -6,12 +6,14 @@ from restaurant import menu_provider
 from restaurant.clover.menu import MenuCache
 from restaurant.clover.models import CachedMenuItem
 from restaurant.customer_info import (
+    accumulate_phone,
     enforce_english_phone_in_speech,
     extract_phone_digits,
     format_phone_spoken,
     is_valid_customer_name,
     looks_like_phone_utterance,
     parse_customer_name,
+    phone_fragment_digits,
 )
 
 
@@ -239,3 +241,71 @@ def test_looks_like_phone_utterance_word_digits():
         )
         is None
     )
+
+
+# ---------------------------------------------------------------------------
+# PR 082 — code-side phone digit custody: pure fragment extractor + reducer.
+
+
+def test_extract_real_call_single_shot():
+    # The real-call vector: dictated with a space, must yield all 10 digits.
+    assert extract_phone_digits("It's 80770 39800.") == "8077039800"
+
+
+def test_phone_fragment_digits_real_vectors():
+    # Filler words + danda around real dictated fragments.
+    assert phone_fragment_digits("there's zero. 39800।") == "039800"
+    assert phone_fragment_digits("80") == "80"
+    assert phone_fragment_digits("80।") == "80"
+    assert phone_fragment_digits("807") == "807"
+    assert phone_fragment_digits("it's 80770") == "80770"
+
+
+def test_phone_fragment_digits_non_fragments():
+    # Non-phone utterances (no digits, or menu words) → None.
+    assert phone_fragment_digits("Thanks.") is None
+    assert phone_fragment_digits("No, that's it.") is None
+    assert phone_fragment_digits("two samosas") is None
+    # A single digit is too little to be a fragment.
+    assert phone_fragment_digits("eight") is None
+
+
+def test_accumulate_single_shot_save():
+    buf, event = accumulate_phone("", "It's 80770 39800.")
+    assert (buf, event) == ("8077039800", "saved")
+
+
+def test_accumulate_stitches_fragments():
+    buf = ""
+    buf, e1 = accumulate_phone(buf, "80")
+    assert (buf, e1) == ("80", "append")
+    buf, e2 = accumulate_phone(buf, "770")
+    assert (buf, e2) == ("80770", "append")
+    buf, e3 = accumulate_phone(buf, "39800")
+    assert (buf, e3) == ("8077039800", "saved")
+
+
+def test_accumulate_repeat_suppression():
+    buf, event = accumulate_phone("80770", "80770")
+    assert (buf, event) == ("80770", "repeat")
+
+
+def test_accumulate_correction_reset():
+    buf = ""
+    buf, _ = accumulate_phone(buf, "80770")
+    buf, e = accumulate_phone(buf, "no, it's 90770")
+    assert (buf, e) == ("90770", "reset")
+    buf, e = accumulate_phone(buf, "39800")
+    assert (buf, e) == ("9077039800", "saved")
+
+
+def test_accumulate_overflow_restatement():
+    # Appending would exceed 10 → treat the fragment as a fresh restatement.
+    buf, event = accumulate_phone("80770", "807703")
+    assert event == "reset"
+    assert buf == "807703"
+
+
+def test_accumulate_non_fragment_leaves_buffer():
+    buf, event = accumulate_phone("80770", "Thanks, that's all.")
+    assert (buf, event) == ("80770", "none")
