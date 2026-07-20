@@ -62,6 +62,7 @@ def _cache(items=None) -> MenuCache:
         _item("GULAB_JAMUN", "Gulab Jamun", "ਗੁਲਾਬ ਜਾਮੁਨ", "ਗੁਲਾਬ ਜਾਮੁਨ", ["gulab jamun"]),
         _item("KHEER", "Kheer", "ਖੀਰ", "ਖੀਰ", ["kheer"]),
         _item("BUTTER_CHICKEN", "Butter Chicken", "ਬਟਰ ਚਿਕਨ", "ਬਟਰ ਚਿਕਨ", ["butter chicken"]),
+        _item("BHATURA", "Bhatura (single)", "ਭਟੂਰਾ", "ਭਟੂਰਾ", ["bhatura"]),
     ]
     return MenuCache(items, tenant_id="test", synced_at="now")
 
@@ -215,6 +216,58 @@ def test_extra_descriptors_do_not_break_match(clover_cache):
     hit = clover_cache.find_item("one butter chicken extra spicy please")
     assert hit is not None
     assert hit.name == "Butter Chicken"
+
+
+# ---------------------------------------------------------------------------
+# PR 084 (Gap 7): phonetic-only ASCII single-token cap
+
+
+def test_ascii_phonetic_collision_capped_below_clarify_gate(clover_cache):
+    # "butter" folds to Bhatura (both phonetic key "btr"). A lone Roman word
+    # matching an ASCII label only phonetically must be capped below the 0.7
+    # clarify gate so it routes to "did you mean?" instead of a silent add.
+    scored = clover_cache.find_item_scored("butter")
+    assert scored is not None
+    assert scored[1] <= 0.65
+
+
+def test_bhatura_phonetic_only_match_capped_direct():
+    # Direct MatchIndex proof: pre-cap "butter"→Bhatura scored ~0.92; the cap
+    # holds Bhatura at/below the phonetic-only ceiling regardless of tie-break.
+    # The real item carries a Gurmukhi speak_as ("ਭਟੂਰਾ") which also folds to
+    # "btr" — the cap must fire off the ASCII *query*, not the label's script,
+    # or that Gurmukhi label would re-surface the collision uncapped.
+    idx = MatchIndex(
+        [("BHATURA", "Bhatura", ["Bhatura (single)", "ਭਟੂਰਾ", "bhatura", "bhature"])]
+    )
+    m = idx.best("butter", min_conf=0.0)
+    assert m is not None and m.key == "BHATURA"
+    assert m.exact_tokens == 0
+    assert m.confidence <= 0.65
+
+
+def test_ascii_single_token_still_disambiguates(clover_cache):
+    # Below the gate, but above the floor — the match still surfaces so the
+    # agent can ask "did you mean?" rather than the word vanishing.
+    names = {o["name"] for o in menu_provider.disambiguation_options("butter")}
+    assert names  # non-empty: Bhatura (and/or Butter Chicken) offered
+
+
+def test_multi_token_query_not_capped(clover_cache):
+    # The cap is single-token only — real orders are untouched.
+    scored = clover_cache.find_item_scored("butter chicken")
+    assert scored is not None
+    assert scored[0].name == "Butter Chicken"
+    assert scored[1] == 1.0
+
+
+def test_gurmukhi_single_token_not_capped(clover_cache):
+    # Non-Latin single-word queries stay uncapped — phonetic matching is their
+    # designed primary path (PR 032). A unique Gurmukhi word still resolves.
+    hit = clover_cache.find_item("ਖੀਰ")
+    assert hit is not None
+    assert hit.name == "Kheer"
+    assert clover_cache.find_item_scored("ਖੀਰ")[1] > 0.65
 
 
 # ---------------------------------------------------------------------------

@@ -170,6 +170,13 @@ PHONETIC_WEIGHT = 0.85
 PREFIX_WEIGHT = 0.75
 UNIQUE_SINGLE_CONF = 0.65
 DEFAULT_MIN_CONF = 0.55
+# PR 084 (Gap 7): a lone ASCII (Roman) query word that matched only
+# phonetically (never exactly) is positive evidence of a *different* word —
+# `butter` folds to Bhatura (both keys "btr") at F=0.92. Cap it below the 0.7
+# clarify gate but above the floor so it still surfaces for "did you mean?".
+# Gurmukhi/Devanagari QUERIES are intentionally NOT capped: phonetic matching
+# is their designed primary path (PR 032).
+PHONETIC_ONLY_ASCII_SINGLE_CONF = 0.65
 _MIN_PHONETIC_KEY = 3  # 2-char keys collide too easily (ਕਰੀ/ਖੀਰ → "kr")
 
 
@@ -240,6 +247,9 @@ class MatchIndex:
         q_keys = {phonetic_key(t) for t in q_toks}
         q_keys.discard("")
         n_query = len(q_toks)
+        # PR 084: single ASCII (Roman) query word — candidate for the
+        # phonetic-only cap below. Non-Latin queries are never capped.
+        single_ascii_query = n_query == 1 and q_toks[0].isascii()
 
         candidates: list[Match] = []
         for item_key, name, labels in self._items:
@@ -280,6 +290,15 @@ class MatchIndex:
                         confidence = UNIQUE_SINGLE_CONF
                 if confidence <= 0:
                     continue
+                # PR 084 (Gap 7): a lone ASCII (Roman) query word that matched
+                # purely phonetically — no exact token, whatever the label's
+                # script — is positive evidence of a *different* word
+                # (`butter`→Bhatura, both keys "btr"). Cap it below the clarify
+                # gate so it routes through "did you mean?" instead of a silent
+                # wrong add. Gurmukhi/Devanagari QUERIES are excluded by
+                # single_ascii_query — their phonetic path stays uncapped.
+                if single_ascii_query and exact == 0:
+                    confidence = min(confidence, PHONETIC_ONLY_ASCII_SINGLE_CONF)
                 m = Match(item_key, round(confidence, 4), matched, exact, label)
                 if best_for_item is None or (
                     (m.confidence, m.matched_tokens, m.exact_tokens)
