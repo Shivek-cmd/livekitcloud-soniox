@@ -4,10 +4,15 @@ import asyncio
 import time
 from types import SimpleNamespace
 
-from restaurant.channels.eou_watchdog import EouWatchdog, eou_watchdog_seconds
+from restaurant.channels.eou_watchdog import (
+    EouWatchdog,
+    eou_watchdog_max_seconds,
+    eou_watchdog_seconds,
+)
 
 _TIMEOUT = 0.05
 _PAST_TIMEOUT = 0.15
+_MAX = 0.12
 
 
 class _FakeSession:
@@ -77,6 +82,12 @@ def _attach(timeout=_TIMEOUT):
     return session
 
 
+def _attach_capped(timeout=_TIMEOUT, max_sec=_MAX):
+    session = _FakeSession()
+    EouWatchdog(timeout_sec=timeout, max_sec=max_sec).attach(session)
+    return session
+
+
 # ── env helper ───────────────────────────────────────────────────────────────
 
 
@@ -92,6 +103,20 @@ def test_watchdog_seconds_custom_and_invalid(monkeypatch):
     assert eou_watchdog_seconds() == 2.0
     monkeypatch.setenv("EOU_WATCHDOG_SEC", "-1")
     assert eou_watchdog_seconds() == 0.0
+
+
+def test_watchdog_max_seconds_default(monkeypatch):
+    monkeypatch.delenv("EOU_WATCHDOG_MAX_SEC", raising=False)
+    assert eou_watchdog_max_seconds() == 4.0
+
+
+def test_watchdog_max_seconds_custom_and_invalid(monkeypatch):
+    monkeypatch.setenv("EOU_WATCHDOG_MAX_SEC", "6")
+    assert eou_watchdog_max_seconds() == 6.0
+    monkeypatch.setenv("EOU_WATCHDOG_MAX_SEC", "later")
+    assert eou_watchdog_max_seconds() == 4.0
+    monkeypatch.setenv("EOU_WATCHDOG_MAX_SEC", "-1")
+    assert eou_watchdog_max_seconds() == 0.0
 
 
 # ── firing behavior ──────────────────────────────────────────────────────────
@@ -326,3 +351,88 @@ def test_commit_exception_is_logged_not_raised(caplog):
 
     asyncio.run(_run())
     assert any("forced commit failed" in r.message for r in caplog.records)
+
+
+# ── absolute wall-clock cap (PR 083 / gap 3) ─────────────────────────────────
+
+
+def test_interims_capped_by_max_sec():
+    async def _run():
+        # The 16s live repro in miniature: interims keep streaming past the
+        # cap, but the commit must land once, ~max_sec after VAD end-of-speech.
+        session = _attach_capped()
+        session.user_speaks()
+        session.user_stops()
+        for _ in range(8):  # 8 × (_TIMEOUT/2) = 0.2s > _MAX (0.12)
+            await asyncio.sleep(_TIMEOUT / 2)
+            session.interim()
+        assert len(session.commits) == 1
+
+    asyncio.run(_run())
+
+
+def test_cap_disabled_slides_indefinitely():
+    async def _run():
+        # max_sec == 0 → bit-for-bit the pre-cap behavior: the deadline slides
+        # on every interim and never caps while tokens keep arriving.
+        session = _attach_capped(max_sec=0.0)
+        session.user_speaks()
+        session.user_stops()
+        for _ in range(8):
+            await asyncio.sleep(_TIMEOUT / 2)
+            session.interim()
+            assert session.commits == []
+        await asyncio.sleep(_PAST_TIMEOUT)  # tokens stop → commit fires
+        assert len(session.commits) == 1
+
+    asyncio.run(_run())
+
+
+def test_user_resumes_before_cap_no_fire():
+    async def _run():
+        session = _attach_capped()
+        session.user_speaks()
+        session.user_stops()
+        for _ in range(3):  # 0.075s < _MAX
+            await asyncio.sleep(_TIMEOUT / 2)
+            session.interim()
+        session.user_speaks()  # resumed before the cap is spent
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert session.commits == []
+
+    asyncio.run(_run())
+
+
+def test_final_resets_cap_budget():
+    async def _run():
+        session = _attach_capped()
+        session.user_speaks()
+        session.user_stops()
+        await asyncio.sleep(_TIMEOUT / 2)
+        session.interim()
+        # A real final closes the turn and clears the cap anchor.
+        session.final()
+        # The next utterance is VAD-missed (no "speaking"/"listening"); it must
+        # get a fresh budget, not fire instantly against the old stopped-at.
+        session.interim("mango lassi")
+        await asyncio.sleep(_TIMEOUT / 2)
+        assert session.commits == []  # fresh budget — not an instant fire
+        await asyncio.sleep(_PAST_TIMEOUT)
+        assert len(session.commits) == 1
+
+    asyncio.run(_run())
+
+
+def test_interim_after_cap_spent_commits_immediately():
+    async def _run():
+        # First transcript text arrives only after the whole cap window has
+        # already elapsed → the delay≤0 immediate-commit path (no extra wait).
+        session = _attach_capped()
+        session.user_speaks()
+        session.user_stops()
+        await asyncio.sleep(_MAX + _TIMEOUT)
+        assert session.commits == []  # nothing to commit yet — no interim
+        session.interim()  # late text; cap already spent
+        assert len(session.commits) == 1  # committed synchronously
+
+    asyncio.run(_run())
