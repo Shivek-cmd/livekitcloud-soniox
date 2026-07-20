@@ -1,4 +1,4 @@
-"""Voice stack: Soniox STT + OpenAI (GPT) LLM + Soniox TTS.
+"""Voice stack: Soniox STT + OpenAI (GPT) or Google (Gemini) LLM + Soniox TTS.
 
 All three providers are US/EU/JP-hosted, so for North-America (Canada) callers the
 whole pipeline stays on-continent → low latency. Soniox handles Punjabi/English/Hindi
@@ -205,17 +205,103 @@ def build_stt(is_phone: bool):
 
 
 def llm_model_name() -> str:
-    """LLM model id (OPENAI_LLM_MODEL). PR 074 default: gpt-4.1-mini.
+    """LLM model id (LLM_MODEL, falling back to OPENAI_LLM_MODEL).
 
-    Rollback knob for the conversation rebuild — set OPENAI_LLM_MODEL=gpt-4o-mini
-    to restore the previous model without a deploy.
+    PR 080 widens the model choice beyond OpenAI: any `gemini-*` id routes to
+    the Google plugin (see build_llm). LLM_MODEL is the provider-agnostic knob;
+    OPENAI_LLM_MODEL is kept as a fallback so the PR 074 rollback instructions
+    (OPENAI_LLM_MODEL=gpt-4o-mini) keep working without a deploy.
     """
-    raw = os.getenv("OPENAI_LLM_MODEL", "").strip()
+    raw = os.getenv("LLM_MODEL", "").strip() or os.getenv("OPENAI_LLM_MODEL", "").strip()
     return raw or "gpt-4.1-mini"
 
 
+def is_gemini_model(model: str) -> bool:
+    return model.startswith("gemini")
+
+
+def gemini_thinking_budget() -> int:
+    """Gemini thinking-token budget (GEMINI_THINKING_BUDGET), default 0.
+
+    Gemini 2.5 models ship with dynamic thinking ON — unbounded seconds of
+    silent reasoning before the first spoken token, unacceptable on a live
+    call. 0 disables thinking entirely; raise only with latency data. Note:
+    gemini-*-pro models refuse budget 0 (their API minimum is 128) — build_llm
+    floors the budget there for pro ids so a default config can't 400.
+    """
+    raw = os.getenv("GEMINI_THINKING_BUDGET", "").strip()
+    if not raw:
+        return 0
+    try:
+        return max(0, int(float(raw)))
+    except ValueError:
+        return 0
+
+
+def llm_fallback_model_name() -> str | None:
+    """Fallback LLM for gemini primaries (LLM_FALLBACK_MODEL), default
+    gpt-4.1-mini; set to none/off to disable.
+
+    PR 080 finding: Gemini's NON-configurable PROHIBITED_CONTENT filter
+    deterministically blocked a reply once the conversation had accumulated
+    name + phone + delivery address (delivery_split_phone, 3/3 repro) — which
+    every delivery order does. The google plugin surfaces that block as
+    APIStatusError, so a FallbackAdapter hands the turn to OpenAI instead of
+    leaving dead air. Money path stays in code (PR 030 lesson).
+    """
+    raw = os.getenv("LLM_FALLBACK_MODEL", "").strip()
+    if raw.lower() in ("none", "off", "0", "disabled"):
+        return None
+    return raw or "gpt-4.1-mini"
+
+
+def gemini_thinking_level() -> str:
+    """Gemini 3 thinking level (GEMINI_THINKING_LEVEL), default "low" —
+    the generation's minimum; it cannot be disabled outright like 2.5's
+    thinking_budget=0. "high" only with latency data."""
+    raw = os.getenv("GEMINI_THINKING_LEVEL", "").strip().lower()
+    return raw if raw in ("low", "high") else "low"
+
+
 def build_llm():
-    return openai.LLM(model=llm_model_name())
+    model = llm_model_name()
+    if not is_gemini_model(model):
+        return openai.LLM(model=model)
+
+    from livekit.agents.llm import FallbackAdapter
+    from livekit.plugins import google
+
+    api_key = os.getenv("GEMINI_API_KEY", "").strip() or os.getenv(
+        "GOOGLE_API_KEY", ""
+    ).strip()
+    kwargs: dict = {"model": model}
+    if api_key:
+        kwargs["api_key"] = api_key
+    if model.startswith("gemini-3"):
+        # Gemini 3 replaced thinking_budget with thinking_level; "low" is its
+        # minimum (thinking cannot be fully disabled on this generation).
+        kwargs["thinking_config"] = {
+            "thinking_level": gemini_thinking_level(),
+            "include_thoughts": False,
+        }
+    else:
+        budget = gemini_thinking_budget()
+        if "pro" in model:
+            budget = max(128, budget)
+        kwargs["thinking_config"] = {
+            "thinking_budget": budget,
+            "include_thoughts": False,
+        }
+    primary = google.LLM(**kwargs)
+
+    fallback_model = llm_fallback_model_name()
+    if fallback_model is None:
+        return primary
+    # attempt_timeout is passed through as the google client deadline, whose
+    # API-enforced minimum is 10s — the 5s adapter default 400s every request.
+    return FallbackAdapter(
+        [primary, openai.LLM(model=fallback_model)], attempt_timeout=10.0
+    )
 
 
 def build_tts(is_phone: bool):

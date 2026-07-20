@@ -1,0 +1,442 @@
+{
+  "dir": "docs/eval/pr080/gemini-3.1-flash-lite",
+  "model": "gemini-3.1-flash-lite",
+  "judge_model": "gpt-4.1",
+  "scenarios": [
+    {
+      "scenario": "ambiguous_fish",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": null,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": null,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": null
+      },
+      "llm_latency": {
+        "calls": 6,
+        "mean_s": 1.233,
+        "p95_s": 1.274,
+        "max_s": 1.69
+      }
+    },
+    {
+      "scenario": "change_after_readback",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 4,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 4,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 1,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [
+        "let me just read everything back to you one more time to make sure it's all correct — narrates process, mild meta-speech"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": 10,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 23,
+        "mean_s": 1.172,
+        "p95_s": 1.402,
+        "max_s": 1.704
+      }
+    },
+    {
+      "scenario": "delivery_split_phone",
+      "harness_passed": false,
+      "scores": {
+        "acknowledgement_variety": 4,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [
+        "Sure thing — I've got one Dal Makhani and two Butter Naan down for you. Anything else I can get you with that? — varied acknowledgement, not repeated",
+        "You got it, I've made that Dal Makhani spicy for you. Anything else I can add to your order? — sentence length and structure varies",
+        "Got it. Would you like to pick this up, or should we deliver it for you? — natural code-mix, English for delivery/pickup",
+        "Thanks, Navdeep. I have the first six digits of your phone number—could you please finish that for me? — confusion handled gracefully, no blame",
+        "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 30-40 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ! — correct closing in Punjabi"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 11,
+        "baseline_turns_to_place": 11,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 22,
+        "mean_s": 1.213,
+        "p95_s": 1.372,
+        "max_s": 2.082
+      }
+    },
+    {
+      "scenario": "english_pickup",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": 8,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 16,
+        "mean_s": 1.196,
+        "p95_s": 1.262,
+        "max_s": 1.696
+      }
+    },
+    {
+      "scenario": "hindi_order",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": 8,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 15,
+        "mean_s": 1.172,
+        "p95_s": 1.405,
+        "max_s": 1.707
+      }
+    },
+    {
+      "scenario": "no_spice_mentioned",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 16,
+        "mean_s": 1.203,
+        "p95_s": 1.51,
+        "max_s": 1.617
+      }
+    },
+    {
+      "scenario": "price_ask_phone",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 3,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": null,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [
+        "All agent turns in English despite user using English; code-mix appropriateness is only average."
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": null,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": null
+      },
+      "llm_latency": {
+        "calls": 6,
+        "mean_s": 1.225,
+        "p95_s": 1.332,
+        "max_s": 1.632
+      }
+    },
+    {
+      "scenario": "punjabi_order",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 3,
+        "sentence_length_variety": 4,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 4
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [
+        "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ! — repeated verbatim at end",
+        "ਠੀਕ ਹੈ ਜੀ। ਇਹ ਆਰਡਰ ਤੁਸੀਂ Pickup ਲਈ ਲੈਣਾ ਹੈ ਜਾਂ ਅਸੀਂ Delivery ਕਰਵਾ ਦੇਈਏ? — repeated twice",
+        "mixes English dish and order type naturally: ਦੋ Butter Chicken, Pickup",
+        "handles allergy/spice gracefully: ਠੀਕ ਹੈ ਜੀ, ਮੈਂ ਨੋਟ ਕਰ ਲਿਆ ਹੈ।"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": 8,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 16,
+        "mean_s": 1.178,
+        "p95_s": 1.444,
+        "max_s": 1.46
+      }
+    },
+    {
+      "scenario": "quantity_correction",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 8,
+        "baseline_turns_to_place": 9,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 19,
+        "mean_s": 1.214,
+        "p95_s": 1.784,
+        "max_s": 1.96
+      }
+    },
+    {
+      "scenario": "sloppy_readback",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 4,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 1,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [
+        "My apologies, Harpreet, let me just double-check that for you. — mild meta-speech (explaining process)"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 8,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 18,
+        "mean_s": 1.306,
+        "p95_s": 1.646,
+        "max_s": 1.737
+      }
+    }
+  ],
+  "dimension_means": {
+    "acknowledgement_variety": 4.6,
+    "sentence_length_variety": 4.9,
+    "code_mix_appropriateness": 4.8,
+    "zero_meta_speech": 4.8,
+    "confusion_handling_grace": 4.9,
+    "checkout_efficiency": 5.0
+  },
+  "flag_totals": {
+    "stray_language": 0,
+    "roman_indic": 0,
+    "ungrounded_dish": 0,
+    "fact_contradiction": 0,
+    "meta_speech": 2,
+    "spoken_parenthetical": 0
+  },
+  "harness_pass_rate": "9/10",
+  "mean_llm_latency_s": 1.211
+}

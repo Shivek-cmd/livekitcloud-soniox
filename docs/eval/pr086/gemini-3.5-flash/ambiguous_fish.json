@@ -1,0 +1,110 @@
+{
+  "name": "ambiguous_fish",
+  "channel": "phone",
+  "model": "gemini-3.5-flash",
+  "passed": true,
+  "turns": [
+    {
+      "user": "Can I get the fish?",
+      "tool_calls": [
+        {
+          "name": "search_menu",
+          "args": {
+            "query": "fish"
+          },
+          "result": "Browse result for 'fish' (mention at most TWO in ONE casual sentence — never a numbered list): Amritsari Fish Pakora → say \"Fish Pakora\" | Punjabi Fish Curry → say \"Punjabi Fish Curry\". Good: \"ਹਾਂ ਜੀ, ਸਾਡੇ ਕੋਲ X ਤੇ Y ਹੈ — ਕਿਹੜਾ?\" Bad: \"1 X, 2 Y\" or \"first X, second Y\". Ask which they would like."
+        }
+      ],
+      "assistant": "We have the Fish Pakora and the Punjabi Fish Curry. Which one of those would you like to go with?"
+    },
+    {
+      "user": "The fish pakora please.",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "Fish Pakora",
+            "quantity": 1
+          },
+          "result": "ADDED: 1 x Fish Pakora (Amritsari Fish Pakora).\nORDER NOW: 1 x Fish Pakora (Amritsari Fish Pakora). total=$14.99\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"one\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "Awesome, I've got one Fish Pakora down for you. What else can I get started for you today?"
+    },
+    {
+      "user": "That's it for now.",
+      "tool_calls": [
+        {
+          "name": "record_additional_requests",
+          "args": {
+            "response": "no"
+          },
+          "result": "ADDITIONAL REQUESTS RECORDED: none.\nSPICE DEFAULTED: Fish Pakora set to medium (no preference stated — use set_item_spice if the customer actually named a level).\nORDER NOW: 1 x Fish Pakora (Amritsari Fish Pakora) [medium]. total=$14.99\nGUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about spice or allergies — then keep the order moving (pickup or delivery next if not set yet)."
+        }
+      ],
+      "assistant": "Alright, perfect. And will this order be for pickup or delivery today?"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "building",
+    "items": [
+      {
+        "id": "8BGZA0MVS825P",
+        "name": "Amritsari Fish Pakora",
+        "voice_line": "Fish Pakora",
+        "qty": 1,
+        "unit_price": 14.99,
+        "line_total": 14.99,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": null,
+    "delivery_address": null,
+    "customer": {
+      "name": null,
+      "phone": null
+    },
+    "subtotal": 14.99,
+    "delivery_charge": 0,
+    "total": 14.99,
+    "eta": null,
+    "order_id": null
+  },
+  "assertions": [
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=False"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Amritsari Fish Pakora']"
+    },
+    {
+      "check": "items: Amritsari Fish Pakora qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "transcript never contains 'Punjabi Fish Curry ਅਤੇ'",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "transcript never contains 'both fish'",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "llm_latency": {
+    "calls": 6,
+    "mean_s": 1.21,
+    "p95_s": 1.262,
+    "max_s": 1.807
+  }
+}

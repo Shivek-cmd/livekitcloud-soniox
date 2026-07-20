@@ -1,4 +1,10 @@
-"""PR 074 — dialogue eval harness (dev-only, real OpenAI calls, no audio).
+"""PR 074 — dialogue eval harness (dev-only, real LLM calls, no audio).
+
+PR 080: multi-provider — pass --model gemini-2.5-flash (any gemini-* id) to
+drive the same tool-loop through Gemini's OpenAI-compatible endpoint using
+GEMINI_API_KEY; the transcript/tool-loop/assertion machinery is identical, so
+model comparisons are apples-to-apples. Gemini rejects OpenAI's `seed` param,
+so it is omitted there (runs are near-deterministic at temperature 0 anyway).
 
 Drives the real RestaurantAgent tools through a scripted customer
 conversation so conversation-layer changes (PRs 074–080) have a measurable
@@ -65,6 +71,7 @@ import json
 import os
 import re
 import sys
+import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,7 +88,77 @@ from openai import OpenAI  # noqa: E402
 
 from restaurant.agent.core import RestaurantAgent  # noqa: E402
 from restaurant.agent.language import OPENING_GREETING, update_preferred_language  # noqa: E402
-from restaurant.voice_stack import llm_model_name  # noqa: E402
+from restaurant.voice_stack import is_gemini_model, llm_model_name  # noqa: E402
+
+GEMINI_OPENAI_COMPAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+
+def make_client(model: str) -> OpenAI:
+    """OpenAI SDK client for the given model id, any provider.
+
+    gemini-* ids go through Gemini's OpenAI-compatible endpoint so the whole
+    tool-loop below runs unchanged for both providers.
+    """
+    if is_gemini_model(model):
+        api_key = os.getenv("GEMINI_API_KEY", "").strip() or os.getenv(
+            "GOOGLE_API_KEY", ""
+        ).strip()
+        if not api_key:
+            sys.exit("GEMINI_API_KEY (or GOOGLE_API_KEY) required for gemini models")
+        return OpenAI(api_key=api_key, base_url=GEMINI_OPENAI_COMPAT_URL)
+    return OpenAI()
+
+
+def create_with_retry(client: OpenAI, **kwargs):
+    """chat.completions.create with the two retries batch eval actually needs:
+    - OpenAI 429 TPM limits (gpt-4.1 at 30k TPM can't do 10 scenarios
+      back-to-back) → exponential-ish sleep and retry;
+    - Gemini's compat endpoint occasionally returning a completion whose
+      message is None → retry, then surface an error string for the turn.
+    """
+    from openai import APIStatusError, RateLimitError
+
+    last_error = "no response"
+    for attempt in range(6):
+        attempt_started = time.monotonic()
+        try:
+            response = client.chat.completions.create(**kwargs)
+        except RateLimitError as e:
+            last_error = f"rate limited: {e}"
+            time.sleep(min(15 * (attempt + 1), 60))
+            continue
+        except APIStatusError as e:
+            if e.status_code >= 500:  # transient provider hiccup
+                last_error = f"HTTP {e.status_code}: {e}"
+                time.sleep(5 * (attempt + 1))
+                continue
+            raise
+        choices = response.choices or []
+        if choices and choices[0].message is not None:
+            # Elapsed time of the SUCCESSFUL attempt only — retry backoff
+            # must not pollute the per-call latency stats.
+            return response, time.monotonic() - attempt_started
+        finish = choices[0].finish_reason if choices else "no choices"
+        last_error = f"completion had no message (finish_reason={finish})"
+        time.sleep(2)
+    raise RuntimeError(f"LLM call failed after retries: {last_error}")
+
+
+def completion_kwargs(model: str) -> dict:
+    """Per-provider extras. Mirrors the runtime config choices:
+    - OpenAI: seed for (near-)reproducibility.
+    - Gemini: no seed (compat endpoint rejects it); thinking disabled like
+      build_llm's thinking_budget=0 ("none" is invalid for pro → "low").
+    """
+    if is_gemini_model(model):
+        # NOTE: the compat endpoint accepts no safety_settings (probed —
+        # extra_body.google only knows cached_content/thinking_config), and
+        # the block observed on delivery_split_phone is finish_reason
+        # PROHIBITED_CONTENT, Google's NON-configurable filter — it cannot be
+        # disabled via the native API either. Recorded as a turn error; it is
+        # model-decision evidence, not a harness bug.
+        return {"reasoning_effort": "low" if "pro" in model else "none"}
+    return {"seed": 7}
 
 SCENARIO_DIR = REPO_ROOT / "tests" / "scenarios"
 DEFAULT_OUT_DIR = REPO_ROOT / "docs" / "eval" / "baseline"
@@ -132,6 +209,7 @@ class ScenarioRun:
     turns: list[TurnRecord] = field(default_factory=list)
     final_cart: dict = field(default_factory=dict)
     assertions: list[dict] = field(default_factory=list)
+    llm_latencies: list[float] = field(default_factory=list)  # seconds per LLM call
 
     @property
     def passed(self) -> bool:
@@ -146,6 +224,9 @@ def _build_tools(agent: RestaurantAgent) -> tuple[list[dict], dict]:
     by_name: dict = {}
     for tool in agent.tools:
         schema = llm_utils.build_legacy_openai_schema(tool, internally_tagged=True)
+        # internally_tagged leaves "type": "function" INSIDE the function
+        # object; OpenAI ignores the extra key, Gemini's compat endpoint 400s.
+        schema = {k: v for k, v in schema.items() if k != "type"}
         schemas.append({"type": "function", "function": schema})
         by_name[schema["name"]] = tool
     return schemas, by_name
@@ -179,7 +260,8 @@ async def _run_scenario_inner(scenario: dict, model: str) -> ScenarioRun:
     channel = scenario.get("channel", "phone")
     agent = RestaurantAgent(is_phone=channel == "phone")
     tools, tools_by_name = _build_tools(agent)
-    client = OpenAI()
+    client = make_client(model)
+    extra_kwargs = completion_kwargs(model)
 
     run = ScenarioRun(name=scenario["name"], channel=channel, model=model)
     # The opening greeting is spoken by code (session.say) before the LLM's
@@ -242,13 +324,19 @@ async def _run_scenario_inner(scenario: dict, model: str) -> ScenarioRun:
             if round_no == MAX_TOOL_ROUNDS_PER_TURN:
                 turn.error = f"tool loop exceeded {MAX_TOOL_ROUNDS_PER_TURN} rounds"
                 break
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                tools=tools,
-                temperature=0,
-                seed=7,
-            )
+            try:
+                response, elapsed = create_with_retry(
+                    client,
+                    model=model,
+                    messages=messages,
+                    tools=tools,
+                    temperature=0,
+                    **extra_kwargs,
+                )
+            except RuntimeError as e:
+                turn.error = str(e)
+                break
+            run.llm_latencies.append(elapsed)
             msg = response.choices[0].message
             if not msg.tool_calls:
                 turn.assistant = (msg.content or "").strip()
@@ -262,23 +350,10 @@ async def _run_scenario_inner(scenario: dict, model: str) -> ScenarioRun:
                 agent.note_agent_speech(noted)
                 break
 
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": msg.content or "",
-                    "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function.name,
-                                "arguments": tc.function.arguments,
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ],
-                }
-            )
+            # Round-trip the raw assistant message rather than reconstructing
+            # it: Gemini 3 returns thought signatures as extra fields on the
+            # tool calls and 400s if they aren't echoed back verbatim.
+            messages.append(msg.model_dump(exclude_none=True))
             for tc in msg.tool_calls:
                 name = tc.function.name
                 try:
@@ -453,6 +528,19 @@ def _run_to_dict(run: ScenarioRun) -> dict:
         ],
         "final_cart": run.final_cart,
         "assertions": run.assertions,
+        "llm_latency": _latency_stats(run.llm_latencies),
+    }
+
+
+def _latency_stats(latencies: list[float]) -> dict:
+    if not latencies:
+        return {}
+    ordered = sorted(latencies)
+    return {
+        "calls": len(ordered),
+        "mean_s": round(sum(ordered) / len(ordered), 3),
+        "p95_s": round(ordered[max(0, int(len(ordered) * 0.95) - 1)], 3),
+        "max_s": round(ordered[-1], 3),
     }
 
 
@@ -507,7 +595,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--scenario", help="run only this scenario name")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT_DIR, help="output dir")
-    parser.add_argument("--model", default=llm_model_name(), help="OpenAI model id")
+    parser.add_argument(
+        "--model",
+        default=llm_model_name(),
+        help="model id (OpenAI, or gemini-* via the OpenAI-compat endpoint)",
+    )
     args = parser.parse_args()
 
     scenarios = _load_scenarios(args.scenario)
@@ -536,6 +628,14 @@ def main() -> None:
         errors = [t.error for t in r.turns if t.error]
         note = f" — failed: {failed}{errors}" if (failed or errors) else ""
         summary.append(f"- {'✅' if r.passed else '❌'} {r.name}{note}")
+    all_latencies = [s for r in results for s in r.llm_latencies]
+    if all_latencies:
+        stats = _latency_stats(all_latencies)
+        summary.append("")
+        summary.append(
+            f"- llm latency (per call): mean {stats['mean_s']}s, "
+            f"p95 {stats['p95_s']}s, max {stats['max_s']}s over {stats['calls']} calls"
+        )
     summary.append("")
     (args.out / "summary.md").write_text("\n".join(summary))
 

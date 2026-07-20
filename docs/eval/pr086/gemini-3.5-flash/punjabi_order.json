@@ -1,0 +1,193 @@
+{
+  "name": "punjabi_order",
+  "channel": "phone",
+  "model": "gemini-3.5-flash",
+  "passed": true,
+  "turns": [
+    {
+      "user": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ, ਦੋ ਬਟਰ ਚਿਕਨ ਲਗਾ ਦਿਓ।",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "quantity": 2,
+            "item_query": "butter chicken"
+          },
+          "result": "ADDED: 2 x Butter Chicken.\nORDER NOW: 2 x Butter Chicken. total=$39.98\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"two\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! ਬਿਲਕੁਲ, ਮੈਂ ਤੁਹਾਡੇ ਲਈ ਦੋ Butter Chicken ਲਿਖ ਲਏ ਹਨ। ਹੋਰ ਕੁਝ ਚਾਹੀਦਾ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "ਬੱਸ ਜੀ, ਹੋਰ ਕੁਝ ਨਹੀਂ।",
+      "tool_calls": [
+        {
+          "name": "record_additional_requests",
+          "args": {
+            "response": "no"
+          },
+          "result": "ADDITIONAL REQUESTS RECORDED: none.\nSPICE DEFAULTED: Butter Chicken set to medium (no preference stated — use set_item_spice if the customer actually named a level).\nORDER NOW: 2 x Butter Chicken [medium]. total=$39.98\nGUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about spice or allergies — then keep the order moving (pickup or delivery next if not set yet)."
+        }
+      ],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ, ਬਹੁਤ ਵਧੀਆ। ਇਹ ਆਰਡਰ ਤੁਸੀਂ pickup ਕਰਨਾ ਹੈ ਜਾਂ delivery ਕਰਵਾਉਣਾ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "ਮੀਡੀਅਮ ਠੀਕ ਹੈ ਜੀ, ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ।",
+      "tool_calls": [],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ, ਮੈਂ ਨੋਟ ਕਰ ਲਿਆ ਹੈ। ਇਹ ਆਰਡਰ ਤੁਸੀਂ pickup ਕਰਨਾ ਹੈ ਜਾਂ delivery ਕਰਵਾਉਣਾ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "Pickup ਜੀ।",
+      "tool_calls": [
+        {
+          "name": "set_order_type",
+          "args": {
+            "order_type": "pickup"
+          },
+          "result": "Set to pickup. Continue the flow."
+        }
+      ],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ, pickup ਲਈ ਲਿਖ ਲਿਆ ਹੈ। ਮੈਂ ਤੁਹਾਡਾ ਨਾਮ ਜਾਣ ਸਕਦੀ ਹਾਂ ਜੀ?"
+    },
+    {
+      "user": "ਮੇਰਾ ਨਾਮ Gurpreet ਹੈ।",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "name": "Gurpreet"
+          },
+          "result": "NAME SAVED: \"Gurpreet\".\nGUIDE: confirm the name briefly in the customer's language. Then ask for their phone number."
+        }
+      ],
+      "assistant": "ਬਹੁਤ ਵਧੀਆ, Gurpreet ਜੀ। ਤੁਹਾਡਾ ਫ਼ੋਨ ਨੰਬਰ ਕੀ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "Six four seven five five five three four five six.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "phone": "6475553456"
+          },
+          "result": "PHONE SAVED: six, four, seven, five, five, five, three, four, five, six.\nGUIDE: the number is already saved — do NOT ask the customer to repeat or re-say it. Confirm it back once yourself, speaking it as English word digits exactly as in PHONE SAVED (never numerals, never Punjabi/Hindi number words), then continue the order."
+        },
+        {
+          "name": "get_order_readback",
+          "args": {},
+          "result": "READBACK FACTS — read ALL of these to the customer in their language, then ask if everything is correct:\n- 2 x Butter Chicken [medium]\n- order type: pickup (say \"pickup\" in English)\n- name: Gurpreet\nGUIDE: phrase this warmly in your own words in the customer's language — but every item, its quantity (as a word, never a digit), and the order type must actually be spoken. Your spoken readback is checked — anything missing forces a re-read. End by asking if everything is correct."
+        }
+      ],
+      "assistant": "ਧੰਨਵਾਦ ਜੀ। ਮੈਂ ਤੁਹਾਡਾ ਫ਼ੋਨ ਨੰਬਰ six, four, seven, five, five, five, three, four, five, six ਨੋਟ ਕਰ ਲਿਆ ਹੈ। \n\nਹੁਣ ਮੈਂ ਤੁਹਾਡਾ ਆਰਡਰ ਇੱਕ ਵਾਰ ਪੜ੍ਹ ਕੇ ਸੁਣਾ ਦਿੰਦੀ ਹਾਂ:\n- ਤੁਹਾਡੇ ਕੋਲ ਦੋ Butter Chicken ਹਨ, ਜੋ ਕਿ medium spice ਵਿੱਚ ਹਨ।\n- ਇਹ ਆਰਡਰ pickup ਲਈ ਹੈ।\n- ਨਾਮ Gurpreet ਹੈ।\n\nਕੀ ਸਭ ਕੁਝ ਠੀਕ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "Yes.",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "Read-back confirmed. Call place_order now."
+        },
+        {
+          "name": "place_order",
+          "args": {},
+          "result": "Order placed! INTERNAL total $39.98. Tell customer: \"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!\" Do NOT mention price or dollars."
+        }
+      ],
+      "assistant": "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!",
+      "injected": true
+    },
+    {
+      "user": "ਹਾਂ ਜੀ, ਬਿਲਕੁਲ ਠੀਕ ਹੈ।",
+      "tool_calls": [],
+      "assistant": ""
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "placed",
+    "items": [
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 2,
+        "unit_price": 19.99,
+        "line_total": 39.98,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": "pickup",
+    "delivery_address": null,
+    "customer": {
+      "name": "Gurpreet",
+      "phone": "6475553456"
+    },
+    "subtotal": 39.98,
+    "delivery_charge": 0,
+    "total": 39.98,
+    "eta": "20-25 min",
+    "order_id": "9YMN3AZHYRKBG"
+  },
+  "assertions": [
+    {
+      "check": "gates: placed order had a confirmed, current readback",
+      "ok": true,
+      "detail": "readback_confirmed=True readback_revision=3 cart.revision=3"
+    },
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=True"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 2",
+      "ok": true,
+      "detail": "got qty=2"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    },
+    {
+      "check": "order_type",
+      "ok": true,
+      "detail": "got 'pickup'"
+    },
+    {
+      "check": "customer_name",
+      "ok": true,
+      "detail": "got 'Gurpreet'"
+    },
+    {
+      "check": "customer_phone",
+      "ok": true,
+      "detail": "got '6475553456'"
+    },
+    {
+      "check": "additional_requests_recorded",
+      "ok": true,
+      "detail": "got True"
+    },
+    {
+      "check": "readbacks: at least 1 successful",
+      "ok": true,
+      "detail": "got 1"
+    }
+  ],
+  "llm_latency": {
+    "calls": 16,
+    "mean_s": 1.888,
+    "p95_s": 1.779,
+    "max_s": 7.815
+  }
+}

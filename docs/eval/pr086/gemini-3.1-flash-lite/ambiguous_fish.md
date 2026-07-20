@@ -1,0 +1,63 @@
+# Scenario: ambiguous_fish
+
+- channel: phone
+- model: gemini-3.1-flash-lite
+- result: PASS
+
+## Transcript
+
+**SIERRA (greeting):** Hi! I'm Sierra, your virtual assistant. I speak English, Hindi, and Punjabi. How can I help you?
+
+**USER:** Can I get the fish?
+> `search_menu({"query": "fish"})` → Browse result for 'fish' (mention at most TWO in ONE casual sentence — never a numbered list): Amritsari Fish Pakora → say "Fish Pakora" | Punjabi Fish Curry → say "Punjabi Fish Curry". Good: "ਹਾਂ ਜੀ, ਸਾਡੇ ਕੋਲ X ਤੇ Y ਹੈ — ਕਿਹੜਾ?" Bad: "1 X, 2 Y" or "first X, second Y". Ask which they would like.
+**SIERRA:** We have the Fish Pakora and the Punjabi Fish Curry — which one would you like?
+
+**USER:** The fish pakora please.
+> `add_item({"quantity": 1, "item_query": "Amritsari Fish Pakora"})` → ADDED: 1 x Fish Pakora (Amritsari Fish Pakora). ⏎ ORDER NOW: 1 x Fish Pakora (Amritsari Fish Pakora). total=$14.99 ⏎ GUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as "one", never a digit), then keep the order moving.
+**SIERRA:** Sure thing, I've got one Fish Pakora down for you. Anything else I can get you with that?
+
+**USER:** That's it for now.
+> `record_additional_requests({"response": "none"})` → ADDITIONAL REQUESTS RECORDED: none. ⏎ SPICE DEFAULTED: Fish Pakora set to medium (no preference stated — use set_item_spice if the customer actually named a level). ⏎ ORDER NOW: 1 x Fish Pakora (Amritsari Fish Pakora) [medium]. total=$14.99 ⏎ GUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about spice or allergies — then keep the order moving (pickup or delivery next if not set yet).
+**SIERRA:** Got it. Would you like to pick that up, or should we deliver it for you?
+
+## Final cart
+
+```json
+{
+  "v": 1,
+  "status": "building",
+  "items": [
+    {
+      "id": "8BGZA0MVS825P",
+      "name": "Amritsari Fish Pakora",
+      "voice_line": "Fish Pakora",
+      "qty": 1,
+      "unit_price": 14.99,
+      "line_total": 14.99,
+      "note": "medium",
+      "modifiers": [
+        "medium"
+      ]
+    }
+  ],
+  "order_type": null,
+  "delivery_address": null,
+  "customer": {
+    "name": null,
+    "phone": null
+  },
+  "subtotal": 14.99,
+  "delivery_charge": 0,
+  "total": 14.99,
+  "eta": null,
+  "order_id": null
+}
+```
+
+## Assertions
+
+- ✅ placed — cart.placed=False
+- ✅ items: exact set of dishes — cart=['Amritsari Fish Pakora']
+- ✅ items: Amritsari Fish Pakora qty == 1 — got qty=1
+- ✅ transcript never contains 'Punjabi Fish Curry ਅਤੇ'
+- ✅ transcript never contains 'both fish'

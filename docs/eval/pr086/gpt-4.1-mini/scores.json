@@ -1,0 +1,468 @@
+{
+  "dir": "docs/eval/pr080/gpt-4.1-mini",
+  "model": "gpt-4.1-mini",
+  "judge_model": "gpt-4.1",
+  "scenarios": [
+    {
+      "scenario": "ambiguous_fish",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": null,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": null,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": null
+      },
+      "llm_latency": {
+        "calls": 5,
+        "mean_s": 1.179,
+        "p95_s": 1.226,
+        "max_s": 1.381
+      }
+    },
+    {
+      "scenario": "change_after_readback",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 2,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [
+        "Sure thing, I've got one Butter Chicken with medium spice for you. Anything else you'd like to add? — varied acknowledgement, not repeated",
+        "Alright, before we finish, do you have any spice preferences, allergies, or special instructions for the kitchen? — longer sentence",
+        "Great, I've noted no allergies or special requests. Would you like to pick up your order or have it delivered? — medium-length, natural",
+        "Pickup it is. Can I have your name for the order, please? — short and direct",
+        "Got it, your phone number is four one six five five five two two three three. Let me read back your order: one Butter Chicken with medium spice, for pickup under the name Jasleen. Is everything correct? — mixes short confirm with full readback",
+        "No problem, I've added one Garlic Naan to your order. Anything else you'd like? — natural, warm, and varied",
+        "Alright Jasleen, your order now has one Butter Chicken with medium spice and one Garlic Naan, for pickup. Is everything correct? — full, clear, and warm readback",
+        "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ! — appropriate code-switch to Punjabi at close"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 3,
+        "repeated_phrases": [
+          "is everything correct"
+        ],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 10,
+        "baseline_turns_to_place": 10,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 21,
+        "mean_s": 1.105,
+        "p95_s": 1.444,
+        "max_s": 1.502
+      }
+    },
+    {
+      "scenario": "delivery_split_phone",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 3,
+        "sentence_length_variety": 4,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 4,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 1,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [
+        "\"Anything else you'd like to add?\" — repeated twice, mechanical",
+        "\"Got it, your Dal Makhani will be spicy. Anything else you'd like to add?\" — similar structure, little variety",
+        "\"Alright, no allergies or special instructions noted.\" — slightly meta, but not tool narration",
+        "\"Thanks for that. Now, is this order for pickup or delivery?\" — smooth confusion handling",
+        "\"Thanks, Navdeep, and your phone number six four seven five five five one two one two is all set.\" — confirms phone as required",
+        "\"Let me read back your order: one spicy Dal Makhani and two Butter Naan for delivery. Is everything correct?\" — meta-speech: 'Let me read back your order'"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 12,
+        "baseline_turns_to_place": 11,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 20,
+        "mean_s": 1.193,
+        "p95_s": 1.624,
+        "max_s": 1.81
+      }
+    },
+    {
+      "scenario": "english_pickup",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 4,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 2
+      },
+      "evidence": [
+        "one ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan) for you — spoken parenthetical"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 2,
+        "mech_spoken_parenthetical_hits": [
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)",
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)"
+        ],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": 8,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 15,
+        "mean_s": 1.274,
+        "p95_s": 1.921,
+        "max_s": 1.93
+      }
+    },
+    {
+      "scenario": "hindi_order",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 2
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 2,
+        "mech_spoken_parenthetical_hits": [
+          "जी, एक Paneer Tikka और एक ਗੁਲਾਬ ਜਾਮੁਨ (Gulab Jamun)",
+          "रोहन जी, आपके ऑर्डर में एक Paneer Tikka मीडियम स्पाइस के साथ और एक ਗੁਲਾਬ ਜਾਮੁਨ (Gulab Jamun)"
+        ],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": 8,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 15,
+        "mean_s": 1.249,
+        "p95_s": 1.722,
+        "max_s": 1.816
+      }
+    },
+    {
+      "scenario": "no_spice_mentioned",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 4,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 4,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 1,
+        "spoken_parenthetical": 3
+      },
+      "evidence": [
+        "Now let me read back your order to make sure everything is correct. — meta-speech (narrates readback step)",
+        "one ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan) — spoken parenthetical inside English sentence"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 3,
+        "mech_spoken_parenthetical_hits": [
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)",
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)",
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)"
+        ],
+        "turns_to_place": 8,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 17,
+        "mean_s": 1.212,
+        "p95_s": 1.641,
+        "max_s": 1.837
+      }
+    },
+    {
+      "scenario": "price_ask_phone",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": null,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": null,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": null
+      },
+      "llm_latency": {
+        "calls": 5,
+        "mean_s": 1.19,
+        "p95_s": 1.119,
+        "max_s": 1.794
+      }
+    },
+    {
+      "scenario": "punjabi_order",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 7,
+        "baseline_turns_to_place": 8,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 15,
+        "mean_s": 1.213,
+        "p95_s": 1.437,
+        "max_s": 1.718
+      }
+    },
+    {
+      "scenario": "quantity_correction",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 5,
+        "sentence_length_variety": 5,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 5,
+        "confusion_handling_grace": 5
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 0,
+        "spoken_parenthetical": 0
+      },
+      "evidence": [],
+      "mechanical": {
+        "peak_phrase_repeat": 1,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 0,
+        "mech_spoken_parenthetical_hits": [],
+        "turns_to_place": 8,
+        "baseline_turns_to_place": 9,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 18,
+        "mean_s": 1.659,
+        "p95_s": 2.108,
+        "max_s": 7.599
+      }
+    },
+    {
+      "scenario": "sloppy_readback",
+      "harness_passed": true,
+      "scores": {
+        "acknowledgement_variety": 3,
+        "sentence_length_variety": 4,
+        "code_mix_appropriateness": 5,
+        "zero_meta_speech": 3,
+        "confusion_handling_grace": 4
+      },
+      "checkout_efficiency": 5,
+      "flags": {
+        "stray_language": 0,
+        "roman_indic": 0,
+        "ungrounded_dish": 0,
+        "fact_contradiction": 0,
+        "meta_speech": 2,
+        "spoken_parenthetical": 5
+      },
+      "evidence": [
+        "\"Anything else you'd like with that?\" — repeated structure, limited variety",
+        "\"Let me read back your order to make sure everything is correct.\" — meta-speech, narrates process",
+        "\"Let me read back your order again to confirm.\" — meta-speech, narrates process",
+        "\"one ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)\" — spoken parenthetical inside English sentence",
+        "\"one ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)\" — spoken parenthetical inside English sentence"
+      ],
+      "mechanical": {
+        "peak_phrase_repeat": 2,
+        "repeated_phrases": [],
+        "mech_stray_language_chars": "",
+        "mech_stray_language": 0,
+        "mech_roman_indic": 0,
+        "mech_roman_indic_hits": [],
+        "mech_spoken_parenthetical": 5,
+        "mech_spoken_parenthetical_hits": [
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)",
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)",
+          "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)"
+        ],
+        "turns_to_place": 10,
+        "baseline_turns_to_place": null,
+        "checkout_efficiency": 5
+      },
+      "llm_latency": {
+        "calls": 20,
+        "mean_s": 1.362,
+        "p95_s": 1.91,
+        "max_s": 2.128
+      }
+    }
+  ],
+  "dimension_means": {
+    "acknowledgement_variety": 4.1,
+    "sentence_length_variety": 4.8,
+    "code_mix_appropriateness": 5.0,
+    "zero_meta_speech": 4.6,
+    "confusion_handling_grace": 4.9,
+    "checkout_efficiency": 5.0
+  },
+  "flag_totals": {
+    "stray_language": 0,
+    "roman_indic": 0,
+    "ungrounded_dish": 0,
+    "fact_contradiction": 0,
+    "meta_speech": 4,
+    "spoken_parenthetical": 12
+  },
+  "harness_pass_rate": "10/10",
+  "mean_llm_latency_s": 1.264
+}
