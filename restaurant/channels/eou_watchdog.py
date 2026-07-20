@@ -58,15 +58,36 @@ def eou_watchdog_seconds() -> float:
     return max(0.0, value)
 
 
+def eou_watchdog_max_seconds() -> float:
+    """Absolute wall-clock cap on the watchdog delay (EOU_WATCHDOG_MAX_SEC).
+
+    The per-token slide (see _on_transcript) re-arms the timeout on every
+    interim, so under slow, pausing dictation the commit deadline compounds
+    and never caps — transcript_delay was seen at 16s live. This bounds the
+    total wait to max_sec after VAD end-of-speech regardless of streaming
+    interims. 0 disables the cap (bit-for-bit the pre-cap sliding behavior).
+    """
+    raw = os.getenv("EOU_WATCHDOG_MAX_SEC", "").strip()
+    if not raw:
+        return 4.0
+    try:
+        value = float(raw)
+    except ValueError:
+        return 4.0
+    return max(0.0, value)
+
+
 @dataclass
 class EouWatchdog:
     timeout_sec: float = field(default_factory=eou_watchdog_seconds)
+    max_sec: float = field(default_factory=eou_watchdog_max_seconds)
     _session: AgentSession | None = None
     _timer: asyncio.Task | None = None
     _has_interim: bool = False
     _fired_this_turn: bool = False
     _pending_stt_reset: bool = False
     _fired_at: float = 0.0
+    _user_stopped_at: float = 0.0
 
     def attach(self, session: AgentSession) -> None:
         if self.timeout_sec <= 0:
@@ -82,7 +103,12 @@ class EouWatchdog:
                 self._cancel_timer()
                 self._fired_this_turn = False
                 self._pending_stt_reset = False
+                self._user_stopped_at = 0.0
             elif ev.new_state == "listening":
+                # Anchor the absolute cap at the VAD end-of-speech; every
+                # later re-arm measures against this instant, not the last
+                # token, so the total wait can't slide past max_sec.
+                self._user_stopped_at = time.time()
                 self._arm_timer()
 
         @session.on("user_input_transcribed")
@@ -94,6 +120,10 @@ class EouWatchdog:
                 # this watchdog exists for), so a final — not just a VAD
                 # "speaking" transition — must re-enable it.
                 self._fired_this_turn = False
+                # A real final closes this turn; a following VAD-missed
+                # utterance must get a fresh max_sec budget, not fire
+                # instantly against the previous turn's stopped-at anchor.
+                self._user_stopped_at = 0.0
             elif (ev.transcript or "").strip():
                 self._has_interim = True
                 # Under noise Soniox delays even non-final tokens; slide the
@@ -134,15 +164,24 @@ class EouWatchdog:
         self._cancel_timer()
         if self._fired_this_turn:
             return
-        self._timer = asyncio.create_task(self._watch())
+        delay = self.timeout_sec
+        if self.max_sec > 0 and self._user_stopped_at > 0:
+            # Never let a re-arm push the commit past user_stopped_at + max_sec.
+            delay = min(delay, max(0.0, self._user_stopped_at + self.max_sec - time.time()))
+        if delay <= 0:
+            # The cap is already spent — commit now instead of scheduling a
+            # zero-length sleep (which would still yield a full event-loop tick).
+            self._maybe_commit()
+            return
+        self._timer = asyncio.create_task(self._watch(delay))
 
     def _cancel_timer(self) -> None:
         if self._timer is not None:
             self._timer.cancel()
             self._timer = None
 
-    async def _watch(self) -> None:
-        await asyncio.sleep(self.timeout_sec)
+    async def _watch(self, delay: float) -> None:
+        await asyncio.sleep(delay)
         self._timer = None
         self._maybe_commit()
 
