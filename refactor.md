@@ -41,7 +41,7 @@ Statuses: ☐ TODO · 🔶 IN PROGRESS · ✅ DONE
 
 **Key files:** `restaurant/agent/core.py` (agent + tools), `gates.py`, `prompt.py`, `replies.py`, `language.py`, `worker.py`, `restaurant/orders.py`, `restaurant/voice_stack.py`. Tests mirror modules in `tests/`.
 
-**PR numbering:** steps map to PRs 074–080. Highest existing doc is `pr/pr_069_*`; 070–073 are claimed by parked plans (current_fixes.md, echo_gaps.md) — verify free numbers against branches before creating each doc.
+**PR numbering:** steps map to PRs 074–086. Highest existing doc is `pr/pr_069_*`; 070–073 are claimed by parked plans (current_fixes.md, echo_gaps.md) — verify free numbers against branches before creating each doc.
 
 ---
 
@@ -147,7 +147,7 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 
 ---
 
-## Step 4 (PR 077) — Persona + checklist-driven prompt — ☐ TODO
+## Step 4 (PR 077) — Persona + checklist-driven prompt — ✅ DONE
 
 **Goal:** replace the scripted prompt with the approved AI-cashier persona + goal checklist.
 
@@ -160,20 +160,34 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 4. TOOL CONTRACT — tool list, TRUST TOOL RESULTS, NEVER GUESS, additive-add warning: content unchanged.
 5. CHANNEL — phone/web blocks, price policy unchanged.
 
+**4c — Persona drift enforcement (user-requested 2026-07-18; style can't be hard-gated like the money path, so prevent + re-anchor):**
+- **GUIDE-line style nudges:** every `facts.py` GUIDE line carries a persona re-anchor ("confirm this warmly in the customer's language, in your own words") — the text closest to the generation point re-injects style on every cart mutation. Keep nudges short; facts stay facts.
+- **Periodic context re-anchoring:** inject a one-line system-role reminder ("you're still Sierra at the counter — warm, flowing, never robotic") into the chat context every N turns via the before-LLM hook (LiveKit chat-ctx edit). N configurable (`PERSONA_REANCHOR_TURNS`, default ~8; `0` = off). No latency cost, no turn regeneration.
+- Explicitly OUT of this step: a robotic-marker detection watchdog (revisit in Step 7 once live transcripts exist to calibrate markers).
+
 **Canned lines (all rewritten in persona voice):** opening greeting — keep fixed (latency-critical, pre-LLM `session.say`); `order_placed_goodbye` — keep fixed (wired into hang-up choreography ~`core.py:809`), add language variants keyed off `state.preferred_language`; echo/background reprompts — keep fixed (spoken under `StopResponse`, no LLM turn exists), 2–3 variant pools, no immediate repeats; reservation confirm (~`core.py:949`) — hand to LLM as facts (ref digits as English words); transfer exact line — relax to guidance.
 
 **Rollback:** `PROMPT_STYLE=legacy` env flag keeps the old builder for one release.
 
-**Verify:** prompt unit tests assert non-negotiables present in the assembled prompt (both styles); full harness scored side-by-side vs Step 1 baseline; 5+ live calls per language; transcript review for re-greeting/meta-speech regressions (the old regexes never actually fired on speech — review replaces them).
+**Verify:** prompt unit tests assert non-negotiables present in the assembled prompt (both styles); re-anchor unit test (reminder appears at turn N, absent before, `0` disables); GUIDE nudges covered by existing `facts.py` tests; full harness scored side-by-side vs Step 1 baseline; 5+ live calls per language; transcript review for re-greeting/meta-speech regressions (the old regexes never actually fired on speech — review replaces them).
 
 **Definition of done:** persona approved by user; new prompt live behind flag default-on; harness + live calls reviewed.
 
 ### Checkpoint (fill in when done)
-- Date / branch / commit:
-- Final approved persona summary (one paragraph):
+- Date / branch / commit: 2026-07-18 / `pr_077_persona-checklist-prompt` (off pr_076) / see branch tip (committed locally, NOT pushed — user approval required).
+- Final approved persona summary (one paragraph): Sierra is an AI cashier at Bizbull (honest about being an AI, no fake-human backstory) with a warm, quick Punjabi-counter manner; **fuller flowing sentences per explicit user feedback** ("longer like a person talking, not direct") — one or two relaxed sentences per turn, at most one question, varied acknowledgements; native-script fillers (ਹਾਂ ਜੀ / ज़रूर — never Roman); mirror-the-customer code-mix; four tone micro-dialogues (en/pa/hi/undecided). Approved 2026-07-18.
 - Deviations:
-- Live-call review findings:
+  - **Tone examples needed `[tools: …]` annotations** (post-approval amendment, spoken lines untouched): dialogue-only few-shots deterministically taught gpt-4.1-mini to add only the FIRST of several dishes named in one turn and chat about the rest (`no_spice_mentioned` failed; legacy style passed; stripping examples passed). Annotating each example with the tool calls made before speaking fixed it. Lesson for Step 7: few-shots teach tool-call behavior, not just tone — always show the calls.
+  - New persona-style NEVER GUESS bullet ("several dishes in one turn → add EVERY one before speaking") — needed alongside the annotations; legacy prompt untouched/verbatim (incl. old exact transfer line).
+  - Reprompt-pool fragments deliberately NOT all added to `phone_echo._RECOVERY_ECHO_PHRASES` — caller-plausible ones ("one more time", "ਇੱਕ ਵਾਰ ਫਿਰ") would drop real callers asking us to repeat (PR 073 lesson); only "take your time" added, full-line echoes covered via `_recent_agent_lines`.
+  - Opening greeting left as-is (plan said keep fixed); recovery_phrase untouched (sanitizer fallback, dies in Step 6).
+  - 4c shipped as planned: GUIDE style nudges (facts.py + core inline GUIDEs) and `PERSONA_REANCHOR_TURNS` (default 8) system-line injection in `on_user_turn_completed`, persona style only.
+- Live-call review findings: **NOT yet live-called** — harness only (9/9 twice, committed `docs/eval/pr077/`; full suite 301 passed). Plan calls for 5+ live calls per language after deploy; rollback `PROMPT_STYLE=legacy`.
 - Notes for next session:
+  - Persona feel confirmed in transcripts: "ਮੈਂ ਦੋ ਸਮੋਸਾ ਚਾਟ ... ਲਿਖ ਲਈ ਹੈ ਜੀ", "Sure thing — so I've got two Butter Chicken ... down for you", varied acks per turn.
+  - Watch items for live calls / Step 7: (1) model sometimes speaks the grounding parenthetical "ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)" — pre-existing (4 occurrences in pr076 run too), consider a hard-rule line or facts format change; (2) Hindi turns rendered checkout terms in Devanagari ("पिकअप") mid-flow — readback itself stayed English so Step 5's verifier is unaffected, but the checkout-English rule is being bent.
+  - Step 5 dependencies intact: voice_line + English-checkout hard rules carried verbatim into HARD SPEECH RULES; readback still VERBATIM from `get_order_readback` (Step 5 rewrites that).
+  - Clover customer upsert HTTP 400 (city/state/zip) still appearing in delivery harness runs — pre-existing, fail-open, unrelated.
 
 ---
 
@@ -224,7 +238,7 @@ Facts must not be contradicted; phrasing is the LLM's. `total=` stays in facts (
 
 ---
 
-## Step 7 (PR 080) — Calibration: rubric, judge, model decision — ☐ TODO
+## Step 7 (PR 086) — Calibration: rubric, judge, model decision — ☐ TODO
 
 **Goal:** systematize "sounds natural"; decide gpt-4.1-mini vs gpt-4.1; finish rollout flags.
 

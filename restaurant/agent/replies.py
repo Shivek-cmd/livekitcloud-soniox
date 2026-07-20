@@ -8,6 +8,7 @@ structured facts in restaurant/agent/facts.py (PR 075).
 
 from __future__ import annotations
 
+import random
 import re
 from typing import TYPE_CHECKING
 
@@ -26,11 +27,27 @@ def _format_dollars(amount: float) -> str:
     return f"{amount:.2f}"
 
 
-def order_placed_goodbye(*, order_type: str | None) -> str:
-    """Fixed Punjabi closing line after a successful order."""
-    wait = "30-40 ਮਿੰਟ" if order_type == "delivery" else "20-25 ਮਿੰਟ"
+def order_placed_goodbye(*, order_type: str | None, language: str | None = None) -> str:
+    """Fixed closing line after a successful order — spoken by code (hang-up
+    choreography), variant keyed off the customer's preferred language.
+    Punjabi remains the default for pa/mixed/unknown."""
+    delivery = order_type == "delivery"
+    lang = str(language or "").lower()
+    if lang == "en":
+        wait = "30 to 40 minutes" if delivery else "20 to 25 minutes"
+        return (
+            f"Perfect, your order's in! It'll be ready in {wait}. "
+            "Thank you so much ji — see you soon!"
+        )
+    if lang == "hi":
+        wait = "30-40 मिनट" if delivery else "20-25 मिनट"
+        return (
+            f"आपका ऑर्डर मिल गया जी! {wait} में तैयार हो जाएगा। "
+            "धन्यवाद जी, फिर मिलेंगे!"
+        )
+    wait = "30-40 ਮਿੰਟ" if delivery else "20-25 ਮਿੰਟ"
     return (
-        f"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ। {wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਧੰਨਵਾਦ ਜੀ!"
+        f"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! {wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!"
     )
 
 
@@ -98,14 +115,40 @@ def recovery_phrase(*, is_phone: bool) -> str:
     return "Sorry ji — go ahead whenever you're ready."
 
 
+# Reprompt variant pools (PR 077) — spoken by code under StopResponse, so no
+# LLM turn exists to vary them; a small pool + no-immediate-repeat does it.
+# Every fragment here must stay covered by phone_echo._RECOVERY_ECHO_PHRASES
+# so an echo of our own reprompt is never treated as caller speech.
+_ECHO_RECOVERY_POOL = (
+    "ਮੈਂ ਸੁਣ ਰਹੀ ਹਾਂ — go ahead ji.",
+    "ਹਾਂ ਜੀ, ਮੈਂ ਸੁਣ ਰਹੀ ਹਾਂ — take your time.",
+    "Go ahead ji — I'm listening.",
+)
+
+_BACKGROUND_REPEAT_POOL = (
+    "Sorry, I didn't catch that — could you repeat please?",
+    "Sorry ji, it got a little noisy there — one more time please?",
+    "ਮਾਫ਼ ਕਰਨਾ ਜੀ, ਇੱਕ ਵਾਰ ਫਿਰ ਦੱਸੋਗੇ?",
+)
+
+_last_variant: dict[str, str] = {}
+
+
+def _pick_variant(key: str, pool: tuple[str, ...]) -> str:
+    options = [line for line in pool if line != _last_variant.get(key)] or list(pool)
+    line = random.choice(options)
+    _last_variant[key] = line
+    return line
+
+
 def echo_recovery_phrase() -> str:
     """Short reprompt after phone echo drop — avoid echoing Sierra's own prior line."""
-    return "ਮੈਂ ਸੁਣ ਰਹੀ ਹਾਂ — go ahead ji."
+    return _pick_variant("echo", _ECHO_RECOVERY_POOL)
 
 
 def background_repeat_phrase() -> str:
     """One reprompt when background noise caused dropped turns."""
-    return "Sorry, I didn't catch that — could you repeat please?"
+    return _pick_variant("background", _BACKGROUND_REPEAT_POOL)
 
 
 # ── Assistant output guard ────────────────────────────────────────────────────

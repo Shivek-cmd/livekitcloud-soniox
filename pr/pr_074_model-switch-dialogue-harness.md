@@ -10,7 +10,7 @@ measurement tool BEFORE any behavior changes: a dev-only dialogue harness that
 drives the real `RestaurantAgent` tools through a scripted customer
 conversation using real OpenAI calls (no audio, no LiveKit session), plus 8
 scenario scripts and a committed baseline run against the current prompt so
-every later step (PRs 075–080) has a before/after.
+every later step (PRs 075–086) has a before/after.
 
 ## Files Added
 ### `scripts/dialogue_harness.py`
@@ -88,9 +88,9 @@ None.
 
 ## What's NOT in This PR
 No prompt, tool-reply, flow, persona, readback, or speech-guard changes —
-behavior is identical except for the model name. Those are PRs 075–080.
+behavior is identical except for the model name. Those are PRs 075–086.
 The harness does not simulate STT noise/echo/background filters (audio-path
-only) and does not score naturalness (judge/rubric is PR 080).
+only) and does not score naturalness (judge/rubric is PR 086).
 
 ## How to Test
 ```

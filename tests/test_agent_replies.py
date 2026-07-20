@@ -51,6 +51,43 @@ def test_goodbye_eta_by_order_type():
     assert "30-40" in order_placed_goodbye(order_type="delivery")
 
 
+def test_goodbye_language_variants():
+    # Punjabi default for pa / mixed / unknown.
+    for lang in (None, "pa", "mixed"):
+        line = order_placed_goodbye(order_type="pickup", language=lang)
+        assert "ਤੁਹਾਡਾ ਆਰਡਰ" in line and "ਧੰਨਵਾਦ" in line
+
+    en = order_placed_goodbye(order_type="delivery", language="en")
+    assert "30 to 40 minutes" in en and "Thank you" in en
+
+    hi = order_placed_goodbye(order_type="pickup", language="hi")
+    assert "आपका ऑर्डर" in hi and "धन्यवाद" in hi and "20-25" in hi
+
+
+def test_reprompt_pools_no_immediate_repeat():
+    from restaurant.agent.replies import (
+        background_repeat_phrase,
+        echo_recovery_phrase,
+    )
+
+    for phrase_fn in (echo_recovery_phrase, background_repeat_phrase):
+        prev = phrase_fn()
+        for _ in range(10):
+            cur = phrase_fn()
+            assert cur != prev
+            prev = cur
+
+
+def test_reprompt_pool_lines_never_treated_as_caller_speech():
+    """Echo of our own reprompt (agent line noted) must be filtered, but the
+    pool must not contain lines a real caller would plausibly say cold."""
+    from restaurant.agent.replies import _BACKGROUND_REPEAT_POOL, _ECHO_RECOVERY_POOL
+    from restaurant.channels.phone_echo import is_likely_phone_echo
+
+    for line in (*_ECHO_RECOVERY_POOL, *_BACKGROUND_REPEAT_POOL):
+        assert is_likely_phone_echo(line, [line], intent=None)
+
+
 def test_sanitize_strips_mid_call_regreeting():
     out = sanitize_assistant_speech(
         "Hi! I'm Sierra from Bizbull, how can I help?",

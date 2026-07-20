@@ -77,21 +77,25 @@ def _mutation_head(mutation: "CartMutation") -> str:
 
 
 def _mutation_guide(mutation: "CartMutation") -> str:
+    # Each GUIDE carries a short persona re-anchor (PR 077, 4c): this text sits
+    # right next to the generation point, so it steers style far more than the
+    # distant system prompt — facts stay facts, the nudge is about delivery.
     qty = _qty_word(mutation.quantity)
     if mutation.kind in ("added", "merged"):
         return (
-            "GUIDE: confirm the add briefly in the customer's language using "
-            f'the exact dish name and quantity above (quantity spoken as "{qty}", '
+            "GUIDE: confirm the add in the customer's language — warm and in "
+            "your own words, never reading these lines aloud — using the exact "
+            f'dish name and quantity above (quantity spoken as "{qty}", '
             "never a digit), then keep the order moving."
         )
     if mutation.kind == "updated":
         return (
-            "GUIDE: confirm the correction briefly in the customer's language "
-            f'— it is a fix to "{qty}" total, not a second add.'
+            "GUIDE: reassure the customer in their language, in your own "
+            f'words, that it is fixed — "{qty}" total, not a second add.'
         )
     return (
-        "GUIDE: confirm the removal briefly in the customer's language, then "
-        "keep the order moving."
+        "GUIDE: confirm the removal in the customer's language, warm and "
+        "natural, then keep the order moving."
     )
 
 
