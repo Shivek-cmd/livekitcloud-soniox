@@ -43,6 +43,7 @@ from restaurant.agent.language import update_preferred_language
 from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
 from restaurant.agent.prompt import build_system_prompt, prompt_style
 from restaurant.agent.readback_verify import readback_verify_mode, verify_readback
+from restaurant.agent.tts_transform import phone_enforced_stream, tts_phone_enforce_enabled
 from restaurant.agent.replies import (
     background_repeat_phrase,
     echo_recovery_phrase,
@@ -183,6 +184,16 @@ class RestaurantAgent(Agent):
             return False
         handle = self._session.current_speech
         return handle is not None and not handle.done()
+
+    def tts_node(self, text, model_settings):
+        """PR 079 — phone-digit enforcement in the REAL audio path: whatever
+        the LLM wrote, TTS only ever hears the stored phone as English word
+        digits. Rollback: TTS_PHONE_ENFORCE=0."""
+        if tts_phone_enforce_enabled():
+            text = phone_enforced_stream(
+                text, lambda: self.cart.customer_phone or None
+            )
+        return Agent.default.tts_node(self, text, model_settings)
 
     def note_agent_speech(self, text: str) -> None:
         line = text.strip()

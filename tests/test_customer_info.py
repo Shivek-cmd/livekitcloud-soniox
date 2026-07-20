@@ -3,7 +3,6 @@
 import pytest
 
 from restaurant import menu_provider
-from restaurant.agent.replies import sanitize_assistant_speech
 from restaurant.clover.menu import MenuCache
 from restaurant.clover.models import CachedMenuItem
 from restaurant.customer_info import (
@@ -109,15 +108,33 @@ def test_enforce_english_phone_replaces_indic_numerals():
     assert "੯" not in out
 
 
-def test_sanitize_rewrites_phone_to_english_digits():
+def test_enforce_rewrites_ascii_phone_in_place():
+    # Migrated from the deleted sanitize_assistant_speech (PR 079) — the
+    # enforcement now runs in the TTS path, directly on this function.
     phone = "9413752688"
     raw = "Your number is 94137 52688, correct?"
-    out = sanitize_assistant_speech(
-        raw,
-        allow_greeting=True,
-        customer_phone=phone,
-    )
+    out = enforce_english_phone_in_speech(raw, phone)
     assert "nine" in out
+    assert out.startswith("Your number is")
+    assert "correct?" in out
+
+
+def test_enforce_word_chain_replaced_in_place():
+    # PR 079 — a spoken digit-word chain must be canonicalized WITHOUT
+    # deleting the surrounding speech (this output is actually spoken now).
+    phone = "9413752688"
+    raw = "So that's nine four one three seven five two six eight eight, is that right?"
+    out = enforce_english_phone_in_speech(raw, phone)
+    assert out.startswith("So that's")
+    assert "is that right?" in out
+    assert "nine, four, one, three, seven, five, two, six, eight, eight" in out
+
+
+def test_enforce_short_digit_words_untouched():
+    # Quantity words must never be rewritten as phone digits.
+    phone = "9413752688"
+    raw = "two Butter Chicken and three Garlic Naan"
+    assert enforce_english_phone_in_speech(raw, phone) == raw
 
 
 def test_parse_customer_name_exact():

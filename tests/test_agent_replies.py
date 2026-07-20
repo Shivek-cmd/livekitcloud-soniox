@@ -1,10 +1,10 @@
-"""Tests for restaurant.agent.replies — status template + speech guard.
-(The VERBATIM readback formatter moved to READBACK FACTS in PR 078.)"""
+"""Tests for restaurant.agent.replies — status template + canned lines.
+(The VERBATIM readback formatter moved to READBACK FACTS in PR 078; the
+log-only speech guard was deleted in PR 079.)"""
 
 from restaurant.agent.replies import (
     format_order_status,
     order_placed_goodbye,
-    sanitize_assistant_speech,
 )
 from restaurant.orders import OrderCart
 
@@ -69,25 +69,3 @@ def test_reprompt_pool_lines_never_treated_as_caller_speech():
 
     for line in (*_ECHO_RECOVERY_POOL, *_BACKGROUND_REPEAT_POOL):
         assert is_likely_phone_echo(line, [line], intent=None)
-
-
-def test_sanitize_strips_mid_call_regreeting():
-    out = sanitize_assistant_speech(
-        "Hi! I'm Sierra from Bizbull, how can I help?",
-        allow_greeting=False,
-    )
-    assert "Sierra from Bizbull" not in out
-
-
-def test_sanitize_allows_opening_greeting():
-    text = "Sat Sri Akal! Welcome to Bizbull."
-    assert sanitize_assistant_speech(text, allow_greeting=True) == text
-
-
-def test_sanitize_strips_meta_and_price_speech():
-    out = sanitize_assistant_speech(
-        "I've added Butter Chicken, total about 17 dollars.",
-        allow_greeting=False,
-    )
-    assert "added" not in out.lower()
-    assert "dollars" not in out.lower()
