@@ -74,6 +74,9 @@ def _make_ready(agent):
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7805551234"))
     run(agent.get_order_readback())
+    # Feed the spoken readback so the confirm is verifier-clean in any
+    # READBACK_VERIFY mode (PR 078).
+    agent.note_agent_speech("So that's two Garlic Naan for pickup — correct?")
     run(agent.confirm_readback())
 
 
