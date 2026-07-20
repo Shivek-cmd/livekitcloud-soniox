@@ -39,6 +39,7 @@ from restaurant.agent.facts import (
     format_mutation_reply,
     format_readback_facts,
 )
+from restaurant.agent.add_claim_verify import add_claim_verify_mode, falsely_claims_add
 from restaurant.agent.language import update_preferred_language
 from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
 from restaurant.agent.prompt import build_system_prompt, prompt_style
@@ -47,6 +48,7 @@ from restaurant.agent.tts_transform import phone_enforced_stream, tts_phone_enfo
 from restaurant.agent.replies import (
     background_repeat_phrase,
     echo_recovery_phrase,
+    false_add_correction_phrase,
     format_order_status,
     order_placed_goodbye,
 )
@@ -102,6 +104,10 @@ _NO_ALLERGIES_RE = re.compile(
 
 _SPICE_NOTE_RE = re.compile(r"\b(?:extra[ -]spicy|medium|mild|spicy)\b", re.I)
 
+# PR 081 — every _resolve_menu_item refusal leads with this so the LLM can
+# never mistake a refusal for a success; the prompt keys off the ⛔ marker.
+_REFUSAL_PREFIX = "⛔ NOTHING WAS ADDED — CART UNCHANGED. "
+
 _ORDER_COMPLETE_SENTINEL = (
     "ORDER COMPLETE — goodbye already spoken to the customer. "
     "Do NOT generate any assistant speech."
@@ -146,6 +152,7 @@ class RestaurantAgent(Agent):
         self._background_reprompt_done = False
         self._hangup_started = False
         self._goodbye_spoken = False
+        self._false_add_reanchor: str | None = None
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
@@ -204,6 +211,27 @@ class RestaurantAgent(Agent):
         # PR 078 — capture the spoken readback for the confirm-time verifier.
         if self.state.readback_pending:
             self.state.readback_spoken.append(line)
+        # PR 081 — after add_item refused, the very next spoken line must not
+        # claim the item was added (one-shot check; the cart never changed).
+        if self.state.pending_add_refusals:
+            refusals = list(self.state.pending_add_refusals)
+            self.state.pending_add_refusals.clear()
+            mode = add_claim_verify_mode()
+            if mode != "off":
+                hit = next(
+                    (q for q in refusals if falsely_claims_add(line, q)), None
+                )
+                if hit:
+                    logger.warning(
+                        "False add claim after refusal of %r: %s", hit, line
+                    )
+                    if self._recorder is not None:
+                        self._recorder.add_event(
+                            "false_add_claim", {"query": hit, "spoken": line}
+                        )
+                    if mode == "strict":
+                        self._false_add_reanchor = hit
+                        self._schedule_false_add_correction(hit)
 
     # ── phone reprompts (carried over from the old agent) ───────────────────
 
@@ -239,6 +267,30 @@ class RestaurantAgent(Agent):
         finally:
             if not greeting_only:
                 self._echo_recovery_scheduled = False
+
+    def _schedule_false_add_correction(self, query: str) -> None:
+        if not self._session:
+            return
+        asyncio.create_task(self._false_add_correction(query))
+
+    async def _false_add_correction(self, query: str) -> None:
+        """PR 081 strict mode — speak a correction after the LLM claimed a
+        refused item was added; the customer must not believe it's on the
+        order. Waits out the in-flight false claim first."""
+        await asyncio.sleep(0.5)
+        for _ in range(20):
+            if not self._session:
+                return
+            if not self._speech_in_flight():
+                break
+            await asyncio.sleep(0.5)
+        line = false_add_correction_phrase(
+            query, language=self.state.preferred_language.value
+        )
+        try:
+            await self._session.say(line, allow_interruptions=True)
+        except Exception:
+            logger.exception("False-add correction failed")
 
     def _schedule_background_reprompt(self) -> None:
         if not self.is_phone or self._background_reprompt_done:
@@ -310,6 +362,8 @@ class RestaurantAgent(Agent):
             self.state.preferred_language, user_text
         )
         self.state.real_user_turns += 1
+        # PR 081 — a new user turn stales any unchecked add refusal.
+        self.state.pending_add_refusals.clear()
         self._greeting_echo_pending_reprompt = False
         self._echo_recovery_scheduled = False
         self._background_ignore_streak = 0
@@ -324,6 +378,23 @@ class RestaurantAgent(Agent):
             except Exception:
                 logger.exception("Persona re-anchor injection failed")
 
+        # PR 081 — after a strict false-add-claim hit, re-anchor the LLM so it
+        # stops believing the refused item is in the cart.
+        if self._false_add_reanchor:
+            query = self._false_add_reanchor
+            self._false_add_reanchor = None
+            try:
+                turn_ctx.add_message(
+                    role="system",
+                    content=(
+                        f"RE-ANCHOR: '{query}' was NOT added — the cart is "
+                        "unchanged. Never claim it was added; tell the customer "
+                        "it isn't available and help them pick something else."
+                    ),
+                )
+            except Exception:
+                logger.exception("False-add re-anchor injection failed")
+
         if self._recorder is not None:
             self._recorder.complete_turn(cart_snapshot=self._cart_snapshot())
 
@@ -337,13 +408,15 @@ class RestaurantAgent(Agent):
         """
         raw = (query or "").strip()
         if not raw:
-            return None, "Empty item name — ask the customer what they'd like."
+            return None, _REFUSAL_PREFIX + (
+                "Empty item name — ask the customer what they'd like."
+            )
 
         lookup = menu_provider.extract_dish_query(raw) or raw
         item = menu_provider.find_item(lookup)
 
         if item and item.get("unavailable"):
-            return None, (
+            return None, _REFUSAL_PREFIX + (
                 f"'{item['name']}' is not available right now — apologize and "
                 "offer an alternative. Do NOT add it."
             )
@@ -353,22 +426,22 @@ class RestaurantAgent(Agent):
         options = menu_provider.disambiguation_options(lookup, limit=3)
         if len(options) >= 2:
             names = ", ".join(o["name"] for o in options)
-            return None, (
+            return None, _REFUSAL_PREFIX + (
                 f"AMBIGUOUS — '{raw}' could mean: {names}. Ask the customer "
                 "which ONE they want — do NOT add anything yet, do NOT pick "
                 "for them, and do NOT add more than one dish."
             )
         if len(options) == 1:
-            return None, (
+            return None, _REFUSAL_PREFIX + (
                 f'AMBIGUOUS — did the customer mean "{options[0]["name"]}"? '
                 "Confirm with a quick yes/no before adding — do NOT add yet."
             )
         if item:  # matched but below the clarify gate, with no other options
-            return None, (
+            return None, _REFUSAL_PREFIX + (
                 f'AMBIGUOUS — did the customer mean "{item["name"]}"? '
                 "Confirm with a quick yes/no before adding — do NOT add yet."
             )
-        return None, (
+        return None, _REFUSAL_PREFIX + (
             f"NOT FOUND — '{raw}' is not on our menu. Never invent a dish; "
             "ask the customer to clarify or call search_menu."
         )
@@ -417,6 +490,8 @@ class RestaurantAgent(Agent):
 
         item, refusal = self._resolve_menu_item(item_query)
         if refusal:
+            # PR 081 — arm the false-add-claim check for the next spoken line.
+            self.state.pending_add_refusals.append(item_query)
             self._record_tool("add_item", {"item_query": item_query}, refusal)
             return refusal
         assert item is not None

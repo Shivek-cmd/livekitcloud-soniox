@@ -36,6 +36,9 @@ class OrderSessionState:
     # verifier checks the buffer at confirm_readback.
     readback_pending: bool = False
     readback_spoken: list[str] = field(default_factory=list)
+    # PR 081 — queries add_item refused this turn; the next assistant line is
+    # checked against them for a false "I've added …" claim.
+    pending_add_refusals: list[str] = field(default_factory=list)
     real_user_turns: int = 0
 
 
@@ -45,6 +48,9 @@ def invalidate_readback(state: OrderSessionState) -> None:
     state.readback_confirmed = False
     state.readback_pending = False
     state.readback_spoken.clear()
+    # PR 081 — a successful mutation in the same turn means the upcoming
+    # confirm is (at least partly) legitimate; don't flag mixed multi-add turns.
+    state.pending_add_refusals.clear()
 
 
 def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:

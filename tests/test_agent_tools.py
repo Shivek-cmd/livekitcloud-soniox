@@ -462,6 +462,105 @@ def test_off_mode_skips_verification(agent, monkeypatch):
     assert agent.state.readback_confirmed
 
 
+# ── post-refusal false-add-claim verifier (PR 081) ────────────────────────────
+
+_FALSE_CLAIM = "Great choice! I've added one Chana Masala for you."
+
+
+class _EventRecorder:
+    def __init__(self):
+        self.events = []
+
+    def log_tool(self, name, args, result):
+        pass
+
+    def add_event(self, event_type, payload=None):
+        self.events.append((event_type, payload))
+
+
+def test_refusals_carry_cart_unchanged_marker(agent):
+    for query in ("fish", "chana masala", "gulab jamun", "jamun"):
+        result = run(agent.add_item(query))
+        assert result.startswith("⛔ NOTHING WAS ADDED — CART UNCHANGED. "), query
+    assert agent.cart.is_empty
+
+
+def test_refusal_arms_pending_check(agent):
+    run(agent.add_item("chana masala"))
+    assert agent.state.pending_add_refusals == ["chana masala"]
+
+
+def test_successful_mutation_same_turn_disarms(agent):
+    run(agent.add_item("chana masala"))
+    run(agent.add_item("garlic naan"))
+    assert agent.state.pending_add_refusals == []
+    # The legitimate confirm for the naan must not be flagged.
+    agent.note_agent_speech("I've added one Garlic Naan for you.")
+    assert agent._false_add_reanchor is None
+
+
+def test_strict_hit_sets_reanchor_and_is_one_shot(agent, monkeypatch):
+    monkeypatch.delenv("ADD_CLAIM_VERIFY", raising=False)
+    recorder = _EventRecorder()
+    agent.bind_recorder(recorder)
+    run(agent.add_item("chana masala"))
+    agent.note_agent_speech(_FALSE_CLAIM)
+    assert agent._false_add_reanchor == "chana masala"
+    assert agent.state.pending_add_refusals == []
+    assert any(e[0] == "false_add_claim" for e in recorder.events)
+    # One-shot: a later line is no longer checked.
+    agent._false_add_reanchor = None
+    agent.note_agent_speech(_FALSE_CLAIM)
+    assert agent._false_add_reanchor is None
+
+
+def test_honest_refusal_speech_passes(agent):
+    run(agent.add_item("chana masala"))
+    agent.note_agent_speech("Sorry ji, Chana Masala isn't on our menu.")
+    assert agent._false_add_reanchor is None
+    assert agent.state.pending_add_refusals == []
+
+
+def test_warn_mode_records_without_reanchor(agent, monkeypatch):
+    monkeypatch.setenv("ADD_CLAIM_VERIFY", "warn")
+    recorder = _EventRecorder()
+    agent.bind_recorder(recorder)
+    run(agent.add_item("chana masala"))
+    agent.note_agent_speech(_FALSE_CLAIM)
+    assert agent._false_add_reanchor is None
+    assert any(e[0] == "false_add_claim" for e in recorder.events)
+
+
+def test_off_mode_skips_check(agent, monkeypatch):
+    monkeypatch.setenv("ADD_CLAIM_VERIFY", "off")
+    run(agent.add_item("chana masala"))
+    agent.note_agent_speech(_FALSE_CLAIM)
+    assert agent._false_add_reanchor is None
+
+
+def test_new_user_turn_disarms_and_injects_reanchor(agent):
+    class _TurnCtx:
+        def __init__(self):
+            self.messages = []
+
+        def add_message(self, *, role, content):
+            self.messages.append((role, content))
+
+    class _Msg:
+        text_content = "Can I get a butter chicken instead?"
+
+    run(agent.add_item("chana masala"))
+    agent._false_add_reanchor = "chana masala"
+    ctx = _TurnCtx()
+    run(agent.on_user_turn_completed(ctx, _Msg()))
+    assert agent.state.pending_add_refusals == []
+    assert agent._false_add_reanchor is None
+    assert any(
+        role == "system" and "RE-ANCHOR" in content and "chana masala" in content
+        for role, content in ctx.messages
+    )
+
+
 # ── summary ───────────────────────────────────────────────────────────────────
 
 def test_order_summary_grounded_in_cart(agent):
