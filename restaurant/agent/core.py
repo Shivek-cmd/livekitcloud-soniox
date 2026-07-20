@@ -59,12 +59,11 @@ from restaurant.clover.order_submit import (
     submit_cart_to_clover,
 )
 from restaurant.customer_info import (
-    _INDIC_NUMERAL_MAP,
-    _spoken_words_to_digits,
-    extract_phone_digits,
+    accumulate_phone,
     format_phone_spoken,
     is_valid_customer_name,
     parse_customer_name,
+    phone_digit_custody_enabled,
 )
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant.orders import CartItem, CartMutation, OrderCart
@@ -179,6 +178,16 @@ class RestaurantAgent(Agent):
 
     def _cart_snapshot(self) -> dict:
         return self.cart.to_state_dict()
+
+    def _in_phone_collection(self) -> bool:
+        """PR 082 phase predicate for phone custody: name captured, phone still
+        missing, order type set. The order-type condition keeps custody from
+        firing on digit fragments (quantities) during item taking."""
+        return bool(
+            self.cart.customer_name
+            and not self.cart.customer_phone
+            and self.cart.order_type
+        )
 
     async def _sync_web(self) -> None:
         """Push the current cart to the web UI (no-op on phone)."""
@@ -367,6 +376,49 @@ class RestaurantAgent(Agent):
         self._greeting_echo_pending_reprompt = False
         self._echo_recovery_scheduled = False
         self._background_ignore_streak = 0
+
+        # PR 082 — code-side phone digit custody. The LLM is an unreliable
+        # courier for digits (in the live repro it never called
+        # set_customer_contact with a phone during the whole retry loop), so
+        # while the phone is being collected, code captures it from the
+        # transcript and injects a system message. No StopResponse — the LLM
+        # must still speak the progress/confirm turn.
+        if phone_digit_custody_enabled() and self._in_phone_collection():
+            new_buffer, event = accumulate_phone(self.state.phone_buffer, user_text)
+            self.state.phone_buffer = new_buffer
+            if event == "saved":
+                self.cart.customer_phone = new_buffer
+                self.state.phone_buffer = ""
+                await self._sync_web()
+                if self._recorder is not None:
+                    self._recorder.add_event(
+                        "phone_captured_code_side", {"phone": new_buffer}
+                    )
+                try:
+                    turn_ctx.add_message(
+                        role="system",
+                        content=(
+                            "PHONE CAPTURED AND SAVED by the system: "
+                            f"{format_phone_spoken(new_buffer)}. Do NOT ask for "
+                            "the number again — confirm it back once as English "
+                            "word digits, then continue the order."
+                        ),
+                    )
+                except Exception:
+                    logger.exception("Phone-captured injection failed")
+            elif event in ("append", "reset") and new_buffer:
+                try:
+                    turn_ctx.add_message(
+                        role="system",
+                        content=(
+                            f"PHONE IN PROGRESS: the system has {len(new_buffer)} "
+                            f"of 10 digits ({new_buffer}). Ask only for the "
+                            "REMAINING digits — do not restart, do not call "
+                            "set_customer_contact until the customer finishes."
+                        ),
+                    )
+                except Exception:
+                    logger.exception("Phone-progress injection failed")
 
         # Persona drift re-anchor (PR 077, 4c): every N real turns, re-inject a
         # one-line reminder next to the generation point — the system prompt
@@ -775,32 +827,14 @@ class RestaurantAgent(Agent):
                 guides.append("Then ask for their phone number.")
 
         if phone and phone.strip():
-            digits = extract_phone_digits(phone)
-            if not digits:
-                # PR 072 -- report what WAS captured (even if word-dictated
-                # and short) so the LLM can stitch a number spoken across
-                # turns instead of blindly re-asking from scratch.
-                normalized = _spoken_words_to_digits(
-                    phone.translate(_INDIC_NUMERAL_MAP)
-                )
-                captured = re.sub(r"\D", "", normalized)
-                if captured:
-                    facts.append(
-                        f"PHONE NOT SAVED: heard only {len(captured)} "
-                        f"digit(s) ({captured})."
-                    )
-                    guides.append(
-                        "ask for the full 10-digit number, then pass ALL "
-                        "digits together in one call."
-                    )
-                else:
-                    facts.append("PHONE NOT SAVED: no usable digits heard.")
-                    guides.append(
-                        "ask the customer to repeat the number slowly."
-                    )
-            else:
-                self.cart.customer_phone = digits
-                spoken = format_phone_spoken(digits)
+            # PR 082 — accumulate through the same reducer as code-side custody,
+            # so digits dictated across separate tool calls stitch together
+            # instead of the tool replacing (and losing) prior progress.
+            new_buffer, event = accumulate_phone(self.state.phone_buffer, phone)
+            if event == "saved":
+                self.cart.customer_phone = new_buffer
+                self.state.phone_buffer = ""
+                spoken = format_phone_spoken(new_buffer)
                 facts.append(f"PHONE SAVED: {spoken}.")
                 guides.append(
                     "the number is already saved — do NOT ask the customer "
@@ -809,6 +843,22 @@ class RestaurantAgent(Agent):
                     "SAVED (never numerals, never Punjabi/Hindi number "
                     "words), then continue the order."
                 )
+            else:
+                self.state.phone_buffer = new_buffer
+                if new_buffer:
+                    facts.append(
+                        f"PHONE PARTIAL: have {len(new_buffer)} of 10 "
+                        f"({new_buffer})."
+                    )
+                    guides.append(
+                        "ask only for the REMAINING digits — do not restart, "
+                        "and do not re-send digits already captured."
+                    )
+                else:
+                    facts.append("PHONE NOT SAVED: no usable digits heard.")
+                    guides.append(
+                        "ask the customer to repeat the number slowly."
+                    )
 
         if not facts:
             return "Nothing to save — pass name and/or phone."

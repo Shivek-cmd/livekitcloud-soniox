@@ -246,10 +246,12 @@ def test_contact_rejects_junk_name(agent):
 
 
 def test_contact_rejects_nine_digit_phone(agent):
+    # PR 082 — a 9-digit fragment is now held as partial progress (buffered for
+    # accumulation) rather than discarded; still never saved to the cart.
     result = run(agent.set_customer_contact(phone="123456789"))
-    assert "PHONE NOT SAVED" in result
-    assert "9 digit(s)" in result
+    assert "PHONE PARTIAL: have 9 of 10 (123456789)" in result
     assert not agent.cart.customer_phone
+    assert agent.state.phone_buffer == "123456789"
 
 
 def test_contact_accepts_ten_digit_phone(agent):
@@ -265,6 +267,21 @@ def test_contact_accepts_ten_digit_phone(agent):
 def test_contact_accepts_eleven_digits_with_leading_one(agent):
     run(agent.set_customer_contact(phone="1 780 555 1234"))
     assert agent.cart.customer_phone == "7805551234"
+
+
+def test_contact_accumulates_phone_across_calls(agent):
+    # PR 082 — the tool now stitches fragments dictated across separate calls
+    # instead of replacing (and losing) prior progress.
+    r1 = run(agent.set_customer_contact(phone="80"))
+    assert "PHONE PARTIAL: have 2 of 10 (80)" in r1
+    assert not agent.cart.customer_phone
+    r2 = run(agent.set_customer_contact(phone="770"))
+    assert "PHONE PARTIAL: have 5 of 10 (80770)" in r2
+    r3 = run(agent.set_customer_contact(phone="39800"))
+    assert "PHONE SAVED" in r3
+    assert agent.cart.customer_phone == "8077039800"
+    # Buffer cleared once the full number is saved.
+    assert agent.state.phone_buffer == ""
 
 
 def test_contact_saves_valid_name(agent):

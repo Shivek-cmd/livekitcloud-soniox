@@ -39,6 +39,9 @@ class OrderSessionState:
     # PR 081 — queries add_item refused this turn; the next assistant line is
     # checked against them for a false "I've added …" claim.
     pending_add_refusals: list[str] = field(default_factory=list)
+    # PR 082 — code-side phone digit custody: digits stitched across turns while
+    # the phone is being collected. Owned by accumulate_phone, never the LLM.
+    phone_buffer: str = ""
     real_user_turns: int = 0
 
 
