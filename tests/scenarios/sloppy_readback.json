@@ -1,0 +1,34 @@
+{
+  "name": "sloppy_readback",
+  "channel": "phone",
+  "readback_verify": "strict",
+  "censor_speech": [
+    { "text": "Garlic Naan", "max_uses": 1 },
+    { "text": "ਗਾਰਲਿਕ ਨਾਨ", "max_uses": 1 }
+  ],
+  "turns": [
+    "Hi, can I get two butter chicken and one garlic naan please?",
+    "That's everything, thanks.",
+    "Medium spice is fine, and no allergies.",
+    "Pickup please.",
+    "My name is Harpreet.",
+    "Six four seven five five five one two one two.",
+    "Yes, that's correct.",
+    "Yes, everything is correct."
+  ],
+  "expect": {
+    "placed": true,
+    "items": [
+      { "name": "Butter Chicken", "qty": 2, "note_contains": "medium" },
+      { "name": "Garlic Naan", "qty": 1 }
+    ],
+    "order_type": "pickup",
+    "customer_name": "Harpreet",
+    "customer_phone": "6475551212",
+    "additional_requests_recorded": true,
+    "min_readbacks": 1,
+    "tool_result_contains": [
+      { "tool": "confirm_readback", "contains": "READBACK INCOMPLETE", "min": 1 }
+    ]
+  }
+}

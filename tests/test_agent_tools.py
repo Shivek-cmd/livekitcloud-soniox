@@ -306,7 +306,7 @@ def test_late_added_spiced_dish_defaulted_at_readback(agent):
     _complete_order(agent)
     run(agent.add_item("butter chicken"))  # after the wrap-up, spice unset
     result = run(agent.get_order_readback())
-    assert "READ THIS BACK VERBATIM" in result
+    assert "READBACK FACTS" in result
     line = next(i for i in agent.cart.items if i.name == "Butter Chicken")
     assert line.note == "medium"
 
@@ -328,14 +328,27 @@ def test_readback_refuses_while_incomplete(agent):
     assert "record_additional_requests" in result  # wrap-up question still owed
 
 
-def test_readback_is_generated_from_cart(agent):
+def test_readback_facts_generated_from_cart(agent):
     _complete_order(agent)
     result = run(agent.get_order_readback())
-    assert "READ THIS BACK VERBATIM" in result
-    assert "two Garlic Naan" in result
-    assert "pickup" in result
-    # Phone channel: no price in the spoken readback.
-    assert "dollar" not in result.lower()
+    assert "READBACK FACTS" in result
+    assert "2 x Garlic Naan" in result
+    assert "order type: pickup" in result
+    assert "Aman Singh" in result
+    # Phone channel: no price in the readback facts.
+    assert "total" not in result.lower() and "$" not in result
+    # Spoken-capture armed for the verifier.
+    assert agent.state.readback_pending
+    assert agent.state.readback_spoken == []
+
+
+def test_readback_facts_include_total_on_web(agent):
+    # The agent fixture's menu_provider monkeypatches are module-level — a
+    # second (web) agent built here sees the same fake menu.
+    web_agent = RestaurantAgent(is_phone=False)
+    _complete_order(web_agent)
+    result = run(web_agent.get_order_readback())
+    assert "total: $" in result
 
 
 def test_confirm_before_readback_refused(agent):
@@ -375,6 +388,78 @@ def test_order_type_change_invalidates_confirmed_readback(agent):
     run(agent.set_order_type("delivery"))
     result = run(agent.confirm_readback())
     assert "changed since the last read-back" in result
+
+
+# ── spoken-readback verifier at confirm (PR 078) ──────────────────────────────
+
+_GOOD_READBACK = "So that's two Garlic Naan for pickup — is everything correct?"
+
+
+def test_note_agent_speech_buffers_only_while_pending(agent):
+    _complete_order(agent)
+    agent.note_agent_speech("Anything else for you?")  # before readback
+    run(agent.get_order_readback())
+    agent.note_agent_speech(_GOOD_READBACK)
+    assert agent.state.readback_spoken == [_GOOD_READBACK]
+    # A cart mutation voids the in-flight capture.
+    run(agent.add_item("butter chicken", spice_level="Medium"))
+    assert not agent.state.readback_pending
+    assert agent.state.readback_spoken == []
+
+
+def test_strict_confirm_blocked_until_readback_spoken(agent, monkeypatch):
+    monkeypatch.setenv("READBACK_VERIFY", "strict")
+    _complete_order(agent)
+    run(agent.get_order_readback())
+    # Same-turn readback+confirm: nothing spoken yet → refused.
+    result = run(agent.confirm_readback())
+    assert "READBACK INCOMPLETE" in result
+    assert not agent.state.readback_confirmed
+    assert agent.state.readback_pending  # re-read still captured
+    # Sloppy readback (item never spoken) → still refused.
+    agent.note_agent_speech("So that's your order for pickup, all good?")
+    result = run(agent.confirm_readback())
+    assert "READBACK INCOMPLETE" in result
+    assert "Garlic Naan" in result
+    assert not agent.state.readback_confirmed
+    # Full spoken readback → confirmed.
+    agent.note_agent_speech(_GOOD_READBACK)
+    result = run(agent.confirm_readback())
+    assert "confirmed" in result.lower()
+    assert agent.state.readback_confirmed
+    assert not agent.state.readback_pending
+
+
+def test_warn_mode_allows_but_records_event(agent, monkeypatch):
+    monkeypatch.setenv("READBACK_VERIFY", "warn")
+
+    class _Recorder:
+        def __init__(self):
+            self.events = []
+
+        def log_tool(self, name, args, result):
+            pass
+
+        def add_event(self, event_type, payload=None):
+            self.events.append((event_type, payload))
+
+    recorder = _Recorder()
+    agent.bind_recorder(recorder)
+    _complete_order(agent)
+    run(agent.get_order_readback())
+    result = run(agent.confirm_readback())  # nothing spoken — warn, allow
+    assert "confirmed" in result.lower()
+    assert agent.state.readback_confirmed
+    assert any(e[0] == "readback_verify_warn" for e in recorder.events)
+
+
+def test_off_mode_skips_verification(agent, monkeypatch):
+    monkeypatch.setenv("READBACK_VERIFY", "off")
+    _complete_order(agent)
+    run(agent.get_order_readback())
+    result = run(agent.confirm_readback())
+    assert "confirmed" in result.lower()
+    assert agent.state.readback_confirmed
 
 
 # ── summary ───────────────────────────────────────────────────────────────────

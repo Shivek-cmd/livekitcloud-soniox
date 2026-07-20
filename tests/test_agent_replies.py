@@ -1,7 +1,7 @@
-"""Tests for restaurant.agent.replies — readback/status templates + speech guard."""
+"""Tests for restaurant.agent.replies — status template + speech guard.
+(The VERBATIM readback formatter moved to READBACK FACTS in PR 078.)"""
 
 from restaurant.agent.replies import (
-    format_order_readback,
     format_order_status,
     order_placed_goodbye,
     sanitize_assistant_speech,
@@ -27,23 +27,6 @@ def test_order_status_grounded():
     assert "dollar" not in status
 
     assert "empty" in format_order_status(OrderCart(), include_price=False)
-
-
-def test_readback_with_and_without_price():
-    cart = _cart()
-    cart.customer_name = "Aman"
-    spoken = format_order_readback(cart, include_price=False)
-    assert spoken.startswith("Okay Aman ji")
-    assert "pickup" in spoken
-    assert spoken.endswith("All good?")
-    assert "dollar" not in spoken
-
-    with_price = format_order_readback(cart, include_price=True)
-    assert "dollars" in with_price
-
-
-def test_readback_empty_cart_is_empty_string():
-    assert format_order_readback(OrderCart(), include_price=True) == ""
 
 
 def test_goodbye_eta_by_order_type():

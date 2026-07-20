@@ -110,6 +110,35 @@ def format_mutation_reply(mutation: "CartMutation", cart: "OrderCart") -> str:
     )
 
 
+def format_readback_facts(cart: "OrderCart", *, include_total: bool) -> str:
+    """READBACK FACTS block (PR 078) — canonical facts the LLM must phrase in
+    the customer's language; the spoken result is checked by readback_verify.
+    Total is web-only (no-price-on-phone policy)."""
+    lines = [
+        "READBACK FACTS — read ALL of these to the customer in their "
+        "language, then ask if everything is correct:"
+    ]
+    for item in cart.items:
+        line = f"- {item.quantity} x {_dish_label(item.name, item.voice_line)}"
+        if item.note:
+            line += f" [{item.note}]"
+        lines.append(line)
+    order_type = cart.order_type or "pickup"
+    lines.append(f'- order type: {order_type} (say "{order_type}" in English)')
+    if cart.customer_name:
+        lines.append(f"- name: {cart.customer_name}")
+    if include_total:
+        lines.append(f"- total: {_money(cart.total)}")
+    lines.append(
+        "GUIDE: phrase this warmly in your own words in the customer's "
+        "language — but every item, its quantity (as a word, never a digit), "
+        "and the order type must actually be spoken. Your spoken readback is "
+        "checked — anything missing forces a re-read. End by asking if "
+        "everything is correct."
+    )
+    return "\n".join(lines)
+
+
 def format_contact_reply(facts: list[str], guides: list[str]) -> str:
     """Fact line(s) + one merged GUIDE line for set_customer_contact results.
 

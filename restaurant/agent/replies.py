@@ -1,9 +1,10 @@
-"""Readback/status templates, canned lines, and the assistant speech guard.
+"""Status templates, canned lines, and the assistant speech guard.
 
 Salvaged from conversation.py — these encode hard-won live-call lessons
-(no price on phone, English phone digits, exact readback text generated from
-the code cart). The SAY EXACTLY tool-reply formatters were replaced by
-structured facts in restaurant/agent/facts.py (PR 075).
+(no price on phone, English phone digits). The SAY EXACTLY tool-reply
+formatters were replaced by structured facts in restaurant/agent/facts.py
+(PR 075); the VERBATIM readback template by READBACK FACTS + the spoken
+verifier in restaurant/agent/readback_verify.py (PR 078).
 """
 
 from __future__ import annotations
@@ -17,9 +18,6 @@ from restaurant.customer_info import enforce_english_phone_in_speech
 
 if TYPE_CHECKING:
     from restaurant.orders import OrderCart
-
-CONFIRM_CLOSE = "All good?"
-
 
 def _format_dollars(amount: float) -> str:
     if abs(amount - round(amount)) < 0.05:
@@ -52,7 +50,7 @@ def order_placed_goodbye(*, order_type: str | None, language: str | None = None)
 
 
 def _cart_items_str(cart: "OrderCart") -> str:
-    """Comma-joined spoken item list — shared by read-back and status templates."""
+    """Comma-joined spoken item list for the status template."""
     item_parts: list[str] = []
     for item in cart.items:
         qty = _qty_word(item.quantity)
@@ -72,8 +70,7 @@ def _cart_items_str(cart: "OrderCart") -> str:
 def format_order_status(cart: "OrderCart", *, include_price: bool = True) -> str:
     """Neutral mid-conversation cart read — grounded in real cart data, never
     LLM-improvised. Used whenever the customer asks what's in their order so
-    far; distinct from format_order_readback, which is the final-confirmation
-    line and assumes order_type/close are already meaningful.
+    far; the final-confirmation readback is READBACK FACTS (facts.py, PR 078).
     """
     if cart.is_empty:
         return "Your order is empty so far."
@@ -83,29 +80,6 @@ def format_order_status(cart: "OrderCart", *, include_price: bool = True) -> str
         total = _format_dollars(cart.total)
         return f"So far you have — {items_str}, total about {total} dollars."
     return f"So far you have — {items_str}."
-
-
-def format_order_readback(cart: "OrderCart", *, include_price: bool = True) -> str:
-    """Exact spoken read-back line for final confirmation."""
-    if cart.is_empty:
-        return ""
-
-    items_str = _cart_items_str(cart)
-    order_type = cart.order_type or "pickup"
-    name = cart.customer_name or ""
-
-    if include_price:
-        total = _format_dollars(cart.total)
-        if name:
-            return (
-                f"Okay {name} ji — {items_str}, {order_type}, "
-                f"total about {total} dollars. {CONFIRM_CLOSE}"
-            )
-        return f"Okay — {items_str}, {order_type}, total about {total} dollars. {CONFIRM_CLOSE}"
-
-    if name:
-        return f"Okay {name} ji — {items_str}, {order_type}. {CONFIRM_CLOSE}"
-    return f"Okay — {items_str}, {order_type}. {CONFIRM_CLOSE}"
 
 
 def recovery_phrase(*, is_phone: bool) -> str:

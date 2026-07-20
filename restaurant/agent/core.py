@@ -37,14 +37,15 @@ from restaurant.agent.facts import (
     format_cart_facts,
     format_contact_reply,
     format_mutation_reply,
+    format_readback_facts,
 )
 from restaurant.agent.language import update_preferred_language
 from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
 from restaurant.agent.prompt import build_system_prompt, prompt_style
+from restaurant.agent.readback_verify import readback_verify_mode, verify_readback
 from restaurant.agent.replies import (
     background_repeat_phrase,
     echo_recovery_phrase,
-    format_order_readback,
     format_order_status,
     order_placed_goodbye,
 )
@@ -189,6 +190,9 @@ class RestaurantAgent(Agent):
             return
         self._recent_agent_lines.append(line)
         self._recent_agent_lines = self._recent_agent_lines[-6:]
+        # PR 078 — capture the spoken readback for the confirm-time verifier.
+        if self.state.readback_pending:
+            self.state.readback_spoken.append(line)
 
     # ── phone reprompts (carried over from the old agent) ───────────────────
 
@@ -732,9 +736,10 @@ class RestaurantAgent(Agent):
 
     @function_tool
     async def get_order_readback(self) -> str:
-        """Get the exact final read-back line for the order. Call after all
+        """Get the final read-back facts for the order. Call after all
         details are collected, and again after ANY change to the order. Read
-        the returned line back to the customer VERBATIM."""
+        ALL the facts back to the customer in their language, then ask if
+        everything is correct."""
         blockers = readback_blockers(self.cart, self.state)
         if blockers:
             result = "Cannot read back yet:\n- " + "\n- ".join(blockers)
@@ -744,13 +749,11 @@ class RestaurantAgent(Agent):
         # step — they must never reach placement spice-unset.
         if self._apply_default_spice():
             await self._sync_web()
-        text = format_order_readback(self.cart, include_price=not self.is_phone)
+        result = format_readback_facts(self.cart, include_total=not self.is_phone)
         self.state.readback_revision = self.cart.revision
         self.state.readback_confirmed = False
-        result = (
-            "READ THIS BACK VERBATIM, then wait for the customer's yes:\n"
-            f'"{text}"'
-        )
+        self.state.readback_pending = True
+        self.state.readback_spoken.clear()
         self._record_tool("get_order_readback", {}, result)
         return result
 
@@ -770,10 +773,43 @@ class RestaurantAgent(Agent):
                 "customer before confirming."
             )
         else:
-            self.state.readback_confirmed = True
-            result = "Read-back confirmed. Call place_order now."
+            result = self._verified_confirm()
         self._record_tool("confirm_readback", {}, result)
         return result
+
+    def _verified_confirm(self) -> str:
+        """PR 078 — check the SPOKEN readback covers every item/qty/order-type
+        before granting confirmation. warn (default): log + analytics, allow;
+        strict: refuse and force a re-read; off: rollback."""
+        mode = readback_verify_mode()
+        if mode != "off":
+            spoken = "\n".join(self.state.readback_spoken)
+            check = verify_readback(
+                spoken, self.cart, check_total=not self.is_phone
+            )
+            for warning in check.warnings:
+                logger.warning("Readback verify warning: %s", warning)
+            if not check.ok:
+                if mode == "strict":
+                    # Keep pending so the fresh re-read is captured; the buffer
+                    # restarts so stale speech can't satisfy the next check.
+                    self.state.readback_spoken.clear()
+                    return (
+                        "READBACK INCOMPLETE — the customer has not heard the "
+                        "full order:\n- " + "\n- ".join(check.problems) + "\n"
+                        "Read ALL the READBACK FACTS again in the customer's "
+                        "language, then ask again if everything is correct."
+                    )
+                logger.warning(
+                    "Readback verify (warn mode) problems: %s", check.problems
+                )
+                if self._recorder is not None:
+                    self._recorder.add_event(
+                        "readback_verify_warn", {"problems": check.problems}
+                    )
+        self.state.readback_confirmed = True
+        self.state.readback_pending = False
+        return "Read-back confirmed. Call place_order now."
 
     @function_tool
     async def place_order(self) -> str:
