@@ -1149,6 +1149,25 @@ class RestaurantAgent(Agent):
         return result
 
     @function_tool
+    async def get_recommendations(
+        self,
+        preference: Annotated[str, "veg, non-veg, or any — what the customer asked for"] = "any",
+        category: Annotated[str, "optional: starters, mains, breads, drinks, dessert"] = "",
+    ) -> str:
+        """Call whenever the customer asks what's good, wants a suggestion, or
+        can't decide. Recommendations may ONLY come from this tool's results —
+        never from memory."""
+        result = menu_provider.get_recommendations(preference, category)
+        self._record_tool(
+            "get_recommendations", {"preference": preference, "category": category}, result
+        )
+        if self._recorder is not None and "no matching items" in result.lower():
+            self._recorder.add_event(
+                "recommendations_empty", {"preference": preference, "category": category}
+            )
+        return result
+
+    @function_tool
     async def get_order_summary(self) -> str:
         """What is in the order so far — use when the customer asks for their
         current order mid-call. Never state the order from memory."""

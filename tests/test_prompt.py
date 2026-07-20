@@ -25,6 +25,8 @@ _NON_NEGOTIABLES = [
     "record_additional_requests",
     "add_item is additive",
     "NEVER GUESS A DISH OR A QUANTITY",
+    "get_recommendations(preference, category)",
+    "recommend dishes without get_recommendations/search_menu",
     "get_order_readback",
     "confirm_readback",
     "never repeat the welcome intro",

@@ -427,6 +427,121 @@ def search_menu(query: str, *, limit: int = 2) -> str:
     return browse_menu(query, limit=limit)
 
 
+# PR 086 (Gap 6) — grounded recommendations. Deterministic selection: the
+# preference's mains category first, then Tandoor & Grill, Combos & Platters,
+# Starters & Snacks, then remaining categories; cache order within category.
+_REC_PRIORITY_TAIL = ("Tandoor & Grill", "Combos & Platters", "Starters & Snacks")
+
+
+def _normalize_preference(preference: str) -> str:
+    p = (preference or "").strip().lower().replace("_", " ").replace("-", " ")
+    p = " ".join(p.split())
+    if p in ("veg", "vegetarian", "veggie", "pure veg"):
+        return "veg"
+    if p in ("non veg", "nonveg", "non vegetarian", "meat", "chicken or meat"):
+        return "non-veg"
+    return "any"
+
+
+def _recommendation_category_filter(category: str):
+    """Predicate over category_name for an optional category query, or None."""
+    from restaurant.clover.match import normalize as _norm
+    from restaurant.menu_browse import BrowseKind, resolve_browse_target
+
+    q = (category or "").strip()
+    if not q:
+        return None
+    target = resolve_browse_target(q)
+    if target is not None and target.kind == BrowseKind.CATEGORY and target.category_name:
+        # Bidirectional substring so the resolved Clover name ("Starters &
+        # Snacks") also matches the static menu's short keys ("starters").
+        wanted = _norm(target.category_name)
+
+        def _ok(cat_name: str, wanted: str = wanted) -> bool:
+            c = _norm(cat_name)
+            return bool(c) and (c in wanted or wanted in c)
+
+        return _ok
+    sub = _norm(q)
+    if not sub:
+        return None
+    return lambda cat_name: sub in _norm(cat_name) or sub in _norm(cat_name).replace("&", "and")
+
+
+def recommendation_options(preference: str = "any", category: str = "", *, limit: int = 4) -> list[dict]:
+    """Available menu items to recommend — [{name, voice_line, veg}, ...].
+
+    preference ∈ {veg, non-veg, any} (free-form input normalized); optional
+    category narrows to one menu category. Selection is deterministic so the
+    same question always surfaces the same dishes.
+    """
+    pref = _normalize_preference(preference)
+    cat_ok = _recommendation_category_filter(category)
+    cache = _get_cache()
+
+    if cache is not None:
+        items = [
+            i
+            for i in cache.all_items()
+            if i.available
+            and (pref == "any" or i.veg == (pref == "veg"))
+            and (cat_ok is None or cat_ok(i.category_name))
+        ]
+        if pref == "veg":
+            priority = ("Vegetarian Mains",) + _REC_PRIORITY_TAIL
+        elif pref == "non-veg":
+            priority = ("Non-Veg Mains",) + _REC_PRIORITY_TAIL
+        else:
+            priority = ("Vegetarian Mains", "Non-Veg Mains") + _REC_PRIORITY_TAIL
+        rank = {name: i for i, name in enumerate(priority)}
+        items.sort(key=lambda i: rank.get(i.category_name, len(priority)))
+        return [{"name": i.name, "voice_line": i.voice_line, "veg": i.veg} for i in items[:limit]]
+
+    # Static-menu fallback: no voice labels, so voice_line = English name.
+    from restaurant.menu import MENU as _STATIC_MENU
+
+    out: list[dict] = []
+    for cat_key, data in _STATIC_MENU.items():
+        if cat_ok is not None and not cat_ok(cat_key):
+            continue
+        for item in data.get("items", []):
+            if pref != "any" and bool(item.get("veg")) != (pref == "veg"):
+                continue
+            out.append({"name": item["name"], "voice_line": item["name"], "veg": bool(item.get("veg"))})
+    return out[:limit]
+
+
+def _format_recommendations_tool_result(options: list[dict], *, spoken_limit: int = 2) -> str:
+    if not options:
+        return "No matching items — offer to search the menu instead."
+
+    def _line(o: dict) -> str:
+        tag = "veg" if o["veg"] else "non-veg"
+        return f'{o["name"]} → say "{o["voice_line"]}" ({tag})'
+
+    spoken = options[:spoken_limit]
+    joined = " | ".join(_line(o) for o in spoken)
+    extras = options[spoken_limit:]
+    tail = (
+        f" (+{len(extras)} more — offer if they want more: "
+        + " | ".join(_line(o) for o in extras)
+        + ")"
+        if extras
+        else ""
+    )
+    return (
+        f"Recommend from THESE ONLY: {joined}. "
+        "GUIDE: suggest at most TWO in ONE casual sentence — never a list; "
+        "mention veg/non-veg only if it matters; ask which sounds good."
+        f"{tail}"
+    )
+
+
+def get_recommendations(preference: str = "any", category: str = "", *, limit: int = 4) -> str:
+    """Grounded recommendation candidates for the get_recommendations tool."""
+    return _format_recommendations_tool_result(recommendation_options(preference, category, limit=limit))
+
+
 def catalog() -> dict | None:
     """Full menu catalog grouped by category for the web menu panel, or None if unavailable."""
     cache = _get_cache()

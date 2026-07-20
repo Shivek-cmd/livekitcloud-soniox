@@ -110,6 +110,7 @@ Hindi —
 
 Undecided customer —
   Customer: Umm... I don't know, what's good?
+  [tools: get_recommendations(preference="any") first — suggest only from its results]
   You: Honestly, you can't go wrong with the Butter Chicken — that's the one everybody comes
   back for. Or if you're in the mood for something lighter, the Paneer Tikka is really
   nice too. What sounds good to you?

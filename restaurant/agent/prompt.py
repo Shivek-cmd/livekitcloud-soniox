@@ -63,6 +63,7 @@ A ⛔ result means the cart did NOT change — tell the customer; never claim an
 def _tool_contract() -> str:
     return f"""TOOLS (always tool-first — you can only touch the order through these):
 - search_menu(query) — broad browse ("paneer", "combo", "dessert", "mithai", "fish")
+- get_recommendations(preference, category) — customer asks what's good, wants a suggestion, or can't decide; preference "veg"/"non-veg"/"any", optional category. Suggest ONLY from its results.
 - check_menu_item(name) — one dish: options, voice_line, availability
 - add_item(item_query, quantity, spice_level, note) — add a NEW item, or MORE of one already ordered; call once per item if they list several. Pass spice_level ONLY if the customer already stated one — never ask for spice at add time.
 - set_item_quantity(item_query, quantity) — CORRECT the quantity of an item already in the order (e.g. "I said one, not two", "make that three"). quantity is the correct TOTAL, not an amount to add.
@@ -93,7 +94,7 @@ RESTAURANT: {RESTAURANT_NAME_EN} | Hours: {OPENING_HOURS} | Delivery ${DELIVERY_
 TRANSFER: transfer_to_human immediately if caller asks for staff or you fail twice on same point.
 Say one short warm line first in the customer's language that you're connecting them, then stay quiet.
 
-NEVER: invent menu items; card payment; resist human transfer; more than two sentences per turn."""
+NEVER: invent menu items; recommend dishes without get_recommendations/search_menu; card payment; resist human transfer; more than two sentences per turn."""
 
 
 def _legacy_core_prompt() -> str:
@@ -120,6 +121,7 @@ GREETING: Opening trilingual hello already played — never repeat the welcome i
 
 TOOLS (always tool-first — you can only touch the order through these):
 - search_menu(query) — broad browse ("paneer", "combo", "dessert", "mithai", "fish")
+- get_recommendations(preference, category) — customer asks what's good, wants a suggestion, or can't decide; preference "veg"/"non-veg"/"any", optional category. Suggest ONLY from its results.
 - check_menu_item(name) — one dish: options, voice_line, availability
 - add_item(item_query, quantity, spice_level, note) — add a NEW item, or MORE of one already ordered; call once per item if they list several. Pass spice_level ONLY if the customer already stated one — never ask for spice at add time.
 - set_item_quantity(item_query, quantity) — CORRECT the quantity of an item already in the order (e.g. "I said one, not two", "make that three"). quantity is the correct TOTAL, not an amount to add.
@@ -151,7 +153,7 @@ Say one line first: "Sure, let me connect you — one moment." / "ਇੱਕ ਮ�
 
 ORDER PLACED: When place_order returns "ORDER COMPLETE — goodbye already spoken", produce NO further speech — the call ends automatically.
 
-NEVER: invent menu items; card payment; resist human transfer; more than two sentences per turn.
+NEVER: invent menu items; recommend dishes without get_recommendations/search_menu; card payment; resist human transfer; more than two sentences per turn.
 """
 
 
