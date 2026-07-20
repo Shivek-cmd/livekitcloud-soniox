@@ -7,8 +7,11 @@ confirm_readback may succeed. Anything unverifiable across languages that
 cannot corrupt money (inflection, honorifics, notes/spice, phrasing order) is
 deliberately NOT checked — false negatives fail safe toward a re-read.
 
-READBACK_VERIFY env: "warn" (default — log + analytics, allow), "strict"
-(refuse confirmation), "off" (emergency rollback).
+READBACK_VERIFY env: "strict" (default since PR 080 — refuse confirmation),
+"warn" (log + analytics, allow — the initial PR 078 rollout default), "off"
+(emergency rollback). PR 080 flipped the default: zero warn-mode warnings
+across all 30 comparison scenario runs (PR 085's English dish names removed
+the transliteration false-negatives that had blocked strict).
 """
 
 from __future__ import annotations
@@ -24,9 +27,9 @@ if TYPE_CHECKING:
 
 
 def readback_verify_mode() -> str:
-    """'warn' (default) | 'strict' | 'off' via the READBACK_VERIFY env var."""
+    """'strict' (default) | 'warn' | 'off' via the READBACK_VERIFY env var."""
     mode = (os.getenv("READBACK_VERIFY") or "").strip().lower()
-    return mode if mode in ("strict", "off") else "warn"
+    return mode if mode in ("warn", "off") else "strict"
 
 
 # ── trilingual quantity lexicon 1–20 (matches core._MAX_ITEM_QTY) ────────────

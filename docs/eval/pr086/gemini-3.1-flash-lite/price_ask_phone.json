@@ -1,0 +1,104 @@
+{
+  "name": "price_ask_phone",
+  "channel": "phone",
+  "model": "gemini-3.1-flash-lite",
+  "passed": true,
+  "turns": [
+    {
+      "user": "One butter chicken please, medium.",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "spice_level": "medium",
+            "item_query": "butter chicken",
+            "quantity": 1
+          },
+          "result": "ADDED: 1 x Butter Chicken, note: medium.\nORDER NOW: 1 x Butter Chicken [medium]. total=$19.99\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"one\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "Sure thing, I've got one Butter Chicken, medium, down for you. Anything else I can get you with that?"
+    },
+    {
+      "user": "How much will that be?",
+      "tool_calls": [
+        {
+          "name": "get_order_summary",
+          "args": {},
+          "result": "ORDER SO FAR (state ONLY these items — never from memory): 1 x Butter Chicken [medium]. total=$19.99\nGUIDE: state the order conversationally in the customer's language, in your own words, using exactly these dish names and quantities (quantities as words, never digits)."
+        }
+      ],
+      "assistant": "That will be $19.99 for the Butter Chicken. Would you like to add anything else to your order?"
+    },
+    {
+      "user": "Okay, that's all I need for now, thanks.",
+      "tool_calls": [
+        {
+          "name": "record_additional_requests",
+          "args": {
+            "response": "none"
+          },
+          "result": "ADDITIONAL REQUESTS RECORDED: none.\nORDER NOW: 1 x Butter Chicken [medium]. total=$19.99\nGUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about spice or allergies — then keep the order moving (pickup or delivery next if not set yet)."
+        }
+      ],
+      "assistant": "Got it. Would you like to pick that up, or would you like us to deliver it to you?"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "building",
+    "items": [
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 1,
+        "unit_price": 19.99,
+        "line_total": 19.99,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": null,
+    "delivery_address": null,
+    "customer": {
+      "name": null,
+      "phone": null
+    },
+    "subtotal": 19.99,
+    "delivery_charge": 0,
+    "total": 19.99,
+    "eta": null,
+    "order_id": null
+  },
+  "assertions": [
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=False"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    }
+  ],
+  "llm_latency": {
+    "calls": 6,
+    "mean_s": 1.225,
+    "p95_s": 1.332,
+    "max_s": 1.632
+  }
+}

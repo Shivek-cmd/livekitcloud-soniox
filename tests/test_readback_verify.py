@@ -188,11 +188,12 @@ def test_no_total_spoken_no_warning():
 
 
 def test_mode_env(monkeypatch):
+    # PR 080: strict is the default; warn/off are explicit opt-outs.
     monkeypatch.delenv("READBACK_VERIFY", raising=False)
-    assert readback_verify_mode() == "warn"
-    monkeypatch.setenv("READBACK_VERIFY", "strict")
     assert readback_verify_mode() == "strict"
+    monkeypatch.setenv("READBACK_VERIFY", "warn")
+    assert readback_verify_mode() == "warn"
     monkeypatch.setenv("READBACK_VERIFY", "OFF")
     assert readback_verify_mode() == "off"
     monkeypatch.setenv("READBACK_VERIFY", "bogus")
-    assert readback_verify_mode() == "warn"
+    assert readback_verify_mode() == "strict"

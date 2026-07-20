@@ -1,0 +1,210 @@
+{
+  "name": "hindi_order",
+  "channel": "phone",
+  "model": "gemini-3.1-flash-lite",
+  "passed": true,
+  "turns": [
+    {
+      "user": "नमस्ते, एक पनीर टिक्का और एक गुलाब जामुन चाहिए।",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "paneer tikka",
+            "quantity": 1
+          },
+          "result": "ADDED: 1 x Paneer Tikka.\nORDER NOW: 1 x Paneer Tikka. total=$16.99\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"one\", never a digit), then keep the order moving."
+        },
+        {
+          "name": "add_item",
+          "args": {
+            "quantity": 1,
+            "item_query": "gulab jamun"
+          },
+          "result": "ADDED: 1 x ਗੁਲਾਬ ਜਾਮੁਨ (Gulab Jamun (2 pcs)).\nORDER NOW: 1 x Paneer Tikka; 1 x ਗੁਲਾਬ ਜਾਮੁਨ (Gulab Jamun (2 pcs)). total=$22.98\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"one\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "जी, बिल्कुल — मैंने एक Paneer Tikka और एक Gulab Jamun लिख लिया है। और कुछ चाहिए आपको?"
+    },
+    {
+      "user": "बस, और कुछ नहीं।",
+      "tool_calls": [
+        {
+          "name": "record_additional_requests",
+          "args": {
+            "response": "None"
+          },
+          "result": "ADDITIONAL REQUESTS RECORDED: none.\nSPICE DEFAULTED: Paneer Tikka set to medium (no preference stated — use set_item_spice if the customer actually named a level).\nORDER NOW: 1 x Paneer Tikka [medium]; 1 x ਗੁਲਾਬ ਜਾਮੁਨ (Gulab Jamun (2 pcs)). total=$22.98\nGUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about spice or allergies — then keep the order moving (pickup or delivery next if not set yet)."
+        }
+      ],
+      "assistant": "ठीक है जी, समझ गई। यह ऑर्डर आप पिकअप करना चाहेंगे या डिलीवरी?"
+    },
+    {
+      "user": "मीडियम ठीक है, कोई एलर्जी नहीं।",
+      "tool_calls": [],
+      "assistant": "ठीक है जी, मैंने नोट कर लिया है। यह ऑर्डर आप पिकअप करना चाहेंगे या डिलीवरी?"
+    },
+    {
+      "user": "Pickup कर लूंगा।",
+      "tool_calls": [
+        {
+          "name": "set_order_type",
+          "args": {
+            "order_type": "pickup"
+          },
+          "result": "Set to pickup. Continue the flow."
+        }
+      ],
+      "assistant": "ठीक है जी, पिकअप के लिए ऑर्डर तैयार हो जाएगा। अपना नाम बता दीजिए?"
+    },
+    {
+      "user": "मेरा नाम Rohan है।",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "name": "Rohan"
+          },
+          "result": "NAME SAVED: \"Rohan\".\nGUIDE: confirm the name briefly in the customer's language. Then ask for their phone number."
+        }
+      ],
+      "assistant": "धन्यवाद, Rohan जी। अपना फ़ोन नंबर भी बता दीजिए?"
+    },
+    {
+      "user": "Four one six five five five seven eight nine zero.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "phone": "4165557890"
+          },
+          "result": "PHONE SAVED: four, one, six, five, five, five, seven, eight, nine, zero.\nGUIDE: the number is already saved — do NOT ask the customer to repeat or re-say it. Confirm it back once yourself, speaking it as English word digits exactly as in PHONE SAVED (never numerals, never Punjabi/Hindi number words), then continue the order."
+        },
+        {
+          "name": "get_order_readback",
+          "args": {},
+          "result": "READBACK FACTS — read ALL of these to the customer in their language, then ask if everything is correct:\n- 1 x Paneer Tikka [medium]\n- 1 x ਗੁਲਾਬ ਜਾਮੁਨ (Gulab Jamun (2 pcs))\n- order type: pickup (say \"pickup\" in English)\n- name: Rohan\nGUIDE: phrase this warmly in your own words in the customer's language — but every item, its quantity (as a word, never a digit), and the order type must actually be spoken. Your spoken readback is checked — anything missing forces a re-read. End by asking if everything is correct."
+        }
+      ],
+      "assistant": "शुक्रिया Rohan जी। तो आपका ऑर्डर है: एक Paneer Tikka (मीडियम), और एक Gulab Jamun। यह ऑर्डर पिकअप के लिए है। क्या सब कुछ सही है?"
+    },
+    {
+      "user": "हाँ, बिल्कुल सही है।",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "Read-back confirmed. Call place_order now."
+        },
+        {
+          "name": "place_order",
+          "args": {},
+          "result": "Order placed! INTERNAL total $22.979999999999997. Tell customer: \"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!\" Do NOT mention price or dollars."
+        }
+      ],
+      "assistant": "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "placed",
+    "items": [
+      {
+        "id": "M76YYRKJ33MGJ",
+        "name": "Paneer Tikka",
+        "voice_line": "Paneer Tikka",
+        "qty": 1,
+        "unit_price": 16.99,
+        "line_total": 16.99,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      },
+      {
+        "id": "XYCGVQJC48GTT",
+        "name": "Gulab Jamun (2 pcs)",
+        "voice_line": "ਗੁਲਾਬ ਜਾਮੁਨ",
+        "qty": 1,
+        "unit_price": 5.99,
+        "line_total": 5.99,
+        "note": "",
+        "modifiers": []
+      }
+    ],
+    "order_type": "pickup",
+    "delivery_address": null,
+    "customer": {
+      "name": "Rohan",
+      "phone": "4165557890"
+    },
+    "subtotal": 22.98,
+    "delivery_charge": 0,
+    "total": 22.98,
+    "eta": "20-25 min",
+    "order_id": "S4JSN01FCAP5J"
+  },
+  "assertions": [
+    {
+      "check": "gates: placed order had a confirmed, current readback",
+      "ok": true,
+      "detail": "readback_confirmed=True readback_revision=4 cart.revision=4"
+    },
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=True"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Gulab Jamun (2 pcs)', 'Paneer Tikka']"
+    },
+    {
+      "check": "items: Paneer Tikka qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "items: Paneer Tikka note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    },
+    {
+      "check": "items: Gulab Jamun (2 pcs) qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "order_type",
+      "ok": true,
+      "detail": "got 'pickup'"
+    },
+    {
+      "check": "customer_name",
+      "ok": true,
+      "detail": "got 'Rohan'"
+    },
+    {
+      "check": "customer_phone",
+      "ok": true,
+      "detail": "got '4165557890'"
+    },
+    {
+      "check": "additional_requests_recorded",
+      "ok": true,
+      "detail": "got True"
+    },
+    {
+      "check": "readbacks: at least 1 successful",
+      "ok": true,
+      "detail": "got 1"
+    }
+  ],
+  "llm_latency": {
+    "calls": 15,
+    "mean_s": 1.172,
+    "p95_s": 1.405,
+    "max_s": 1.707
+  }
+}

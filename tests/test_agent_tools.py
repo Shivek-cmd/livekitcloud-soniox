@@ -402,8 +402,10 @@ def test_mutation_after_readback_forces_re_readback(agent):
     result = run(agent.confirm_readback())
     assert "changed since the last read-back" in result
     assert not agent.state.readback_confirmed
-    # Fresh readback + confirm clears it.
-    run(agent.get_order_readback())
+    # Fresh readback + confirm clears it. Speaking the facts verbatim
+    # satisfies the (now default-strict) verifier.
+    facts = run(agent.get_order_readback())
+    agent.note_agent_speech(facts)
     result = run(agent.confirm_readback())
     assert "confirmed" in result.lower()
     assert agent.state.readback_confirmed
