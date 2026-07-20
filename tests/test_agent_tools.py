@@ -136,6 +136,25 @@ def test_low_confidence_match_asks_first(agent, monkeypatch):
     assert agent.cart.is_empty
 
 
+def test_phonetic_only_ascii_single_token_routes_to_clarify(agent, monkeypatch):
+    # PR 084 (Gap 7): the matcher caps a lone-Roman-word phonetic-only hit
+    # (e.g. "butter"→Bhatura) to 0.65, below the add gate. _resolve_menu_item
+    # must then route it through the "did you mean?" clarify path, cart intact.
+    bhatura = {
+        "name": "Bhatura",
+        "voice_line": "Bhatura",
+        "price": 2.99,
+        "clover_item_id": "bh1",
+        "match_confidence": 0.65,
+    }
+    monkeypatch.setattr(menu_provider, "find_item", lambda name: dict(bhatura))
+    monkeypatch.setattr(menu_provider, "disambiguation_options", lambda name, limit=3: [])
+    result = run(agent.add_item("butter"))
+    assert "AMBIGUOUS" in result
+    assert result.startswith("⛔ NOTHING WAS ADDED — CART UNCHANGED. ")
+    assert agent.cart.is_empty
+
+
 def test_add_without_spice_succeeds_spice_unset(agent):
     result = run(agent.add_item("butter chicken"))
     assert "ADDED: 1 x Butter Chicken" in result
