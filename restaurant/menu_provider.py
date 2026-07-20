@@ -49,6 +49,65 @@ def _get_cache():
     return _cache
 
 
+# PR 085 (Gap 5) \u2014 reverse map for the TTS DishNameFilter backstop. Cached and
+# invalidated whenever the underlying menu cache object changes. The source cache
+# is held by identity (not id()) so it stays correct across the test suite's
+# per-test cache swaps without any GC id-reuse hazard.
+_reverse_map: dict[str, str] | None = None
+_reverse_map_src: object = ()  # sentinel distinct from any cache object and None
+
+
+def _has_gurmukhi(text: str) -> bool:
+    return any("\u0A00" <= c <= "\u0A7F" for c in text)
+
+
+def english_dish_reverse_map() -> dict[str, str]:
+    """Normalized Gurmukhi speak_as \u2192 English dish name, english-mode items only.
+
+    The TTS DishNameFilter uses this as a last-line backstop: if the LLM ever
+    transliterates an English dish name into Gurmukhi (e.g. \u0A32\u0A48\u0A2E \u0A2C\u0A3F\u0A30\u0A3F\u0A06\u0A28\u0A40), the
+    filter rewrites it back to the English voice_line. Deliberate gurmukhi-mode
+    items (\u0A38\u0A2E\u0A4B\u0A38\u0A3E \u0A1A\u0A3E\u0A1F) are never included, so they pass through untouched.
+
+    Clover cache when available; otherwise a best-effort map from the static
+    menu's `punjabi` field. `{}` when neither is available.
+    """
+    global _reverse_map, _reverse_map_src
+    from restaurant.clover.match import normalize as _norm
+
+    cache = _get_cache()
+    if _reverse_map is not None and cache is _reverse_map_src:
+        return _reverse_map
+
+    out: dict[str, str] = {}
+    if cache is not None:
+        for item in cache.all_items():
+            if item.speech_mode != "english":
+                continue
+            gkey = _norm(item.speak_as)
+            english = item.voice_line
+            # Only map Gurmukhi speak_as that actually differs from the spoken
+            # English line \u2014 skip pure-ASCII keys (would rewrite English text).
+            if gkey and _has_gurmukhi(gkey) and _norm(english) != gkey:
+                out[gkey] = english
+    else:
+        # Static-menu fallback: no speech_mode data, so map every dish's
+        # Gurmukhi label \u2192 its English name. In static mode the menu is
+        # English-first anyway, so surfacing the English name is desired.
+        from restaurant.menu import MENU as _STATIC_MENU
+
+        for _cat, data in _STATIC_MENU.items():
+            for item in data.get("items", []):
+                gkey = _norm(item.get("punjabi", ""))
+                name = item.get("name", "")
+                if gkey and _has_gurmukhi(gkey) and name:
+                    out[gkey] = name
+
+    _reverse_map = out
+    _reverse_map_src = cache
+    return out
+
+
 _DISH_TOKEN_RE = re.compile(r"[A-Za-z\u0900-\u097F\u0A00-\u0A7F]+")
 
 _AVAIL_QUERY_PREFIX_RE = re.compile(

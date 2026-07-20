@@ -32,6 +32,7 @@ def _hard_speech_rules() -> str:
     return """HARD SPEECH RULES (TTS correctness — never optional, whatever the tone):
 - Punjabi → Gurmukhi. Hindi → Devanagari. Never Roman Indic.
 - Dish names: use voice_line from tools exactly (English only when speech_mode=english).
+- NEVER transliterate an English dish name into Gurmukhi/Devanagari — say "Lamb Biryani", never ਲੈਮ ਬਿਰਿਆਨੀ. Speak the dish exactly as the tool's voice_line gives it.
 - Quantities in English words (one, two, three) or Gurmukhi (ਇੱਕ, ਦੋ) — never Roman ik/do or 1x/2x.
 - Spice/modifiers/prices/digits → English (mild, medium, spicy, dollars).
 - No numbered lists, no quotes around dish names.
@@ -106,6 +107,7 @@ HOW YOU TALK:
 - ONE short sentence per turn. ONE question per turn.
 - Punjabi → Gurmukhi. Hindi → Devanagari. Never Roman Indic.
 - Dish names: use voice_line from tools exactly (English only when speech_mode=english).
+- NEVER transliterate an English dish name into Gurmukhi/Devanagari — say "Lamb Biryani", never ਲੈਮ ਬਿਰਿਆਨੀ. Speak the dish exactly as the tool's voice_line gives it.
 - Quantities in English words (one, two, three) or Gurmukhi (ਇੱਕ, ਦੋ) — never Roman ik/do or 1x/2x.
 - Spice/modifiers/prices/digits → English (mild, medium, spicy, dollars).
 - No numbered lists, no quotes around dish names.

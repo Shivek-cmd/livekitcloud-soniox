@@ -19,6 +19,7 @@ from restaurant.agent.prompt import build_system_prompt, prompt_style
 _NON_NEGOTIABLES = [
     "Punjabi → Gurmukhi. Hindi → Devanagari. Never Roman Indic.",
     "voice_line from tools exactly",
+    "NEVER transliterate an English dish name",
     "English word digits",
     "stay in English",
     "record_additional_requests",

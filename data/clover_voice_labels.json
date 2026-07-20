@@ -3672,8 +3672,8 @@
           ]
         }
       ],
-      "voice_line": "ਚਿਕਨ ਟਿੱਕਾ ਮਸਾਲਾ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Chicken Tikka Masala",
+      "speech_mode": "english"
     },
     {
       "key": "lamb_rogan_josh",
@@ -3888,8 +3888,8 @@
           ]
         }
       ],
-      "voice_line": "ਲੈਮ ਰੋਗਨ ਜੋਸ਼",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Lamb Rogan Josh",
+      "speech_mode": "english"
     },
     {
       "key": "goat_curry",
@@ -4416,8 +4416,8 @@
           ]
         }
       ],
-      "voice_line": "ਚਿਕਨ ਬਿਰਿਆਨੀ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Chicken Biryani",
+      "speech_mode": "english"
     },
     {
       "key": "lamb_biryani",
@@ -4566,8 +4566,8 @@
           ]
         }
       ],
-      "voice_line": "ਲੈਮ ਬਿਰਿਆਨੀ",
-      "speech_mode": "gurmukhi"
+      "voice_line": "Lamb Biryani",
+      "speech_mode": "english"
     },
     {
       "key": "butter_prawn_masala",

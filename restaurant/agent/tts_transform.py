@@ -32,6 +32,12 @@ def tts_phone_enforce_enabled() -> bool:
     return raw not in ("0", "false", "off")
 
 
+def tts_dish_english_enforce_enabled() -> bool:
+    """`TTS_DISH_ENGLISH_ENFORCE` env — default ON; `0`/`false`/`off` rollback."""
+    raw = (os.getenv("TTS_DISH_ENGLISH_ENFORCE") or "").strip().lower()
+    return raw not in ("0", "false", "off")
+
+
 # Word fixups salvaged from the deleted sanitizer — only the trivially reliable
 # whole-word Roman→Gurmukhi case (TTS misreads Roman "Dhanyavaad"); NO general
 # transliteration.
@@ -130,6 +136,174 @@ class PhoneSpeechFilter:
             if phone:
                 out = enforce_english_phone_in_speech(out, phone)
         return out
+
+
+# --- PR 085 (Gap 5): English dish-name backstop ------------------------------
+
+from restaurant.clover.match import normalize as _match_normalize  # noqa: E402
+
+_GURMUKHI_CHAR_RE = re.compile(r"[਀-੿]")
+# A maximal run of Gurmukhi tokens (with internal whitespace) — surrounding
+# whitespace/text is left untouched by re.sub so spacing is preserved exactly.
+_GURMUKHI_RUN_RE = re.compile(r"[਀-੿]+(?:\s+[਀-੿]+)*")
+
+
+def _has_gurmukhi_tok(tok: str) -> bool:
+    return bool(_GURMUKHI_CHAR_RE.search(tok))
+
+
+class DishNameFilter:
+    """Incremental filter that rewrites any Gurmukhi rendition of an
+    english-mode dish back to its English voice_line (e.g. ਲੈਮ ਬਿਰਿਆਨੀ → Lamb
+    Biryani). Same pure sync feed/flush shape as PhoneSpeechFilter so it
+    unit-tests without livekit. `get_map` is called at emit time so the map is
+    picked up once the menu cache is loaded.
+
+    Only an *open trailing Gurmukhi run* is held back (a dish name can grow
+    across chunk boundaries), and even that hold is bounded to the trailing
+    key-sized window: earlier tokens of the run whose greedy-match decision is
+    already final stream out immediately, so a pure-Punjabi reply is not
+    buffered whole. Deliberate gurmukhi-mode dishes are absent from the map,
+    so they pass through unchanged."""
+
+    def __init__(self, get_map: Callable[[], dict[str, str]]):
+        self._get_map = get_map
+        self._buf = ""
+
+    def feed(self, chunk: str) -> str:
+        self._buf += chunk
+        emit, hold = self._split_emit_hold(self._buf)
+        if hold:
+            committed, hold = self._commit_prefix(hold)
+            emit += committed
+        if len(hold) > _MAX_HOLD:
+            emit, hold = emit + hold, ""
+        self._buf = hold
+        return self._transform(emit)
+
+    def flush(self) -> str:
+        out = self._transform(self._buf)
+        self._buf = ""
+        return out
+
+    @staticmethod
+    def _split_emit_hold(buf: str) -> tuple[str, str]:
+        """Split into (safe to emit now, open trailing Gurmukhi run to keep)."""
+        tokens = re.split(r"(\s+)", buf)
+        i = len(tokens)
+        hold_has_gurmukhi = False
+
+        last = tokens[-1] if tokens else ""
+        if last and not last[-1].isspace():
+            if _has_gurmukhi_tok(last):
+                i -= 1
+                hold_has_gurmukhi = True
+            else:
+                # Trailing complete non-Gurmukhi token — any run before it is
+                # already boundary-terminated, so everything is safe to emit.
+                return buf, ""
+
+        while i > 0:
+            tok = tokens[i - 1]
+            if not tok or tok.isspace():
+                i -= 1
+            elif _has_gurmukhi_tok(tok):
+                i -= 1
+                hold_has_gurmukhi = True
+            else:
+                break
+
+        if not hold_has_gurmukhi:
+            return buf, ""
+        return "".join(tokens[:i]), "".join(tokens[i:])
+
+    def _commit_prefix(self, hold: str) -> tuple[str, str]:
+        """Bound the hold: split into (already-final prefix, trailing window).
+
+        Rewrites happen per Gurmukhi run (`_GURMUKHI_RUN_RE`), so only the
+        run that reaches the buffer's open end can still be changed by future
+        chunks — every earlier run is boundary-terminated and final. Inside
+        the open run, `_rewrite_run`'s greedy walk at token k only ever looks
+        at windows of ≤ max-key-length tokens, so once that whole window lies
+        within the tokens already complete, the decision at k is final and the
+        token can be emitted. Net effect: the hold never exceeds ~one dish
+        name (plus a partial token), instead of a whole Punjabi sentence."""
+        mapping = self._get_map()
+        maxlen = max((len(k.split()) for k in mapping), default=1)
+
+        runs = list(_GURMUKHI_RUN_RE.finditer(hold))
+        if not runs:
+            return hold, ""
+        last = runs[-1]
+        if hold[last.end():].strip():
+            # Last run is closed by trailing non-Gurmukhi text (punctuation);
+            # nothing in the hold can be extended by future chunks.
+            return hold, ""
+
+        toks = last.group(0).split()
+        # The final token is still open (may grow) unless whitespace follows it.
+        complete = len(toks) if last.end() < len(hold) else len(toks) - 1
+
+        k = 0
+        while k + maxlen <= complete:
+            step = 1
+            for end in range(min(k + maxlen, complete), k, -1):
+                if _match_normalize(" ".join(toks[k:end])) in mapping:
+                    step = end - k
+                    break
+            k += step
+        if k == 0:
+            return hold[: last.start()], hold[last.start() :]
+        if k >= len(toks):
+            return hold, ""
+        tok_starts = [m.start() for m in re.finditer(r"\S+", last.group(0))]
+        split_at = last.start() + tok_starts[k]
+        return hold[:split_at], hold[split_at:]
+
+    def _transform(self, text: str) -> str:
+        if not text:
+            return text
+        mapping = self._get_map()
+        if not mapping:
+            return text
+        return _GURMUKHI_RUN_RE.sub(lambda m: self._rewrite_run(m.group(0), mapping), text)
+
+    @staticmethod
+    def _rewrite_run(run: str, mapping: dict[str, str]) -> str:
+        """Greedy longest-match over a Gurmukhi token run; unmatched tokens
+        (e.g. deliberate gurmukhi-mode dishes) pass through."""
+        toks = run.split()
+        out: list[str] = []
+        k = 0
+        while k < len(toks):
+            hit: str | None = None
+            for end in range(len(toks), k, -1):
+                key = _match_normalize(" ".join(toks[k:end]))
+                if key in mapping:
+                    hit = mapping[key]
+                    k = end
+                    break
+            if hit is not None:
+                out.append(hit)
+            else:
+                out.append(toks[k])
+                k += 1
+        return " ".join(out)
+
+
+async def dish_english_enforced_stream(
+    text: AsyncIterable[str],
+    get_map: Callable[[], dict[str, str]],
+) -> AsyncIterator[str]:
+    """Wrap a tts_node text stream with the English dish-name backstop."""
+    filt = DishNameFilter(get_map)
+    async for chunk in text:
+        out = filt.feed(chunk)
+        if out:
+            yield out
+    tail = filt.flush()
+    if tail:
+        yield tail
 
 
 async def phone_enforced_stream(
