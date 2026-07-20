@@ -167,26 +167,43 @@ def enforce_english_phone_in_speech(text: str, phone_digits: str | None) -> str:
         if old in out:
             out = out.replace(old, english)
 
-    # Collapse spoken-word digit chains (e.g. "nine four one three seven") when long enough.
+    # Collapse spoken-word digit chains (e.g. "nine four one three seven") in
+    # place when long enough — surrounding speech survives (this output is
+    # actually spoken since PR 079, so whole-text replacement is not an
+    # option). Any >=7 chain canonicalizes to the STORED phone's English
+    # words: Sierra must only ever speak the stored number.
     tokens = re.split(r"(\s+)", out)
     rebuilt: list[str] = []
     digit_run: list[str] = []
+    run_toks: list[str] = []
+
+    def _close_run() -> None:
+        run = "".join(digit_run)
+        if len(run) >= 7:
+            trail_ws = run_toks.pop() if run_toks[-1].isspace() else ""
+            last = run_toks[-1]
+            punct = last[len(last.rstrip(".,")) :]
+            rebuilt.append(english + punct + trail_ws)
+        else:
+            rebuilt.extend(run_toks)
+        digit_run.clear()
+        run_toks.clear()
+
     for tok in tokens:
         key = tok.lower().strip(".,")
         if key in _SPOKEN_DIGIT_WORDS:
             digit_run.append(_SPOKEN_DIGIT_WORDS[key])
+            run_toks.append(tok)
+            continue
+        if digit_run and (not tok or tok.isspace()):
+            run_toks.append(tok)
             continue
         if digit_run:
-            run = "".join(digit_run)
-            if len(run) >= 7:
-                out = english
-                return out
-            digit_run.clear()
+            _close_run()
         rebuilt.append(tok)
     if digit_run:
-        run = "".join(digit_run)
-        if len(run) >= 7 and run == phone_digits:
-            return re.sub(re.escape(run), english, out, count=1)
+        _close_run()
+    out = "".join(rebuilt)
 
     # Any 7+ digit ASCII run that matches stored phone → canonical English form.
     for match in re.finditer(r"\d[\d\s\-]{6,}\d", out):

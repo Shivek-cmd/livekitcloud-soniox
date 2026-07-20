@@ -1,20 +1,19 @@
-"""Status templates, canned lines, and the assistant speech guard.
+"""Status templates and canned lines (goodbye, reprompt pools).
 
-Salvaged from conversation.py — these encode hard-won live-call lessons
-(no price on phone, English phone digits). The SAY EXACTLY tool-reply
-formatters were replaced by structured facts in restaurant/agent/facts.py
-(PR 075); the VERBATIM readback template by READBACK FACTS + the spoken
-verifier in restaurant/agent/readback_verify.py (PR 078).
+Salvaged from conversation.py. The SAY EXACTLY tool-reply formatters were
+replaced by structured facts in restaurant/agent/facts.py (PR 075); the
+VERBATIM readback template by READBACK FACTS + the spoken verifier in
+restaurant/agent/readback_verify.py (PR 078); the log-only regex speech guard
+(sanitize_assistant_speech) was deleted in PR 079 — phone-digit enforcement
+now lives in the real TTS path (restaurant/agent/tts_transform.py).
 """
 
 from __future__ import annotations
 
 import random
-import re
 from typing import TYPE_CHECKING
 
 from restaurant.agent.facts import _qty_word
-from restaurant.customer_info import enforce_english_phone_in_speech
 
 if TYPE_CHECKING:
     from restaurant.orders import OrderCart
@@ -82,13 +81,6 @@ def format_order_status(cart: "OrderCart", *, include_price: bool = True) -> str
     return f"So far you have — {items_str}."
 
 
-def recovery_phrase(*, is_phone: bool) -> str:
-    """After missed turn or echo — never re-greet."""
-    if is_phone:
-        return "Sorry ji — go ahead, I'm listening."
-    return "Sorry ji — go ahead whenever you're ready."
-
-
 # Reprompt variant pools (PR 077) — spoken by code under StopResponse, so no
 # LLM turn exists to vary them; a small pool + no-immediate-repeat does it.
 # Every fragment here must stay covered by phone_echo._RECOVERY_ECHO_PHRASES
@@ -123,104 +115,3 @@ def echo_recovery_phrase() -> str:
 def background_repeat_phrase() -> str:
     """One reprompt when background noise caused dropped turns."""
     return _pick_variant("background", _BACKGROUND_REPEAT_POOL)
-
-
-# ── Assistant output guard ────────────────────────────────────────────────────
-
-
-_GREETING_RE = re.compile(
-    r"(sat\s*sri\s*akal|ਸਤ\s*ਸ੍ਰੀ\s*ਅਕਾਲ|welcome to bizbull|"
-    r"how may i help you today|how can i help|"
-    r"sierra from bizbull|i.?m sierra from bizbull|"
-    r"i speak english|english,?\s*hindi,?\s*(?:and|or)\s*punjabi|"
-    r"i can help you in english)",
-    re.I,
-)
-
-_META_SPEECH_RE = re.compile(
-    r"\b(?:"
-    r"I can add|I(?:'ve| have) added|added to (?:the )?(?:cart|menu|order)|"
-    r"comes with \d+ pieces?"
-    r")\b",
-    re.I,
-)
-
-_PRICE_SPEECH_RE = re.compile(
-    r"(?:"
-    r",?\s*total about [\d.]+\s*dollars?|"
-    r"\$\s*[\d.]+|"
-    r"about \d+(?:\.\d+)?\s*dollars?|"
-    r"(?:,\s*)?(?:ਕੁੱ?\s*)?(?:total|ਕੁੱ?|ਤਕਰੀਬ(?:ਨ)?)"
-    r"[^.?!]*(?:dollars?|ਡਾਲਰ)|"
-    r"[\d.]+\s*(?:ਡਾਲਰ|dollars?)"
-    r")",
-    re.I,
-)
-
-_LLM_JUNK_RE = re.compile(
-    r"(?:"
-    r"ਪ[uu]?[sś][h]?[tṭ][iī]|push\s*confirm|confirm\s*push|"
-    r"confirm(?:ing)?\s+(?:the\s+)?order|"
-    r"ਚੇਲਾ|chela"
-    r")",
-    re.I,
-)
-
-_PUNJABI_CONFIRM_RE = re.compile(
-    r"ਪ[uu]?[sś][h]?[tṭ][iī]\s*ਕਰ",
-    re.I,
-)
-
-
-def sanitize_assistant_speech(
-    text: str,
-    *,
-    allow_greeting: bool,
-    is_phone: bool = True,
-    customer_phone: str | None = None,
-) -> str:
-    """Strip mid-call re-greetings; normalize common script slips."""
-    if not text:
-        return text
-
-    out = text
-    if not allow_greeting:
-        if _GREETING_RE.search(out):
-            out = _GREETING_RE.sub("", out).strip()
-            if not out or len(out) < 8:
-                out = recovery_phrase(is_phone=True)
-
-        if _META_SPEECH_RE.search(out):
-            out = _META_SPEECH_RE.sub("", out)
-            out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
-            if not out or len(out) < 6:
-                out = "Sure."
-
-        if _PRICE_SPEECH_RE.search(out):
-            out = _PRICE_SPEECH_RE.sub("", out)
-            out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
-            if not out or len(out) < 8:
-                out = "Sure."
-
-        replacements = {
-            "ਸوری": "ਮਾਫ ਕਰਨਾ",
-            "سوری": "ਮਾਫ ਕਰਨਾ",
-            "سفارش": "ਆਰਡਰ",
-        }
-        for bad, good in replacements.items():
-            out = out.replace(bad, good)
-
-        if _LLM_JUNK_RE.search(out):
-            out = _LLM_JUNK_RE.sub("", out)
-            out = re.sub(r"\s{2,}", " ", out).strip(" ,.-")
-
-        if _PUNJABI_CONFIRM_RE.search(out):
-            out = _PUNJABI_CONFIRM_RE.sub("confirm", out)
-
-        out = re.sub(r"\bDhanyavaad\b", "ਧੰਨਵਾਦ", out, flags=re.I)
-        out = re.sub(r"\bdhanyavaad\b", "ਧੰਨਵਾਦ", out, flags=re.I)
-
-    if customer_phone:
-        out = enforce_english_phone_in_speech(out, customer_phone)
-
-    return out.strip()

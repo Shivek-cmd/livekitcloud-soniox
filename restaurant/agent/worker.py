@@ -16,7 +16,6 @@ from livekit.agents import JobContext, WorkerOptions, cli
 
 from restaurant.agent.core import RestaurantAgent
 from restaurant.agent.language import OPENING_GREETING
-from restaurant.agent.replies import sanitize_assistant_speech
 from restaurant.channels.ambient_audio import build_ambient_player, start_ambient, stop_ambient
 from restaurant.analytics.analytics_store import persist_session
 from restaurant.llm_warmup import schedule_llm_warmup
@@ -163,14 +162,6 @@ async def entrypoint(ctx: JobContext):
         if role == "assistant":
             text = getattr(ev.item, "text_content", None) or ""
             if text:
-                cleaned = sanitize_assistant_speech(
-                    text,
-                    allow_greeting=agent.state.real_user_turns == 0,
-                    is_phone=agent.is_phone,
-                    customer_phone=agent.cart.customer_phone or None,
-                )
-                if cleaned != text:
-                    logger.warning("Mid-call re-greeting blocked in log: %s", text[:80])
                 agent.note_agent_speech(text)
                 recorder.append_sierra(text)
                 logger.info(f"SIERRA: {text}")
