@@ -606,3 +606,26 @@ def test_order_summary_grounded_in_cart(agent):
     assert "2 x Garlic Naan" in result
     assert "total=$7" in result  # total stays in facts; price policy lives in the prompt
     assert "SAY EXACTLY" not in result
+
+
+# ── get_recommendations (PR 086) ──────────────────────────────────────────────
+
+def test_get_recommendations_returns_grounded_result(agent, monkeypatch):
+    monkeypatch.setattr(menu_provider, "_cache", None)
+    monkeypatch.setattr(menu_provider, "_cache_loaded", True)
+    result = run(agent.get_recommendations(preference="veg"))
+    assert "at most TWO" in result
+    assert "(veg)" in result
+
+
+def test_get_recommendations_empty_records_event(agent, monkeypatch):
+    monkeypatch.setattr(
+        menu_provider,
+        "recommendation_options",
+        lambda preference="any", category="", *, limit=4: [],
+    )
+    recorder = _EventRecorder()
+    agent.bind_recorder(recorder)
+    result = run(agent.get_recommendations(preference="veg", category="pizza"))
+    assert "No matching items" in result
+    assert ("recommendations_empty", {"preference": "veg", "category": "pizza"}) in recorder.events
