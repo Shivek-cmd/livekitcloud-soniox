@@ -81,6 +81,27 @@ def format_order_status(cart: "OrderCart", *, include_price: bool = True) -> str
     return f"So far you have — {items_str}."
 
 
+def false_add_correction_phrase(query: str, language: str | None = None) -> str:
+    """PR 081 strict mode — one warm corrective line after the LLM falsely
+    claimed a refused item was added. Punjabi default for pa/mixed/unknown,
+    like order_placed_goodbye."""
+    lang = str(language or "").lower()
+    if lang == "en":
+        return (
+            f"Oh — sorry, I actually don't have {query} on our menu, so "
+            "nothing's been added. Can I get you something else instead?"
+        )
+    if lang == "hi":
+        return (
+            f"माफ़ कीजिए जी — {query} हमारे मेन्यू में नहीं है, "
+            "इसलिए कुछ भी add नहीं हुआ। कुछ और बताइए?"
+        )
+    return (
+        f"ਮਾਫ਼ ਕਰਨਾ ਜੀ — {query} ਸਾਡੇ ਮੀਨੂ ਵਿੱਚ ਨਹੀਂ ਹੈ, "
+        "ਇਸ ਲਈ ਕੁਝ ਵੀ add ਨਹੀਂ ਹੋਇਆ। ਕੁਝ ਹੋਰ ਦੱਸੋਗੇ ਜੀ?"
+    )
+
+
 # Reprompt variant pools (PR 077) — spoken by code under StopResponse, so no
 # LLM turn exists to vary them; a small pool + no-immediate-repeat does it.
 # Every fragment here must stay covered by phone_echo._RECOVERY_ECHO_PHRASES

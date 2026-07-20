@@ -55,7 +55,8 @@ If the customer states a spice level themselves, pass it in add_item / use set_i
 state no preference, do nothing — the kitchen default (Medium) is applied automatically.
 Handle changes at ANY point — after any cart change you must run get_order_readback again before placing.
 TRUST TOOL RESULTS: if a tool says AMBIGUOUS / NEEDS INFO / NOT FOUND / a blocker, relay it and ask —
-never work around it, never state items or totals from memory."""
+never work around it, never state items or totals from memory.
+A ⛔ result means the cart did NOT change — tell the customer; never claim an item was added."""
 
 
 def _tool_contract() -> str:

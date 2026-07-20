@@ -27,6 +27,7 @@ _NON_NEGOTIABLES = [
     "get_order_readback",
     "confirm_readback",
     "never repeat the welcome intro",
+    "⛔ result means the cart did NOT change",
     "ORDER COMPLETE — goodbye already spoken",
 ]
 
