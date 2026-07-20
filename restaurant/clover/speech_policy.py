@@ -26,6 +26,14 @@ ENGLISH_VOICE_KEYS: frozenset[str] = frozenset(
         "mango_lassi",
         "mango_shake",
         "butter_chicken",
+        # PR 085 (Gap 5) — English proper-name Non-Veg Mains whose Gurmukhi
+        # speak_as only transliterates the English word ("ਲੈਮ" = "Lamb",
+        # "ਚਿਕਨ" = "Chicken"); Soniox misreads that back, so speak the English
+        # menu-card name. Gurmukhi speak_as stays matchable for STT.
+        "chicken_tikka_masala",
+        "lamb_rogan_josh",
+        "chicken_biryani",
+        "lamb_biryani",
         "chicken_tikka",
         "seekh_kebab",
         "lamb_chops",

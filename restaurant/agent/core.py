@@ -44,7 +44,12 @@ from restaurant.agent.language import update_preferred_language
 from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
 from restaurant.agent.prompt import build_system_prompt, prompt_style
 from restaurant.agent.readback_verify import readback_verify_mode, verify_readback
-from restaurant.agent.tts_transform import phone_enforced_stream, tts_phone_enforce_enabled
+from restaurant.agent.tts_transform import (
+    dish_english_enforced_stream,
+    phone_enforced_stream,
+    tts_dish_english_enforce_enabled,
+    tts_phone_enforce_enabled,
+)
 from restaurant.agent.replies import (
     background_repeat_phrase,
     echo_recovery_phrase,
@@ -204,7 +209,15 @@ class RestaurantAgent(Agent):
     def tts_node(self, text, model_settings):
         """PR 079 — phone-digit enforcement in the REAL audio path: whatever
         the LLM wrote, TTS only ever hears the stored phone as English word
-        digits. Rollback: TTS_PHONE_ENFORCE=0."""
+        digits. Rollback: TTS_PHONE_ENFORCE=0.
+
+        PR 085 — dish-name backstop runs FIRST: any Gurmukhi rendition of an
+        english-mode dish (ਲੈਮ ਬਿਰਿਆਨੀ) is rewritten to its English voice_line
+        before phone enforcement sees the stream. Rollback: TTS_DISH_ENGLISH_ENFORCE=0."""
+        if tts_dish_english_enforce_enabled():
+            text = dish_english_enforced_stream(
+                text, menu_provider.english_dish_reverse_map
+            )
         if tts_phone_enforce_enabled():
             text = phone_enforced_stream(
                 text, lambda: self.cart.customer_phone or None

@@ -99,6 +99,10 @@ class MenuCache:
     def item_count(self) -> int:
         return len(self._items)
 
+    def all_items(self) -> list[CachedMenuItem]:
+        """Public snapshot of every cached item (order preserved)."""
+        return list(self._items)
+
     @classmethod
     def sync_from_clover(cls, tenant: Tenant) -> "MenuCache":
         client = CloverClient(
