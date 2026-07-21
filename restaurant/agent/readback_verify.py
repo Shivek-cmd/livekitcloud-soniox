@@ -22,6 +22,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from restaurant.customer_info import _INDIC_NUMERAL_MAP, _spoken_words_to_digits
+
 if TYPE_CHECKING:
     from restaurant.orders import OrderCart
 
@@ -219,6 +221,20 @@ def _check_order_type(tokens: list[str], order_type: str) -> str | None:
     return f"you never said the order type '{order_type}' (say it in English)"
 
 
+def _check_phone(spoken: str, phone_digits: str) -> str | None:
+    """The stored phone's digits must appear as a contiguous run somewhere in
+    the spoken readback — in any script/word form the LLM is allowed to say
+    (English/Punjabi/Hindi digit words, ASCII/Gurmukhi/Devanagari numerals).
+    `readback_spoken` is captured pre-TTS-transform, so this must recognize
+    the same forms `enforce_english_phone_in_speech` rewrites, not just the
+    canonical English-word-digit output."""
+    normalized = _spoken_words_to_digits(spoken.translate(_INDIC_NUMERAL_MAP))
+    digits_only = re.sub(r"\D", "", normalized)
+    if phone_digits in digits_only:
+        return None
+    return "you never said the phone number"
+
+
 def _check_total(spoken: str, total: float) -> str | None:
     """Warn-level: a spoken numeric dollar amount must equal the cart total."""
     for m in _DOLLARS_RE.finditer(unicodedata.normalize("NFC", spoken)):
@@ -248,6 +264,11 @@ def verify_readback(
 
     if cart.order_type:
         problem = _check_order_type(tokens, cart.order_type)
+        if problem:
+            check.problems.append(problem)
+
+    if cart.customer_phone:
+        problem = _check_phone(spoken, cart.customer_phone)
         if problem:
             check.problems.append(problem)
 

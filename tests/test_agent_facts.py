@@ -1,6 +1,11 @@
 """Tests for restaurant.agent.facts — structured tool-reply facts (PR 075)."""
 
-from restaurant.agent.facts import _qty_word, format_cart_facts, format_mutation_reply
+from restaurant.agent.facts import (
+    _qty_word,
+    format_cart_facts,
+    format_mutation_reply,
+    format_readback_facts,
+)
 from restaurant.orders import CartMutation, OrderCart
 
 _NAAN = {"name": "Garlic Naan", "voice_line": "Garlic Naan", "price": 3.50}
@@ -30,6 +35,36 @@ def test_cart_facts_items_total_and_notes():
 
 def test_cart_facts_empty_cart():
     assert format_cart_facts(OrderCart()) == "ORDER NOW: empty. total=$0"
+
+
+def _ready_cart(order_type: str = "pickup") -> OrderCart:
+    cart = _cart()
+    cart.order_type = order_type
+    cart.customer_name = "Aman Singh"
+    cart.customer_phone = "7805551234"
+    if order_type == "delivery":
+        cart.delivery_address = "123 Main St, Apt 4"
+    return cart
+
+
+def test_readback_facts_always_include_phone():
+    facts = format_readback_facts(_ready_cart(), include_total=False)
+    assert "seven, eight, zero, five, five, five, one, two, three, four" in facts
+    assert "say as English word digits" in facts
+
+
+def test_readback_facts_include_address_only_for_delivery():
+    pickup_facts = format_readback_facts(_ready_cart("pickup"), include_total=False)
+    assert "delivery address" not in pickup_facts
+
+    delivery_facts = format_readback_facts(_ready_cart("delivery"), include_total=False)
+    assert "delivery address: 123 Main St, Apt 4" in delivery_facts
+
+
+def test_readback_facts_guide_mentions_phone_and_address():
+    facts = format_readback_facts(_ready_cart("delivery"), include_total=False)
+    assert "phone number" in facts
+    assert "address" in facts
 
 
 def test_cart_facts_custom_label():
