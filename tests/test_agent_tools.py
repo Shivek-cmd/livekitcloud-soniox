@@ -10,6 +10,7 @@ import asyncio
 import pytest
 
 from restaurant import menu_provider
+from restaurant.agent import core
 from restaurant.agent.core import RestaurantAgent
 
 # ── fake menu ─────────────────────────────────────────────────────────────────
@@ -371,6 +372,7 @@ def test_readback_facts_generated_from_cart(agent):
     assert "2 x Garlic Naan" in result
     assert "order type: pickup" in result
     assert "Aman Singh" in result
+    assert "seven, eight, zero, five, five, five, one, two, three, four" in result
     # Phone channel: no price in the readback facts.
     assert "total" not in result.lower() and "$" not in result
     # Spoken-capture armed for the verifier.
@@ -394,7 +396,8 @@ def test_confirm_before_readback_refused(agent):
     assert not agent.state.readback_confirmed
 
 
-def test_mutation_after_readback_forces_re_readback(agent):
+def test_mutation_after_readback_forces_re_readback(agent, monkeypatch):
+    monkeypatch.setattr(core, "clover_submit_enabled", lambda: False)
     _complete_order(agent)
     run(agent.get_order_readback())
     # Late add — the readback the customer heard is now stale.
@@ -407,7 +410,7 @@ def test_mutation_after_readback_forces_re_readback(agent):
     facts = run(agent.get_order_readback())
     agent.note_agent_speech(facts)
     result = run(agent.confirm_readback())
-    assert "confirmed" in result.lower()
+    assert "ORDER COMPLETE" in result or "Order placed" in result
     assert agent.state.readback_confirmed
 
 
@@ -430,7 +433,10 @@ def test_order_type_change_invalidates_confirmed_readback(agent):
 
 # ── spoken-readback verifier at confirm (PR 078) ──────────────────────────────
 
-_GOOD_READBACK = "So that's two Garlic Naan for pickup — is everything correct?"
+_GOOD_READBACK = (
+    "So that's two Garlic Naan for pickup, phone seven eight zero five "
+    "five five one two three four — is everything correct?"
+)
 
 
 def test_note_agent_speech_buffers_only_while_pending(agent):
@@ -447,6 +453,7 @@ def test_note_agent_speech_buffers_only_while_pending(agent):
 
 def test_strict_confirm_blocked_until_readback_spoken(agent, monkeypatch):
     monkeypatch.setenv("READBACK_VERIFY", "strict")
+    monkeypatch.setattr(core, "clover_submit_enabled", lambda: False)
     _complete_order(agent)
     run(agent.get_order_readback())
     # Same-turn readback+confirm: nothing spoken yet → refused.
@@ -460,19 +467,22 @@ def test_strict_confirm_blocked_until_readback_spoken(agent, monkeypatch):
     assert "READBACK INCOMPLETE" in result
     assert "Garlic Naan" in result
     assert not agent.state.readback_confirmed
-    # Full spoken readback → confirmed.
+    # Full spoken readback → confirmed and finalized in the same call.
     agent.note_agent_speech(_GOOD_READBACK)
     result = run(agent.confirm_readback())
-    assert "confirmed" in result.lower()
+    assert "ORDER COMPLETE" in result or "Order placed" in result
     assert agent.state.readback_confirmed
     assert not agent.state.readback_pending
+    assert agent.cart.placed
 
 
 def test_warn_mode_allows_but_records_event(agent, monkeypatch):
     monkeypatch.setenv("READBACK_VERIFY", "warn")
+    monkeypatch.setattr(core, "clover_submit_enabled", lambda: False)
 
     class _Recorder:
         def __init__(self):
+            self.session_id = "sess-1"
             self.events = []
 
         def log_tool(self, name, args, result):
@@ -481,22 +491,27 @@ def test_warn_mode_allows_but_records_event(agent, monkeypatch):
         def add_event(self, event_type, payload=None):
             self.events.append((event_type, payload))
 
+        def set_outcome(self, outcome):
+            pass
+
     recorder = _Recorder()
     agent.bind_recorder(recorder)
     _complete_order(agent)
     run(agent.get_order_readback())
     result = run(agent.confirm_readback())  # nothing spoken — warn, allow
-    assert "confirmed" in result.lower()
+    assert "ORDER COMPLETE" in result or "Order placed" in result
     assert agent.state.readback_confirmed
     assert any(e[0] == "readback_verify_warn" for e in recorder.events)
 
 
 def test_off_mode_skips_verification(agent, monkeypatch):
     monkeypatch.setenv("READBACK_VERIFY", "off")
+    monkeypatch.setattr(core, "clover_submit_enabled", lambda: False)
     _complete_order(agent)
     run(agent.get_order_readback())
     result = run(agent.confirm_readback())
-    assert "confirmed" in result.lower()
+    assert "ORDER COMPLETE" in result or "Order placed" in result
+    assert agent.state.readback_confirmed
     assert agent.state.readback_confirmed
 
 

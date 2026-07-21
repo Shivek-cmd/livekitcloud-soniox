@@ -184,6 +184,55 @@ def test_no_total_spoken_no_warning():
     assert not check.warnings
 
 
+# ── phone verification (PR 088) ───────────────────────────────────────────────
+
+
+def _cart_with_phone(order_type: str = "pickup") -> OrderCart:
+    cart = _cart(order_type)
+    cart.customer_phone = "7805551234"
+    return cart
+
+
+def test_phone_english_words_passes():
+    spoken = (
+        "Two Butter Chicken and a Garlic Naan for pickup, phone seven eight "
+        "zero five five five one two three four — correct?"
+    )
+    assert verify_readback(spoken, _cart_with_phone()).ok
+
+
+def test_phone_ascii_digits_passes():
+    spoken = "Two Butter Chicken and a Garlic Naan for pickup, phone 7805551234."
+    assert verify_readback(spoken, _cart_with_phone()).ok
+
+
+def test_phone_punjabi_words_passes():
+    spoken = (
+        "ਦੋ ਬਟਰ ਚਿਕਨ ਅਤੇ ਇੱਕ ਗਾਰਲਿਕ ਨਾਨ pickup, "
+        "ਸੱਤ ਅੱਠ ਸਿਫ਼ਰ ਪੰਜ ਪੰਜ ਪੰਜ ਇੱਕ ਦੋ ਤਿੰਨ ਚਾਰ ਜੀ"
+    )
+    assert verify_readback(spoken, _cart_with_phone()).ok
+
+
+def test_phone_missing_fails():
+    spoken = "Two Butter Chicken and a Garlic Naan for pickup — correct?"
+    check = verify_readback(spoken, _cart_with_phone())
+    assert not check.ok
+    assert any("phone" in p for p in check.problems)
+
+
+def test_phone_wrong_digits_fails():
+    spoken = "Two Butter Chicken and a Garlic Naan for pickup, phone nine nine nine nine nine nine nine nine nine nine."
+    check = verify_readback(spoken, _cart_with_phone())
+    assert not check.ok
+    assert any("phone" in p for p in check.problems)
+
+
+def test_no_phone_on_cart_skips_check():
+    spoken = "Two Butter Chicken and a Garlic Naan for pickup — correct?"
+    assert verify_readback(spoken, _cart()).ok
+
+
 # ── mode env ─────────────────────────────────────────────────────────────────
 
 

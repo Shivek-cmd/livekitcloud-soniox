@@ -909,20 +909,29 @@ class RestaurantAgent(Agent):
     @function_tool
     async def confirm_readback(self) -> str:
         """Call when the customer confirms the read-back is correct ("yes",
-        "that's right"). Must come after get_order_readback."""
+        "that's right"). Must come after get_order_readback. On success this
+        finalizes and places the order itself — do not call place_order
+        afterward."""
         if self.state.readback_revision is None:
             result = (
                 "No read-back has been given yet — call get_order_readback "
                 "first and read it to the customer."
             )
-        elif self.state.readback_revision != self.cart.revision:
+            self._record_tool("confirm_readback", {}, result)
+            return result
+        if self.state.readback_revision != self.cart.revision:
             result = (
                 "The order changed since the last read-back — call "
                 "get_order_readback again and read the NEW version to the "
                 "customer before confirming."
             )
-        else:
-            result = self._verified_confirm()
+            self._record_tool("confirm_readback", {}, result)
+            return result
+        result = self._verified_confirm()
+        if self.state.readback_confirmed:
+            # _finalize_order records itself under this tool_name — don't
+            # double-record the same call.
+            return await self._finalize_order(tool_name="confirm_readback")
         self._record_tool("confirm_readback", {}, result)
         return result
 
@@ -958,12 +967,19 @@ class RestaurantAgent(Agent):
                     )
         self.state.readback_confirmed = True
         self.state.readback_pending = False
-        return "Read-back confirmed. Call place_order now."
+        # confirm_readback overrides this with the finalized-order result —
+        # this string only surfaces if _verified_confirm is ever called from
+        # somewhere that doesn't immediately finalize.
+        return "Read-back confirmed."
 
     @function_tool
     async def place_order(self) -> str:
-        """Finalize and place the order. Only call after confirm_readback
-        succeeded."""
+        """Finalize and place the order. Normally triggered automatically by
+        confirm_readback on success — call this directly only as a fallback
+        if placement needs to be retried explicitly."""
+        return await self._finalize_order()
+
+    async def _finalize_order(self, tool_name: str = "place_order") -> str:
         if self.cart.placed or self._goodbye_spoken:
             return (
                 "ORDER COMPLETE — goodbye already spoken. "
@@ -973,7 +989,7 @@ class RestaurantAgent(Agent):
         blockers = place_order_blockers(self.cart, self.state)
         if blockers:
             result = "Cannot place order:\n- " + "\n- ".join(blockers)
-            self._record_tool("place_order", {}, result)
+            self._record_tool(tool_name, {}, result)
             return result
 
         clover_order_id: str | None = None
@@ -1071,7 +1087,7 @@ class RestaurantAgent(Agent):
             order_type=self.cart.order_type,
             language=getattr(self.state, "preferred_language", None),
         )
-        self._record_tool("place_order", {}, "placed")
+        self._record_tool(tool_name, {}, "placed")
         self._goodbye_spoken = True
 
         if (

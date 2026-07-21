@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from restaurant.customer_info import format_phone_spoken
+
 if TYPE_CHECKING:
     from restaurant.orders import CartMutation, OrderCart
 
@@ -127,14 +129,21 @@ def format_readback_facts(cart: "OrderCart", *, include_total: bool) -> str:
     lines.append(f'- order type: {order_type} (say "{order_type}" in English)')
     if cart.customer_name:
         lines.append(f"- name: {cart.customer_name}")
+    if cart.customer_phone:
+        lines.append(
+            f"- phone: {format_phone_spoken(cart.customer_phone)} "
+            "(say as English word digits)"
+        )
+    if order_type == "delivery" and cart.delivery_address:
+        lines.append(f"- delivery address: {cart.delivery_address}")
     if include_total:
         lines.append(f"- total: {_money(cart.total)}")
     lines.append(
         "GUIDE: phrase this warmly in your own words in the customer's "
         "language — but every item, its quantity (as a word, never a digit), "
-        "and the order type must actually be spoken. Your spoken readback is "
-        "checked — anything missing forces a re-read. End by asking if "
-        "everything is correct."
+        "the order type, the phone number, and (for delivery) the address "
+        "must actually be spoken. Your spoken readback is checked — anything "
+        "missing forces a re-read. End by asking if everything is correct."
     )
     return "\n".join(lines)
 
