@@ -16,9 +16,9 @@ The web app has **two tabs** (tab switcher at the top):
 | Tab | Scope | Priority |
 |-----|-------|----------|
 | **Order with Sierra** | Live voice ordering with avatar + live menu + live order screen | **Build first** |
-| **Store** | Browse/scroll menu, add to cart manually, classic e-commerce checkout | After "Order with Sierra" |
+| **Store** | Browse/scroll menu, add to cart manually, classic e-commerce checkout | See **[`14-web-store.md`](14-web-store.md)** (S0–S8 ✅ on PR 089) |
 
-This doc covers **Order with Sierra** only. Store gets its own plan doc later.
+This doc covers **Order with Sierra** only. Store is documented in [`14-web-store.md`](14-web-store.md).
 
 ### "Order with Sierra" screen — three live panels
 
@@ -236,7 +236,7 @@ These become the stable interface between agent and UI; both sides version it (`
 | **W4** | **Avatar**: provider integration via `AvatarSession`, `videoTrack` in UI, audio-only fallback | Provider chosen at this point (§7 #1). |
 | **W5** | **Hardening**: reconnect/resync, error states, mobile polish, idle timeout, rate limiting | Production edge cases. |
 | **W6** | **Web prompt variant**: channel-aware prompt (prices on screen, tap-add awareness, "two humans" polish), checkout overlay | Conversation quality for web. |
-| later | **Store tab**, **online payment**, **Clover submit (8c)** | Separate plans. |
+| later | **online payment**, remaining Clover submit polish (8c) | Separate from Store (Store is [`14-web-store.md`](14-web-store.md) / PR 089) |
 
 ---
 

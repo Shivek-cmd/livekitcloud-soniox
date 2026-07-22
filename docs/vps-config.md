@@ -250,6 +250,7 @@ Our web block (shared Caddy on VPS):
 voice.bizbull.ai {
   handle /token* { reverse_proxy localhost:8001 }
   handle /menu*  { reverse_proxy localhost:8001 }
+  handle /store* { reverse_proxy localhost:8001 }
   handle /health { reverse_proxy localhost:8001 }
   handle {
     root * /opt/livekit-sarvam/web/dist
@@ -258,6 +259,8 @@ voice.bizbull.ai {
   }
 }
 ```
+
+> **Store tab (PR 089):** `POST /store/checkout` must reach the token server. Without `handle /store*`, Caddy serves `index.html` and place-order fails in production. After changing Caddy: `systemctl reload caddy` (or `caddy reload`).
 
 > **`sarvam.bizbull.ai` retired** (PR 009). Use **`voice.bizbull.ai`** only.
 

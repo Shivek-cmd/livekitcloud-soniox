@@ -12,6 +12,7 @@ export default defineConfig({
       '/token': 'http://127.0.0.1:8001',
       '/menu': 'http://127.0.0.1:8001',
       '/health': 'http://127.0.0.1:8001',
+      '/store': 'http://127.0.0.1:8001',
     },
   },
 })

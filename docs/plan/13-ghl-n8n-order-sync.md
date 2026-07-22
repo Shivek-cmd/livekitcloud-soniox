@@ -130,7 +130,7 @@ Today Sierra can place orders (log + optional Clover submit) and store call anal
 
 | Event | Source | When | Why |
 |-------|--------|------|-----|
-| `order.placed` | Sierra | After successful `place_order` (Clover id present **or** shadow log-only) | Confirmation SMS + CRM note |
+| `order.placed` | Sierra | After successful `place_order` **or** Store `POST /store/checkout` place (`channel` = `phone` / `web` / `web_store`) | Confirmation SMS + CRM note — **pickup and delivery** |
 | `order.place_failed` | Sierra | Clover submit / place failed after customer intended to place | Ops + optional “we’ll call you back” |
 | `session.ended` | Sierra | Call/web session closes **without** placed order | Abandoned recovery |
 | `order.status_changed` | Clover → n8n | Status moves; v1 care about **completed** (+ optional open/locked) | “Ready / completed” follow-up |
