@@ -1,33 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { fetchMenu, type MenuCatalog, type MenuCategory, type MenuItem } from '../lib/api'
+import { fetchMenu, type MenuCatalog, type MenuItem } from '../lib/api'
+import { sortCategories } from '../lib/menuSort'
 
 type DietFilter = 'all' | 'veg' | 'nonveg'
-
-/** Browse order: how a guest typically builds a meal. Unknown cats go last. */
-const CATEGORY_ORDER = [
-  'Starters & Snacks',
-  'Vegetarian Mains',
-  'Non-Veg Mains',
-  'Tandoor & Grill',
-  'Combos & Platters',
-  'Breads & Rice',
-  'Desserts',
-  'Drinks',
-  'Extras & Sides',
-]
-
-function sortCategories(categories: MenuCategory[]): MenuCategory[] {
-  const rank = (name: string) => {
-    const i = CATEGORY_ORDER.findIndex(
-      (c) => c.toLowerCase() === name.toLowerCase(),
-    )
-    return i === -1 ? CATEGORY_ORDER.length : i
-  }
-  return [...categories].sort((a, b) => {
-    const d = rank(a.name) - rank(b.name)
-    return d !== 0 ? d : a.name.localeCompare(b.name)
-  })
-}
 
 export function LiveMenu() {
   const [menu, setMenu] = useState<MenuCatalog | null>(null)

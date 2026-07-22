@@ -39,6 +39,8 @@ class CachedMenuItem:
     category_name: str
     aliases: list[str] = field(default_factory=list)
     modifier_groups: list[CachedModifierGroup] = field(default_factory=list)
+    # From Clover Dashboard upload when Inventory API exposes it; demo fill is separate.
+    image_url: str | None = None
 
     @property
     def price_dollars(self) -> float:

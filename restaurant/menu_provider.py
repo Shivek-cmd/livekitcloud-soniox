@@ -566,6 +566,17 @@ def item_has_spice_level(name: str) -> bool:
     return bool(item and item.get("spice_level"))
 
 
+def item_has_spice_by_id(clover_item_id: str) -> bool:
+    """True if the Clover item id has a Spice Level modifier group."""
+    cache = _get_cache()
+    if not cache:
+        return False
+    hit = cache.get_by_id(clover_item_id)
+    if not hit:
+        return False
+    return any(g.name == "Spice Level" for g in hit.modifier_groups)
+
+
 def resolve_item_in_text(text: str) -> dict | None:
     """Best-effort menu item match from free-form caller text."""
     return resolve_item_dict_from_text(text)

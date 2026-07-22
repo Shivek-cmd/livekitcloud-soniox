@@ -105,8 +105,10 @@ npm run dev
 
 Open: **http://localhost:5173**
 
-Vite proxies `/token`, `/menu`, `/health` → `http://127.0.0.1:8001` (see `web/vite.config.ts`).  
+Vite proxies `/token`, `/menu`, `/health`, `/store` → `http://127.0.0.1:8001` (see `web/vite.config.ts`).  
 If you change the proxy, **restart** `npm run dev`.
+
+**Store tab:** needs token server + web only (no agent). Full place uses `POST /store/checkout` (Clover + n8n kill switches same as voice). Confirm SMS fires for **pickup and delivery** when `N8N_SYNC_ENABLED=1`. Demo dish photos: `STORE_DEMO_IMAGES=1` (default) fills missing Clover images via Unsplash on `GET /menu`.
 
 Theme: light default; dark/light toggle in the header.
 
@@ -146,6 +148,8 @@ Login: same credentials as production `admin.bizbull.ai` (from project owner).
 | Symptom | Fix |
 |---------|-----|
 | “Couldn’t load the menu” | Token server not running, or Vite proxy missing / frontend not restarted |
+| Store checkout 404 / HTML response | Vite `/store` proxy missing, or VPS Caddy missing `handle /store*` |
+| Store “too many attempts” | Rate limit — wait ~60s or raise `STORE_CHECKOUT_RATE_LIMIT` |
 | Menu OK, call fails | Start agent (`agent.py dev`) |
 | `uv trampoline failed…` | Use `uv run python -m uvicorn ...` |
 | Empty menu / 500 on `/menu` | Ensure `USE_CLOVER_MENU=1` and `data/menu_cache_bizbull.json` exists; sync from Clover if needed |

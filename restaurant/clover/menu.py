@@ -15,6 +15,11 @@ from restaurant.clover.match import normalize as match_normalize
 from restaurant.clover.models import CachedMenuItem, CachedModifier, CachedModifierGroup
 from restaurant.clover.seed_menu import CATEGORIES
 from restaurant.clover.speech_policy import resolve_speech_from_label
+from restaurant.demo_menu_images import (
+    demo_images_enabled,
+    extract_clover_image_url,
+    resolve_demo_image_url,
+)
 from restaurant.tenants.store import Tenant, mark_menu_synced
 
 logger = logging.getLogger("menu-match")
@@ -150,6 +155,7 @@ class MenuCache:
                     category_name=cat_name,
                     aliases=list(voice.get("aliases") or []) if voice else [],
                     modifier_groups=_voice_modifier_groups(voice),
+                    image_url=extract_clover_image_url(raw),
                 )
             )
 
@@ -217,6 +223,7 @@ class MenuCache:
                     category_name=raw.get("category_name", ""),
                     aliases=aliases,
                     modifier_groups=mod_groups,
+                    image_url=raw.get("image_url") or None,
                 )
             )
         return cls(
@@ -244,6 +251,7 @@ class MenuCache:
                     "category_id": i.category_id,
                     "category_name": i.category_name,
                     "aliases": i.aliases,
+                    "image_url": i.image_url,
                     "modifier_groups": [
                         {
                             "clover_modifier_group_id": g.clover_modifier_group_id,
@@ -385,11 +393,17 @@ class MenuCache:
         """Full menu grouped by category, JSON-serializable for the web menu panel."""
         groups: dict[str, list[dict]] = {}
         order: list[str] = []
+        fill_demo = demo_images_enabled()
         for it in self._items:
             cat = it.category_name or "Other"
             if cat not in groups:
                 groups[cat] = []
                 order.append(cat)
+            image_url = it.image_url
+            if not image_url and fill_demo:
+                image_url = resolve_demo_image_url(
+                    name=it.name, category_name=it.category_name
+                )
             groups[cat].append(
                 {
                     "id": it.clover_item_id,
@@ -400,6 +414,7 @@ class MenuCache:
                     "available": it.available,
                     "has_spice": any(g.name == "Spice Level" for g in it.modifier_groups),
                     "options": [g.name for g in it.modifier_groups],
+                    "image_url": image_url,
                 }
             )
         return {

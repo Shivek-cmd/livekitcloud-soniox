@@ -11,6 +11,7 @@
 | [**HANDOFF.md**](HANDOFF.md) | Current state, what's done, what's next, ops cheat sheet |
 | [plan/06-milestones.md](plan/06-milestones.md) | Build phases 1–8 + web W1–W6 |
 | [plan/11-web-order-with-sierra.md](plan/11-web-order-with-sierra.md) | Web "Order with Sierra" plan (W3–W6 next) |
+| [plan/14-web-store.md](plan/14-web-store.md) | Web **Store** tab — browse/checkout without voice (S0–S8 on PR 089) |
 | [plan/12-admin-analytics-supabase.md](plan/12-admin-analytics-supabase.md) | Admin dashboard + Supabase call analytics (D0–D8, PR 027+) |
 | [plan/13-ghl-n8n-order-sync.md](plan/13-ghl-n8n-order-sync.md) | GHL + n8n automations — G0–G2b live; **G3 abandoned** next |
 | [../n8n/](../n8n/) | Production n8n workflow export + setup |

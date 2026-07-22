@@ -11,6 +11,8 @@ export interface MenuItem {
   available: boolean
   has_spice: boolean
   options: string[]
+  /** From GET /menu — Clover when synced, else demo Unsplash fill. */
+  image_url?: string | null
 }
 
 export interface MenuCategory {
@@ -83,4 +85,102 @@ export async function fetchMenu(): Promise<MenuCatalog> {
   const resp = await fetch(MENU_URL)
   if (!resp.ok) throw new Error('Failed to load menu')
   return resp.json()
+}
+
+export const STORE_CHECKOUT_URL = '/store/checkout'
+
+export interface StoreCheckoutItemPayload {
+  id: string
+  qty: number
+  modifiers: string[]
+}
+
+export interface StoreCheckoutRequest {
+  items: StoreCheckoutItemPayload[]
+  order_type: 'pickup' | 'delivery'
+  customer: { name: string; phone: string }
+  delivery_address?: string | null
+  note?: string | null
+  place?: boolean
+}
+
+export interface StoreCheckoutSummaryLine {
+  id: string
+  name: string
+  voice_line: string
+  qty: number
+  unit_price: number
+  line_total: number
+  modifiers: string[]
+}
+
+export interface StoreCheckoutSummary {
+  items: StoreCheckoutSummaryLine[]
+  order_type: 'pickup' | 'delivery'
+  customer: { name: string; phone: string }
+  delivery_address: string | null
+  note: string | null
+  subtotal: number
+  delivery_charge: number
+  total: number
+  placed: boolean
+  order_id: string | null
+  eta?: string | null
+  clover_submitted?: boolean
+  session_id?: string | null
+}
+
+export interface StoreCheckoutResponse {
+  ok: boolean
+  status: string
+  summary?: StoreCheckoutSummary
+  blockers?: string[]
+  placed?: boolean
+  place_requested?: boolean
+}
+
+export async function postStoreCheckout(
+  body: StoreCheckoutRequest,
+): Promise<StoreCheckoutResponse> {
+  const resp = await fetch(STORE_CHECKOUT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = (await resp.json().catch(() => null)) as
+    | StoreCheckoutResponse
+    | { detail?: StoreCheckoutResponse | string }
+    | null
+
+  if (!resp.ok) {
+    const detail =
+      data && typeof data === 'object' && 'detail' in data ? data.detail : null
+    if (detail && typeof detail === 'object' && 'blockers' in detail) {
+      return detail as StoreCheckoutResponse
+    }
+    if (resp.status === 429) {
+      return {
+        ok: false,
+        status: 'rate_limited',
+        blockers: [
+          'Too many checkout attempts. Please wait a minute and try again.',
+        ],
+      }
+    }
+    if (resp.status === 502 || resp.status === 503) {
+      return {
+        ok: false,
+        status: 'invalid',
+        blockers: [
+          'The restaurant system is temporarily unavailable. Please try again in a moment.',
+        ],
+      }
+    }
+    const msg =
+      typeof detail === 'string'
+        ? detail
+        : 'Checkout failed. Please check your details.'
+    return { ok: false, status: 'invalid', blockers: [msg] }
+  }
+  return data as StoreCheckoutResponse
 }

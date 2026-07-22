@@ -10,7 +10,7 @@ Working Punjabi voice conversation, agent pipeline validated.
 - React web app at **`https://voice.bizbull.ai`** (migrated from `sarvam.bizbull.ai`, PR 009)
 - Token server: `/token`, `/menu`, `/health` (Caddy → port 8001)
 - **Order with Sierra** tab: W1 shell + W2 live cart (PR 011–012) — see `docs/plan/11-web-order-with-sierra.md`
-- Store tab: placeholder
+- **Store** tab: browse/checkout without voice — **[`14-web-store.md`](14-web-store.md)** on **PR 089** (S0–S8 ✅ on branch; push when asked)
 
 ## Phase 3 — Phone Channel (Twilio SIP) ✅ DONE
 - Twilio number `+15878175156` → SIP → LiveKit
@@ -79,7 +79,7 @@ See **`11-web-order-with-sierra.md`**.
 | Outbound calls | Agent proactively calls users |
 | Analytics | Transcript logging, latency dashboard |
 | WhatsApp channel | Via LiveKit SIP connectors |
-| **Store tab** (web) | Browse/order without call — after W3–W6 |
+| **Store tab** (web) | Browse/order without call — **[`14-web-store.md`](14-web-store.md)** on **PR 089** (S0–S8 ✅ on branch) |
 
 ## What NOT to build yet
 - No delivery / pay-on-call / non-Clover POS — see `09-clover-pos.md` out-of-scope list
