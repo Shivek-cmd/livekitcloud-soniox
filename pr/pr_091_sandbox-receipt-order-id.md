@@ -18,6 +18,9 @@ succeeds, the webhook places the kitchen order + confirm SMS, then receipt SMS.
 redirects to `?tab=store&store_pay=1|0` so the return tab opens **Store** and restores
 awaiting/thank-you (not a blank Order-with-Sierra page).
 
+**Order success UI:** Shared animated checkmark confirmation for pay later and pay now
+(pills for Pickup/Delivery + Paid online / Pay later; receipt button only when paid).
+
 ## Files Modified (pay-first)
 ### `restaurant/store_checkout.py`
 Pay-now returns `awaiting_payment`; `fulfill_store_order_after_payment` places after pay.
@@ -29,7 +32,16 @@ Stores `place_summary`; claim/mark kitchen place after APPROVED.
 Webhook APPROVED → fulfill kitchen → `order.paid`.
 
 ### `web/src/components/StoreTab.tsx`
-`awaiting_payment` pane until paid; thank-you only after kitchen order id.
+`awaiting_payment` pane until paid; animated success screen after kitchen order id.
+
+### `web/src/App.css`
+Success checkmark ring/tick animation + success layout.
+
+### `web/src/lib/storePayPending.ts`
+Persist pending pay-now across Clover redirect tabs.
+
+### `docs/plan/14-web-store.md`, `docs/plan/15-store-optional-payment.md`
+Success UI + pay-return notes.
 
 ## Files Added
 ### `pr/pr_091_sandbox-receipt-order-id.md`

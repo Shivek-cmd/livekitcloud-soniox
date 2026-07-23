@@ -1159,109 +1159,146 @@ export function StoreTab() {
           )}
 
           {pane === 'placed' && summary && (
-            <div className="store-placed">
-              <p className="store-placed-banner">Thank you — your order is in.</p>
-              <div className="store-placed-id">
-                Order ID: <strong>{summary.order_id}</strong>
-              </div>
-              {summary.eta && (
-                <div className="store-placed-eta">Ready in about {summary.eta}</div>
-              )}
-              <ul className="store-cart-lines">
-                {summary.items.map((line) => {
-                  const img = lineImage(line.id)
-                  return (
-                  <li
-                    key={`${line.id}-${line.modifiers.join('-')}-done`}
-                    className="store-cart-line"
-                  >
-                    <div className="store-cart-line-row">
-                      <div
-                        className={
-                          img ? 'store-cart-thumb has-photo' : 'store-cart-thumb'
-                        }
-                        aria-hidden
-                      >
-                        {img ? (
-                          <img
-                            src={img}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <span>{line.name.slice(0, 1)}</span>
-                        )}
-                      </div>
-                      <div className="store-cart-line-body">
-                        <div className="store-cart-line-main">
-                          <span className="store-cart-name">
-                            {line.qty}× {line.name}
-                          </span>
-                          {line.modifiers.length > 0 && (
-                            <span className="store-cart-mod">
-                              {line.modifiers.join(', ')}
-                            </span>
-                          )}
-                          <span className="store-cart-line-price">
-                            ${line.line_total.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                  )
-                })}
-              </ul>
-              <div className="store-validated-meta">
-                <div>
-                  <strong>
-                    {summary.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
-                  </strong>
-                  {' · '}
-                  {summary.customer.name} · {summary.customer.phone}
+            <div className="store-success" role="status" aria-live="polite">
+              <div className="store-success-hero">
+                <div className="store-success-check" aria-hidden>
+                  <svg viewBox="0 0 72 72" className="store-success-check-svg">
+                    <circle
+                      className="store-success-ring"
+                      cx="36"
+                      cy="36"
+                      r="30"
+                      fill="none"
+                    />
+                    <path
+                      className="store-success-tick"
+                      fill="none"
+                      d="M22 37.5 L31.5 47 L50 26"
+                    />
+                  </svg>
                 </div>
-                {summary.delivery_address && (
-                  <div>{summary.delivery_address}</div>
-                )}
-              </div>
-              <div className="store-cart-footer">
-                <div className="ot-row ot-total">
-                  <span>Total</span>
-                  <span>${summary.total.toFixed(2)}</span>
-                </div>
-                {receiptUrl && (
-                  <a
-                    className="store-checkout-btn ready store-pay-now-link"
-                    href={receiptUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View receipt
-                  </a>
-                )}
-                <p className="store-pay-note">
+                <h3 className="store-success-title">Order placed!</h3>
+                <p className="store-success-sub">
                   {(summary.payment_preference ?? paymentPreference) === 'now'
-                    ? receiptUrl
-                      ? 'Payment received — order is with the kitchen. Open your receipt above.'
-                      : 'Payment received — order is with the kitchen.'
-                    : `Pay later at ${
-                        summary.order_type === 'delivery' ? 'the door' : 'pickup'
-                      }.`}
-                  {summary.clover_submitted
-                    ? ' Sent to the kitchen.'
-                    : summary.order_id
-                      ? ' Logged locally (Clover submit off).'
-                      : ''}
+                    ? 'Payment received. The kitchen has your order.'
+                    : summary.order_type === 'delivery'
+                      ? 'We got it — pay when it arrives.'
+                      : 'We got it — pay when you pick up.'}
                 </p>
-                <button
-                  type="button"
-                  className="store-checkout-btn ready"
-                  onClick={startNewOrder}
-                >
-                  New order
-                </button>
+                {summary.order_id && (
+                  <div className="store-success-id">
+                    <span className="store-success-id-label">Order ID</span>
+                    <strong>{summary.order_id}</strong>
+                  </div>
+                )}
+                {summary.eta && (
+                  <div className="store-success-eta">
+                    Ready in about <strong>{summary.eta}</strong>
+                  </div>
+                )}
+                <div className="store-success-pills">
+                  <span className="store-success-pill">
+                    {summary.order_type === 'delivery' ? 'Delivery' : 'Pickup'}
+                  </span>
+                  <span
+                    className={
+                      (summary.payment_preference ?? paymentPreference) === 'now'
+                        ? 'store-success-pill is-paid'
+                        : 'store-success-pill'
+                    }
+                  >
+                    {(summary.payment_preference ?? paymentPreference) === 'now'
+                      ? 'Paid online'
+                      : summary.order_type === 'delivery'
+                        ? 'Pay on delivery'
+                        : 'Pay at pickup'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="store-success-body">
+                <ul className="store-cart-lines store-success-lines">
+                  {summary.items.map((line) => {
+                    const img = lineImage(line.id)
+                    return (
+                      <li
+                        key={`${line.id}-${line.modifiers.join('-')}-done`}
+                        className="store-cart-line"
+                      >
+                        <div className="store-cart-line-row">
+                          <div
+                            className={
+                              img
+                                ? 'store-cart-thumb has-photo'
+                                : 'store-cart-thumb'
+                            }
+                            aria-hidden
+                          >
+                            {img ? (
+                              <img
+                                src={img}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <span>{line.name.slice(0, 1)}</span>
+                            )}
+                          </div>
+                          <div className="store-cart-line-body">
+                            <div className="store-cart-line-main">
+                              <span className="store-cart-name">
+                                {line.qty}× {line.name}
+                              </span>
+                              {line.modifiers.length > 0 && (
+                                <span className="store-cart-mod">
+                                  {line.modifiers.join(', ')}
+                                </span>
+                              )}
+                              <span className="store-cart-line-price">
+                                ${line.line_total.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+
+                <div className="store-validated-meta store-success-meta">
+                  <div>
+                    {summary.customer.name} · {summary.customer.phone}
+                  </div>
+                  {summary.delivery_address && (
+                    <div>{summary.delivery_address}</div>
+                  )}
+                </div>
+
+                <div className="store-cart-footer store-success-footer">
+                  <div className="ot-row ot-total">
+                    <span>Total</span>
+                    <span>${summary.total.toFixed(2)}</span>
+                  </div>
+                  {receiptUrl && (
+                    <a
+                      className="store-checkout-btn ready store-pay-now-link"
+                      href={receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View receipt
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    className="store-checkout-btn ready"
+                    onClick={startNewOrder}
+                  >
+                    New order
+                  </button>
+                </div>
               </div>
             </div>
           )}
