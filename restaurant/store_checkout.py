@@ -24,6 +24,30 @@ logger = logging.getLogger("store-checkout")
 
 STORE_CHANNEL = "web_store"
 
+# Canonical values echoed in summary / accepted on the wire.
+PAYMENT_PREFERENCE_LATER = "later"
+PAYMENT_PREFERENCE_NOW = "now"
+_PAYMENT_PREFERENCE_ALIASES = {
+    "later": PAYMENT_PREFERENCE_LATER,
+    "pay_later": PAYMENT_PREFERENCE_LATER,
+    "pay-later": PAYMENT_PREFERENCE_LATER,
+    "now": PAYMENT_PREFERENCE_NOW,
+    "pay_now": PAYMENT_PREFERENCE_NOW,
+    "pay-now": PAYMENT_PREFERENCE_NOW,
+}
+
+
+def parse_payment_preference(payload: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Return (preference, blocker). Missing/blank → later. Invalid → blocker."""
+    raw = payload.get("payment_preference")
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return PAYMENT_PREFERENCE_LATER, None
+    key = str(raw).strip().lower().replace(" ", "_")
+    pref = _PAYMENT_PREFERENCE_ALIASES.get(key)
+    if pref is None:
+        return None, "Choose pay later or pay now."
+    return pref, None
+
 
 @dataclass
 class StoreCheckoutResult:
@@ -105,6 +129,10 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
 
     note = (payload.get("note") or "").strip()
 
+    payment_preference, pay_blocker = parse_payment_preference(payload)
+    if pay_blocker:
+        blockers.append(pay_blocker)
+
     priced_lines: list[dict[str, Any]] = []
     if isinstance(raw_items, list):
         for idx, raw in enumerate(raw_items):
@@ -173,6 +201,9 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
         "customer": {"name": name, "phone": phone},
         "delivery_address": delivery_address if order_type == "delivery" else None,
         "note": note or None,
+        "payment_preference": payment_preference or PAYMENT_PREFERENCE_LATER,
+        # P2 will set checkout_url when preference is "now".
+        "checkout_url": None,
         "subtotal": subtotal,
         "delivery_charge": round(delivery_charge, 2),
         "total": total,

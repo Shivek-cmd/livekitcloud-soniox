@@ -95,12 +95,16 @@ export interface StoreCheckoutItemPayload {
   modifiers: string[]
 }
 
+export type StorePaymentPreference = 'later' | 'now'
+
 export interface StoreCheckoutRequest {
   items: StoreCheckoutItemPayload[]
   order_type: 'pickup' | 'delivery'
   customer: { name: string; phone: string }
   delivery_address?: string | null
   note?: string | null
+  /** later = pay at pickup/door (default); now = online pay (Hosted Checkout in P2+) */
+  payment_preference?: StorePaymentPreference
   place?: boolean
 }
 
@@ -120,6 +124,9 @@ export interface StoreCheckoutSummary {
   customer: { name: string; phone: string }
   delivery_address: string | null
   note: string | null
+  payment_preference?: StorePaymentPreference
+  /** Set in P2+ when pay-now Hosted Checkout is created */
+  checkout_url?: string | null
   subtotal: number
   delivery_charge: number
   total: number

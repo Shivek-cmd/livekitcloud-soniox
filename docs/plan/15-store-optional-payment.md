@@ -1,6 +1,6 @@
 # Store Optional Payment — Plan (pay now or pay later)
 
-> **Status:** ☐ Plan only — **no code until each step is approved**  
+> **Status:** 🔶 **P1 done** — waiting approval before P2  
 > **Last updated:** 2026-07-23  
 > **Channel:** Web **Store** tab only (`voice.bizbull.ai`) — **not phone / Sierra voice**  
 > **Depends on:** PR 089 Store (merged) — [`14-web-store.md`](14-web-store.md)  
@@ -79,23 +79,24 @@ Browser never talks to Clover or GHL directly.
 
 ## 5. Phases (step by step — approval gate each time)
 
-### P0 — Plan + branch ✅ (this doc)
+### P0 — Plan + branch ✅
 
 - [x] Plan doc + PR doc + branch `pr_090_store-optional-payment`
-- [ ] User approves locked decisions (§2)
-- **Stop.** No code yet.
+- [x] User approved locked decisions (§2)
+- **Stop for next phase.**
 
-### P1 — Checkout UI (pay choice only)
+### P1 — Checkout UI (pay choice only) ✅
 
-**Do:** Add Pay later / Pay now radios on Store checkout (pickup + delivery).  
-Wire preference into `POST /store/checkout` body.  
-If `later` → current behavior only (no payment API yet).
+**Done:**
+- Store checkout radios: **Pay at pickup / Pay on delivery** (default) vs **Pay now**
+- `payment_preference: later | now` on `POST /store/checkout` (validate + place)
+- Summary echoes `payment_preference`; `checkout_url` is always `null` until P2
+- Pay-now place still creates the kitchen order; thank-you notes that the payment link is next
+- Tests: default later, now echoed, aliases, invalid, place keeps preference
 
-**Done when:** UI choice works; pay-later place still succeeds; pay-now can be accepted but may no-op or show “coming soon” until P2.
+**Approval:** UI copy + default = pay later — waiting before P2.
 
-**Approval:** UI copy + default = pay later.
-
-### P2 — Clover Hosted Checkout (pay now)
+### P2 — Clover Hosted Checkout (pay now) ☐
 
 **Do:** After successful place, if `payment_preference=now`, create Hosted Checkout session; return `checkout_url`; Store thank-you redirects/opens it.
 

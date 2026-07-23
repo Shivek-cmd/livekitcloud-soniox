@@ -5,6 +5,7 @@ import {
   type MenuCatalog,
   type MenuItem,
   type StoreCheckoutSummary,
+  type StorePaymentPreference,
 } from '../lib/api'
 import { sortCategories } from '../lib/menuSort'
 import { categoryInitials, categoryTheme } from '../lib/categoryTheme'
@@ -33,6 +34,8 @@ export function StoreTab() {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [note, setNote] = useState('')
+  const [paymentPreference, setPaymentPreference] =
+    useState<StorePaymentPreference>('later')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string[] | null>(null)
   const [summary, setSummary] = useState<StoreCheckoutSummary | null>(null)
@@ -117,11 +120,18 @@ export function StoreTab() {
         customer: { name: name.trim(), phone: phone.trim() },
         delivery_address: orderType === 'delivery' ? address.trim() : null,
         note: note.trim() || null,
+        payment_preference: paymentPreference,
         place: false,
       })
       if (!res.ok || !res.summary) {
         setFormError(res.blockers?.length ? res.blockers : ['Validation failed.'])
         return
+      }
+      if (
+        res.summary.payment_preference === 'now' ||
+        res.summary.payment_preference === 'later'
+      ) {
+        setPaymentPreference(res.summary.payment_preference)
       }
       setSummary(res.summary)
       setPane('validated')
@@ -146,6 +156,7 @@ export function StoreTab() {
         customer: { name: name.trim(), phone: phone.trim() },
         delivery_address: orderType === 'delivery' ? address.trim() : null,
         note: note.trim() || null,
+        payment_preference: paymentPreference,
         place: true,
       })
       if (!res.ok || !res.summary) {
@@ -609,7 +620,9 @@ export function StoreTab() {
                 >
                   Checkout
                 </button>
-                <p className="store-pay-note">Pay later at pickup or delivery.</p>
+                <p className="store-pay-note">
+                  Pay at pickup/delivery, or pay now online at checkout.
+                </p>
               </div>
             </>
           )}
@@ -682,6 +695,46 @@ export function StoreTab() {
                 />
               </label>
 
+              <div
+                className="store-order-type"
+                role="radiogroup"
+                aria-label="Payment"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={paymentPreference === 'later'}
+                  className={
+                    paymentPreference === 'later'
+                      ? 'store-type-btn active'
+                      : 'store-type-btn'
+                  }
+                  onClick={() => setPaymentPreference('later')}
+                >
+                  {orderType === 'delivery' ? 'Pay on delivery' : 'Pay at pickup'}
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={paymentPreference === 'now'}
+                  className={
+                    paymentPreference === 'now'
+                      ? 'store-type-btn active'
+                      : 'store-type-btn'
+                  }
+                  onClick={() => setPaymentPreference('now')}
+                >
+                  Pay now
+                </button>
+              </div>
+              <p className="store-pay-note">
+                {paymentPreference === 'now'
+                  ? 'Pay online after you place — card entry on a secure Clover page (next step).'
+                  : orderType === 'delivery'
+                    ? 'Pay when your order arrives.'
+                    : 'Pay when you pick up.'}
+              </p>
+
               {formError && (
                 <ul className="store-form-errors">
                   {formError.map((b) => (
@@ -731,7 +784,12 @@ export function StoreTab() {
           {pane === 'validated' && summary && (
             <div className="store-validated">
               <p className="store-validated-banner">
-                Prices confirmed. Ready to place — pay later at pickup or delivery.
+                Prices confirmed. Ready to place —{' '}
+                {(summary.payment_preference ?? paymentPreference) === 'now'
+                  ? 'you chose pay now.'
+                  : summary.order_type === 'delivery'
+                    ? 'pay when it arrives.'
+                    : 'pay at pickup.'}
               </p>
               <ul className="store-cart-lines">
                 {summary.items.map((line) => {
@@ -912,7 +970,11 @@ export function StoreTab() {
                   <span>${summary.total.toFixed(2)}</span>
                 </div>
                 <p className="store-pay-note">
-                  Pay later at {summary.order_type === 'delivery' ? 'the door' : 'pickup'}.
+                  {(summary.payment_preference ?? paymentPreference) === 'now'
+                    ? 'You chose pay now. Online payment link comes in the next step — your order is already with the kitchen.'
+                    : `Pay later at ${
+                        summary.order_type === 'delivery' ? 'the door' : 'pickup'
+                      }.`}
                   {summary.clover_submitted
                     ? ' Sent to the kitchen.'
                     : ' Logged locally (Clover submit off).'}

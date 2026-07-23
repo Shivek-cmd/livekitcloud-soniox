@@ -23,8 +23,8 @@ Plan: [`docs/plan/15-store-optional-payment.md`](../docs/plan/15-store-optional-
 ## Current status
 | Phase | Scope | Status |
 |-------|--------|--------|
-| **P0** | Plan + branch + this doc | ✅ Done — waiting approval to start P1 |
-| **P1** | Store checkout UI: pay choice | ☐ Not started |
+| **P0** | Plan + branch + this doc | ✅ Done |
+| **P1** | Store checkout UI: pay choice | ✅ Done — waiting approval before P2 |
 | **P2** | Clover Hosted Checkout link | ☐ Not started |
 | **P3** | Payment success → receipt URL | ☐ Not started |
 | **P4** | Receipt SMS via n8n/GHL | ☐ Not started |
@@ -41,19 +41,34 @@ This ship record (updated as phases land).
 ### `docs/README.md`
 Index link to plan 15.
 
+### `restaurant/store_checkout.py` (P1)
+`parse_payment_preference`; summary fields `payment_preference` + `checkout_url` (null until P2).
+
+### `web/src/lib/api.ts` (P1)
+Request/summary types for `payment_preference` / `checkout_url`.
+
+### `web/src/components/StoreTab.tsx` (P1)
+Pay later / Pay now radios on checkout; copy on review + thank-you; preference sent on validate/place.
+
+### `tests/test_store_checkout.py` (P1)
+Preference default, now, alias, invalid, place keep.
+
 ## Files Deleted
 None.
 
 ## What's NOT in This PR
 - Phone / Sierra voice payment
-- Any payment code until P0 is approved and each later phase is approved
+- Hosted Checkout / receipt SMS (P2–P4)
 - Forced prepay before kitchen
 - Tips / refunds
 
 ## How to Test
-N/A at P0 (docs only).
-
-After P1+: see phase checklists in `docs/plan/15-store-optional-payment.md`.
+**P1**
+```
+PYTHONPATH=. uv run --with pytest pytest tests/test_store_checkout.py -q
+```
+Local Store: token server + `cd web && npm run dev` → checkout → toggle Pay now / Pay at pickup → Review → Place.  
+Pay later: same as before. Pay now: order still places; thank-you says payment link is next (no redirect yet).
 
 ## Post-Merge: VPS Pull Command
 `cd /opt/livekit-sarvam && git pull origin main && uv sync`  
