@@ -90,23 +90,25 @@ Browser never talks to Clover or GHL directly.
 **Done:**
 - Store checkout radios: **Pay at pickup / Pay on delivery** (default) vs **Pay now**
 - `payment_preference: later | now` on `POST /store/checkout` (validate + place)
-- Summary echoes `payment_preference`; `checkout_url` is always `null` until P2
-- Pay-now place still creates the kitchen order; thank-you notes that the payment link is next
+- Summary echoes `payment_preference`; `checkout_url` filled in P2 when enabled
+- Pay-now place still creates the kitchen order
 - Tests: default later, now echoed, aliases, invalid, place keeps preference
 
-**Approval:** UI copy + default = pay later — waiting before P2.
+### P2 — Clover Hosted Checkout (pay now) ✅
 
-### P2 — Clover Hosted Checkout (pay now) ☐
+**Done:**
+- `restaurant/clover/hosted_checkout.py` — create session via `/invoicingcheckoutservice/v1/checkouts`
+- After place, if preference=`now` and `STORE_PAY_NOW_ENABLED=1` → set `checkout_url` + `checkout_session_id`
+- Fail-open: HCO failure never undoes a placed order
+- Thank-you: auto-open checkout URL + **Pay now** button fallback
+- Env in `.env.example`: `STORE_PAY_NOW_ENABLED`, `CLOVER_ECOM_PRIVATE_TOKEN`, redirect URLs
+- Tests: body cents/delivery, href parse, enabled/disabled/fail-open
 
-**Do:** After successful place, if `payment_preference=now`, create Hosted Checkout session; return `checkout_url`; Store thank-you redirects/opens it.
+**VPS enable (when ready):** set Ecommerce Hosted Checkout private token + `STORE_PAY_NOW_ENABLED=1`.
 
-**Needs:** Clover Ecommerce / Hosted Checkout token on merchant (sandbox first). Env vars documented in `.env.example`.
+**Approval:** waiting before P3 (payment success → receipt URL).
 
-**Done when:** Sandbox pay-now opens Clover pay page for a real Store order.
-
-**Approval:** Sandbox credentials + kill switch name before coding.
-
-### P3 — Payment success → receipt URL
+### P3 — Payment success → receipt URL ☐
 
 **Do:** Detect successful payment (webhook preferred; poll fallback). Store `payment_id` + `receipt_url` against `clover_order_id`.
 
@@ -132,11 +134,12 @@ Browser never talks to Clover or GHL directly.
 
 ---
 
-## 6. Kill switches (planned)
+## 6. Kill switches
 
 | Env | Effect |
 |-----|--------|
-| `STORE_PAY_NOW_ENABLED` | `0` = hide/disable Pay now (pay later only) |
+| `STORE_PAY_NOW_ENABLED` | `0` (default) = no HCO link created (pay-now still places order) |
+| `CLOVER_ECOM_PRIVATE_TOKEN` | Hosted Checkout private key (falls back to `CLOVER_API_TOKEN`) |
 | Existing `CLOVER_SUBMIT_ORDERS` | Kitchen ticket vs log-only id |
 | Existing `N8N_SYNC_ENABLED` | Confirm / receipt SMS fail-open |
 
