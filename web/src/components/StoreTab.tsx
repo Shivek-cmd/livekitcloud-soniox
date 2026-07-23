@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   fetchMenu,
   fetchStoreConfig,
@@ -12,6 +12,12 @@ import {
 import { sortCategories } from '../lib/menuSort'
 import { categoryInitials, categoryTheme } from '../lib/categoryTheme'
 import { SPICE_LEVELS, type SpiceLevel } from '../lib/storeCart'
+import {
+  clearStorePayPending,
+  loadStorePayPending,
+  saveStorePayPending,
+  stripStorePayQueryParams,
+} from '../lib/storePayPending'
 import { useStoreCart } from '../hooks/useStoreCart'
 
 type DietFilter = 'all' | 'veg' | 'nonveg'
@@ -44,7 +50,40 @@ export function StoreTab() {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const [payNowEnabled, setPayNowEnabled] = useState(false)
   const [paymentPollTimedOut, setPaymentPollTimedOut] = useState(false)
+  const [payReturnNote, setPayReturnNote] = useState<string | null>(null)
+  const skipAutoOpenCheckout = useRef(false)
   const cart = useStoreCart()
+
+  // Restore pending pay-now after Clover redirect (new tab / refresh).
+  useEffect(() => {
+    let fromPay: string | null = null
+    try {
+      fromPay = new URLSearchParams(window.location.search).get('store_pay')
+    } catch {
+      fromPay = null
+    }
+    const pending = loadStorePayPending()
+    if (pending?.summary && pending.checkout_session_id) {
+      skipAutoOpenCheckout.current = true
+      setPaymentPreference('now')
+      setSummary(pending.summary)
+      if (pending.summary.placed && pending.summary.order_id) {
+        setPane('placed')
+      } else {
+        setPane('awaiting_payment')
+      }
+      if (fromPay === '0') {
+        setPayReturnNote(
+          'Payment was cancelled or failed. You can open checkout again, or start a new order.',
+        )
+      } else if (fromPay === '1') {
+        setPayReturnNote('Checking payment status…')
+      }
+    }
+    if (fromPay != null || pending) {
+      stripStorePayQueryParams()
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -79,6 +118,10 @@ export function StoreTab() {
   // Pay now — open Clover Hosted Checkout (before kitchen place).
   useEffect(() => {
     if (pane !== 'awaiting_payment' || !summary?.checkout_url) return
+    if (skipAutoOpenCheckout.current) {
+      skipAutoOpenCheckout.current = false
+      return
+    }
     const url = summary.checkout_url
     const w = window.open(url, '_blank', 'noopener,noreferrer')
     if (!w) {
@@ -105,22 +148,26 @@ export function StoreTab() {
         if (cancelled) return
         if (pay?.status === 'paid' && pay.receipt_url) {
           setReceiptUrl(pay.receipt_url)
+          setPayReturnNote(null)
           if (pay.order_id) {
-            setSummary((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    placed: true,
-                    order_id: pay.order_id ?? prev.order_id,
-                    eta: pay.eta ?? prev.eta,
-                    clover_submitted: !String(pay.order_id || '').startsWith('LOG-'),
-                  }
-                : prev,
-            )
+            setSummary((prev) => {
+              if (!prev) return prev
+              const next = {
+                ...prev,
+                placed: true,
+                order_id: pay.order_id ?? prev.order_id,
+                eta: pay.eta ?? prev.eta,
+                clover_submitted: !String(pay.order_id || '').startsWith('LOG-'),
+              }
+              saveStorePayPending({
+                checkout_session_id: sessionId,
+                summary: next,
+              })
+              return next
+            })
             setPane('placed')
             return
           }
-          // Paid but kitchen not placed yet — keep polling briefly.
         }
       } catch {
         // ignore transient poll errors
@@ -128,6 +175,7 @@ export function StoreTab() {
       if (cancelled) return
       if (tries >= 40) {
         setPaymentPollTimedOut(true)
+        setPayReturnNote(null)
         return
       }
       window.setTimeout(tick, 3000)
@@ -142,6 +190,21 @@ export function StoreTab() {
     summary?.payment_preference,
     paymentPreference,
   ])
+
+  // If we restored an already-placed order, fetch receipt once.
+  useEffect(() => {
+    if (pane !== 'placed' || receiptUrl) return
+    const sessionId = summary?.checkout_session_id
+    if (!sessionId) return
+    let cancelled = false
+    fetchStorePaymentStatus({ checkoutSessionId: sessionId }).then((pay) => {
+      if (cancelled) return
+      if (pay?.receipt_url) setReceiptUrl(pay.receipt_url)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [pane, summary?.checkout_session_id, receiptUrl])
 
   const matchesDiet = (item: MenuItem) => {
     if (diet === 'veg') return item.veg
@@ -250,8 +313,17 @@ export function StoreTab() {
       }
       setSummary(res.summary)
       if (res.status === 'awaiting_payment' || res.summary.checkout_url) {
+        if (res.summary.checkout_session_id) {
+          saveStorePayPending({
+            checkout_session_id: res.summary.checkout_session_id,
+            summary: res.summary,
+          })
+        }
+        skipAutoOpenCheckout.current = false
+        setPayReturnNote(null)
         setPane('awaiting_payment')
       } else {
+        clearStorePayPending()
         setPane('placed')
       }
       cart.clear()
@@ -263,10 +335,12 @@ export function StoreTab() {
   }
 
   const startNewOrder = () => {
+    clearStorePayPending()
     setPane('cart')
     setSummary(null)
     setReceiptUrl(null)
     setPaymentPollTimedOut(false)
+    setPayReturnNote(null)
     setFormError(null)
     setNote('')
   }
@@ -1003,6 +1077,9 @@ export function StoreTab() {
               <p className="store-placed-banner">
                 Complete payment to send your order to the kitchen.
               </p>
+              {payReturnNote && (
+                <p className="store-pay-note">{payReturnNote}</p>
+              )}
               <ul className="store-cart-lines">
                 {summary.items.map((line) => {
                   const img = lineImage(line.id)
