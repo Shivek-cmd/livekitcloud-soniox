@@ -62,6 +62,17 @@ export function StoreTab() {
     setSpicePick(null)
   }, [diet, search, activeCategory])
 
+  // Pay now — open Clover Hosted Checkout when the place response includes a URL.
+  useEffect(() => {
+    if (pane !== 'placed' || !summary?.checkout_url) return
+    const url = summary.checkout_url
+    const w = window.open(url, '_blank', 'noopener,noreferrer')
+    if (!w) {
+      // Popup blocked — user can tap the Pay now button on the thank-you pane.
+      console.info('Store pay-now popup blocked; use Pay now button')
+    }
+  }, [pane, summary?.checkout_url, summary?.order_id])
+
   const matchesDiet = (item: MenuItem) => {
     if (diet === 'veg') return item.veg
     if (diet === 'nonveg') return !item.veg
@@ -729,7 +740,7 @@ export function StoreTab() {
               </div>
               <p className="store-pay-note">
                 {paymentPreference === 'now'
-                  ? 'Pay online after you place — card entry on a secure Clover page (next step).'
+                  ? 'Pay online after you place — secure Clover checkout page.'
                   : orderType === 'delivery'
                     ? 'Pay when your order arrives.'
                     : 'Pay when you pick up.'}
@@ -969,9 +980,22 @@ export function StoreTab() {
                   <span>Total</span>
                   <span>${summary.total.toFixed(2)}</span>
                 </div>
+                {(summary.payment_preference ?? paymentPreference) === 'now' &&
+                  summary.checkout_url && (
+                    <a
+                      className="store-checkout-btn ready store-pay-now-link"
+                      href={summary.checkout_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Pay now — open secure checkout
+                    </a>
+                  )}
                 <p className="store-pay-note">
                   {(summary.payment_preference ?? paymentPreference) === 'now'
-                    ? 'You chose pay now. Online payment link comes in the next step — your order is already with the kitchen.'
+                    ? summary.checkout_url
+                      ? 'Complete payment on the Clover page (link opens in a new tab). Your order is already with the kitchen.'
+                      : 'You chose pay now, but the online payment link is unavailable right now — please pay at pickup or delivery. Your order is still with the kitchen.'
                     : `Pay later at ${
                         summary.order_type === 'delivery' ? 'the door' : 'pickup'
                       }.`}

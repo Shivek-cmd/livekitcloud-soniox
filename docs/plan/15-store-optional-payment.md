@@ -1,6 +1,6 @@
 # Store Optional Payment — Plan (pay now or pay later)
 
-> **Status:** 🔶 **P1 done** — waiting approval before P2  
+> **Status:** 🔶 **P2 done** — waiting approval before P3  
 > **Last updated:** 2026-07-23  
 > **Channel:** Web **Store** tab only (`voice.bizbull.ai`) — **not phone / Sierra voice**  
 > **Depends on:** PR 089 Store (merged) — [`14-web-store.md`](14-web-store.md)  

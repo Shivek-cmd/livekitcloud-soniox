@@ -127,6 +127,7 @@ export interface StoreCheckoutSummary {
   payment_preference?: StorePaymentPreference
   /** Set in P2+ when pay-now Hosted Checkout is created */
   checkout_url?: string | null
+  checkout_session_id?: string | null
   subtotal: number
   delivery_charge: number
   total: number

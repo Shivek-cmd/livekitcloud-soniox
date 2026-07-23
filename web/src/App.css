@@ -1588,6 +1588,12 @@
   color: var(--text-dim);
   margin: 0;
 }
+a.store-pay-now-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
 .store-checkout-form {
   flex: 1;
   min-height: 0;

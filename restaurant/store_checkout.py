@@ -304,6 +304,51 @@ async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
     )
     summary["session_id"] = session_id
 
+    # Pay now → Hosted Checkout link (fail-open: order already placed).
+    if summary.get("payment_preference") == PAYMENT_PREFERENCE_NOW:
+        from restaurant.clover.hosted_checkout import (
+            HostedCheckoutError,
+            create_hosted_checkout_session,
+            store_pay_now_enabled,
+        )
+
+        if not store_pay_now_enabled():
+            logger.info(
+                "STORE_PAY_NOW skipped — STORE_PAY_NOW_ENABLED off order_id=%s",
+                clover_order_id,
+            )
+        else:
+            try:
+                from restaurant.tenants.config import get_default_tenant
+
+                tenant = get_default_tenant()
+                session = await asyncio.to_thread(
+                    create_hosted_checkout_session,
+                    summary,
+                    order_id=clover_order_id,
+                    merchant_id=tenant.clover_merchant_id,
+                    base_url=tenant.clover_base_url,
+                    token=None,  # env Ecommerce token (or API token fallback)
+                )
+                summary["checkout_url"] = session.href
+                summary["checkout_session_id"] = session.checkout_session_id
+                logger.info(
+                    "STORE_PAY_NOW checkout_url order_id=%s session=%s",
+                    clover_order_id,
+                    session.checkout_session_id,
+                )
+            except HostedCheckoutError as e:
+                logger.warning(
+                    "STORE_PAY_NOW HCO failed order_id=%s err=%s — order still placed",
+                    clover_order_id,
+                    e,
+                )
+            except Exception:
+                logger.exception(
+                    "STORE_PAY_NOW unexpected error order_id=%s — order still placed",
+                    clover_order_id,
+                )
+
     try:
         from restaurant.integrations.n8n_webhook import notify_order_placed
 
@@ -334,9 +379,11 @@ async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
         logger.exception("n8n store order.placed notify raised — ignored")
 
     logger.info(
-        "STORE_ORDER_PLACED order_id=%s clover=%s total=%s",
+        "STORE_ORDER_PLACED order_id=%s clover=%s total=%s pay=%s checkout=%s",
         clover_order_id,
         summary["clover_submitted"],
         summary["total"],
+        summary.get("payment_preference"),
+        bool(summary.get("checkout_url")),
     )
     return StoreCheckoutResult(ok=True, status="placed", summary=summary)
