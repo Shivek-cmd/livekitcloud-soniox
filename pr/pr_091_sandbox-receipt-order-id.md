@@ -14,6 +14,10 @@ After Hosted Checkout webhook APPROVED, we look up `payment → order.id` and bu
 without placing a kitchen ticket or showing “thank you / order placed”. After payment
 succeeds, the webhook places the kitchen order + confirm SMS, then receipt SMS.
 
+**Pay return UX:** Pending pay-now is saved in `localStorage`. Clover success/failure
+redirects to `?tab=store&store_pay=1|0` so the return tab opens **Store** and restores
+awaiting/thank-you (not a blank Order-with-Sierra page).
+
 ## Files Modified (pay-first)
 ### `restaurant/store_checkout.py`
 Pay-now returns `awaiting_payment`; `fulfill_store_order_after_payment` places after pay.

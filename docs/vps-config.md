@@ -96,8 +96,8 @@ N8N_WEBHOOK_ORDERS_URL=https://n8n.bizbull.ai/webhook/sierra-ghl-sync
 # Webhook URL to paste in Clover: https://voice.bizbull.ai/store/clover-hco-webhook
 # CLOVER_RECEIPT_URL_TEMPLATE=https://sandbox.dev.clover.com/r/{order_id}
 # (omit to auto-pick host; /r/ needs Clover order id, resolved from payment)
-# STORE_PAY_SUCCESS_URL=https://voice.bizbull.ai/
-# STORE_PAY_FAILURE_URL=https://voice.bizbull.ai/
+# STORE_PAY_SUCCESS_URL=https://voice.bizbull.ai/?tab=store&store_pay=1
+# STORE_PAY_FAILURE_URL=https://voice.bizbull.ai/?tab=store&store_pay=0
 ```
 
 Plan: `docs/plan/13-ghl-n8n-order-sync.md`. Workflow export: `n8n/`.

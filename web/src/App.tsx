@@ -70,11 +70,15 @@ function MoonIcon({ size = 14 }: { size?: number }) {
   )
 }
 
-const TAB_SESSION_KEY = 'voice_active_tab'
+const TAB_STORAGE_KEY = 'voice_active_tab'
 
-function readStoredTab(): Tab {
+function readInitialTab(): Tab {
   try {
-    const v = sessionStorage.getItem(TAB_SESSION_KEY)
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('store_pay') != null) return 'store'
+    const q = (params.get('tab') || '').trim().toLowerCase()
+    if (q === 'store' || q === 'order') return q
+    const v = localStorage.getItem(TAB_STORAGE_KEY)
     if (v === 'store' || v === 'order') return v
   } catch {
     /* ignore */
@@ -83,12 +87,12 @@ function readStoredTab(): Tab {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>(readStoredTab)
+  const [tab, setTab] = useState<Tab>(readInitialTab)
   const [theme, toggleTheme] = useTheme()
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(TAB_SESSION_KEY, tab)
+      localStorage.setItem(TAB_STORAGE_KEY, tab)
     } catch {
       /* ignore */
     }
