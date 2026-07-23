@@ -10,6 +10,7 @@ from restaurant.customer_info import (
     enforce_english_phone_in_speech,
     extract_phone_digits,
     format_phone_spoken,
+    is_plausible_phone,
     is_valid_customer_name,
     looks_like_phone_utterance,
     parse_customer_name,
@@ -82,6 +83,34 @@ def test_dish_answer_still_rejected(singh_menu_cache):
     # name to the name question is still rejected, both scripts.
     assert parse_customer_name("Butter Chicken") is None
     assert parse_customer_name("ਬਟਰ ਚਿਕਨ") is None
+
+
+def test_placeholder_names_rejected():
+    for bad in ("Sir", "sir", "Customer", "Ma'am", "Guest", "Caller"):
+        assert not is_valid_customer_name(bad)
+
+
+def test_real_names_still_accepted():
+    for good in ("Aman", "Aman Singh", "Priya"):
+        assert is_valid_customer_name(good)
+
+
+def test_555_exchange_rejected():
+    assert not is_plausible_phone("5551234567")
+    assert not is_plausible_phone("4165551234")
+
+
+def test_repeated_digit_number_rejected():
+    assert not is_plausible_phone("1111111111")
+
+
+def test_sequential_digit_number_rejected():
+    assert not is_plausible_phone("1234567890")
+    assert not is_plausible_phone("0123456789")
+
+
+def test_real_looking_number_accepted():
+    assert is_plausible_phone("7804441234")
 
 
 def test_extract_phone_digits():

@@ -123,6 +123,25 @@ def extract_phone_digits(text: str) -> str | None:
     return None
 
 
+def is_plausible_phone(digits: str) -> bool:
+    """False for numbers that are structurally never real NANP customer
+    numbers — reserved/fictional (555 exchange), or trivially fabricated
+    (all-same-digit, sequential) — never a caller's actual number. `digits`
+    must be a clean 10-digit string. Scoped to the LLM-authored
+    set_customer_contact path only; never applied to accumulate_phone's
+    code-side transcript capture, which must never second-guess a real
+    caller's digits."""
+    if len(digits) != 10 or not digits.isdigit():
+        return False
+    if digits[0:3] == "555" or digits[3:6] == "555":
+        return False
+    if len(set(digits)) == 1:
+        return False
+    if digits in ("1234567890", "0123456789"):
+        return False
+    return True
+
+
 def looks_like_phone_utterance(text: str) -> bool:
     """True when STT is mostly a phone number (not a menu order)."""
     raw = (text or "").strip()
@@ -406,9 +425,18 @@ _BLOCKED_NAME_RE = indic_word_re(
     r"^(?:yes|no|ok|okay|haan|han|ji|ਜੀ|nahi|nahin|ਨਹੀਂ|हाँ)$"
 )
 
+# Honorifics/placeholders an LLM can fabricate instead of asking for a real
+# name (e.g. "Sir", "Customer") — never valid names on their own.
+_PLACEHOLDER_NAME_RE = indic_word_re(
+    r"sir|sirji|sir ji|ma'?am|madam|miss|mister|"
+    r"customer|caller|guest|unknown|n/?a"
+)
+
 
 def is_valid_customer_name(name: str) -> bool:
-    """False for pickup/delivery and other checkout tokens misheard as names."""
+    """False for pickup/delivery and other checkout tokens misheard as names,
+    and for honorific/placeholder words an LLM can fabricate instead of a
+    real name."""
     n = (name or "").strip()
     if len(n) < 2 or re.search(r"\d", n):
         return False
@@ -418,6 +446,8 @@ def is_valid_customer_name(name: str) -> bool:
             return False
     if len(n.split()) == 1:
         if _PICKUP_RE.search(n) or _DELIVERY_RE.search(n):
+            return False
+        if _PLACEHOLDER_NAME_RE.fullmatch(n.lower()):
             return False
     return True
 

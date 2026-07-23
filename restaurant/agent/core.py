@@ -29,7 +29,10 @@ from restaurant.agent.gates import (
     SPICE_GROUP,
     SPICE_LEVELS,
     OrderSessionState,
+    additional_requests_blockers,
+    contact_blockers,
     invalidate_readback,
+    order_type_blockers,
     place_order_blockers,
     readback_blockers,
 )
@@ -66,6 +69,7 @@ from restaurant.clover.order_submit import (
 from restaurant.customer_info import (
     accumulate_phone,
     format_phone_spoken,
+    is_plausible_phone,
     is_valid_customer_name,
     parse_customer_name,
     phone_digit_custody_enabled,
@@ -726,6 +730,11 @@ class RestaurantAgent(Agent):
         before the order can be read back or placed. If the customer named a
         spice level for specific dishes, call set_item_spice for each FIRST,
         then call this."""
+        blockers = additional_requests_blockers(self.cart)
+        if blockers:
+            result = "Cannot record additional requests yet:\n- " + "\n- ".join(blockers)
+            self._record_tool("record_additional_requests", {"response": response}, result)
+            return result
         text = (response or "").strip()
         self.state.additional_requests_recorded = True
         if not text or _NO_ALLERGIES_RE.match(text):
@@ -759,6 +768,11 @@ class RestaurantAgent(Agent):
         order_type: Annotated[str, "Either 'pickup' or 'delivery'"],
     ) -> str:
         """Set whether the order is for pickup or delivery."""
+        blockers = order_type_blockers(self.cart, self.state)
+        if blockers:
+            result = "Cannot set pickup/delivery yet:\n- " + "\n- ".join(blockers)
+            self._record_tool("set_order_type", {"order_type": order_type}, result)
+            return result
         order_type = (order_type or "").lower().strip()
         if order_type not in ("pickup", "delivery"):
             return "order_type must be 'pickup' or 'delivery'."
@@ -815,6 +829,14 @@ class RestaurantAgent(Agent):
     ) -> str:
         """Save the customer's name and/or phone for the order. Ask for the
         name first, then the phone on the next turn."""
+        blockers = contact_blockers(self.cart, self.state)
+        if blockers:
+            result = "Cannot collect contact details yet:\n- " + "\n- ".join(blockers)
+            self._record_tool(
+                "set_customer_contact", {"name": name, "phone": phone}, result
+            )
+            return result
+
         facts: list[str] = []
         guides: list[str] = []
 
@@ -844,17 +866,26 @@ class RestaurantAgent(Agent):
             # so digits dictated across separate tool calls stitch together
             # instead of the tool replacing (and losing) prior progress.
             new_buffer, event = accumulate_phone(self.state.phone_buffer, phone)
-            if event == "saved":
+            if event == "saved" and not is_plausible_phone(new_buffer):
+                self.state.phone_buffer = ""
+                facts.append(
+                    f'PHONE NOT SAVED: "{phone}" does not look like a real '
+                    "phone number."
+                )
+                guides.append(
+                    "ask the customer to say their phone number again, one "
+                    "digit at a time if needed."
+                )
+            elif event == "saved":
                 self.cart.customer_phone = new_buffer
                 self.state.phone_buffer = ""
                 spoken = format_phone_spoken(new_buffer)
                 facts.append(f"PHONE SAVED: {spoken}.")
                 guides.append(
                     "the number is already saved — do NOT ask the customer "
-                    "to repeat or re-say it. Confirm it back once yourself, "
-                    "speaking it as English word digits exactly as in PHONE "
-                    "SAVED (never numerals, never Punjabi/Hindi number "
-                    "words), then continue the order."
+                    "to repeat or re-say it, and do NOT read it back now. "
+                    "It will be read back during the order read-back step. "
+                    "Just continue the order."
                 )
             else:
                 self.state.phone_buffer = new_buffer

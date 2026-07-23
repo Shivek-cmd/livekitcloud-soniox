@@ -72,14 +72,14 @@ def _make_ready(agent):
     run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
-    run(agent.set_customer_contact(phone="7805551234"))
+    run(agent.set_customer_contact(phone="7804441234"))
     run(agent.get_order_readback())
     # Feed the spoken readback so the confirm is verifier-clean in any
     # READBACK_VERIFY mode (PR 078) — must include the phone digits too
     # (PR 088) or strict mode refuses and confirm_readback never finalizes.
     agent.note_agent_speech(
-        "So that's two Garlic Naan for pickup, phone seven eight zero five "
-        "five five one two three four — correct?"
+        "So that's two Garlic Naan for pickup, phone seven eight zero four "
+        "four four one two three four — correct?"
     )
     run(agent.confirm_readback())
 
@@ -123,7 +123,7 @@ def test_n8n_notify_called_on_successful_place(agent, monkeypatch):
     _make_ready(agent)
     run(agent.place_order())
     assert seen["kwargs"]["channel"] == "phone"
-    assert seen["kwargs"]["customer_phone"] == "7805551234"
+    assert seen["kwargs"]["customer_phone"] == "7804441234"
     assert seen["kwargs"]["order_type"] == "pickup"
     assert seen["kwargs"]["clover_submitted"] is False
     assert any(i["name"] == "Garlic Naan" for i in seen["kwargs"]["items"])

@@ -2,7 +2,10 @@
 
 from restaurant.agent.gates import (
     OrderSessionState,
+    additional_requests_blockers,
+    contact_blockers,
     invalidate_readback,
+    order_type_blockers,
     place_order_blockers,
 )
 from restaurant.orders import OrderCart
@@ -16,6 +19,12 @@ def _complete_cart() -> OrderCart:
     cart.order_type = "pickup"
     cart.customer_name = "Aman"
     cart.customer_phone = "7805551234"
+    return cart
+
+
+def _cart_with_items() -> OrderCart:
+    cart = OrderCart()
+    cart.add_item(_ITEM, 1)
     return cart
 
 
@@ -135,3 +144,49 @@ def test_every_mutation_path_bumps_revision():
     cart.add_item(_ITEM, 1)
     cart.remove_item("Butter Chicken")
     assert cart.revision == r0 + 7
+
+
+def test_additional_requests_blocks_on_empty_cart():
+    blockers = additional_requests_blockers(OrderCart())
+    assert any("empty" in b for b in blockers)
+
+
+def test_additional_requests_ok_with_items():
+    assert additional_requests_blockers(_cart_with_items()) == []
+
+
+def test_order_type_blocks_before_additional_requests():
+    state = OrderSessionState()
+    blockers = order_type_blockers(_cart_with_items(), state)
+    assert any("additional-requests" in b for b in blockers)
+
+
+def test_order_type_ok_after_additional_requests():
+    state = OrderSessionState(additional_requests_recorded=True)
+    assert order_type_blockers(_cart_with_items(), state) == []
+
+
+def test_contact_blocks_before_order_type():
+    state = OrderSessionState(additional_requests_recorded=True)
+    blockers = contact_blockers(_cart_with_items(), state)
+    assert any("Pickup or delivery" in b for b in blockers)
+
+
+def test_contact_blocks_before_delivery_address():
+    cart = _cart_with_items()
+    cart.order_type = "delivery"
+    state = OrderSessionState(additional_requests_recorded=True)
+    blockers = contact_blockers(cart, state)
+    assert any("address" in b for b in blockers)
+
+
+def test_contact_ok_once_order_type_and_requests_set():
+    cart = _cart_with_items()
+    cart.order_type = "pickup"
+    state = OrderSessionState(additional_requests_recorded=True)
+    assert contact_blockers(cart, state) == []
+
+
+def test_contact_blocked_reproduces_the_incident():
+    # Exact repro shape: nothing collected yet, tool called immediately.
+    assert contact_blockers(OrderCart(), OrderSessionState()) != []

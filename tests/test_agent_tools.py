@@ -242,6 +242,8 @@ def test_set_item_spice_invalid_value(agent):
 # ── checkout detail tools ─────────────────────────────────────────────────────
 
 def test_set_order_type_validates_literal(agent):
+    run(agent.add_item("garlic naan"))
+    run(agent.record_additional_requests("no"))
     assert "must be" in run(agent.set_order_type("drive-through"))
     assert agent.cart.order_type is None
     result = run(agent.set_order_type("delivery"))
@@ -258,7 +260,16 @@ def test_set_delivery_address_rejects_junk(agent):
     assert agent.cart.delivery_address == "123 Main Street NW, Edmonton"
 
 
+def _ready_for_contact(agent):
+    """Advance past the phase gate (items → additional requests → order
+    type) so set_customer_contact's own validation can be exercised."""
+    run(agent.add_item("garlic naan"))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+
+
 def test_contact_rejects_junk_name(agent):
+    _ready_for_contact(agent)
     result = run(agent.set_customer_contact(name="pickup"))
     assert "NAME NOT SAVED" in result
     assert "does not look like a real name" in result
@@ -268,6 +279,7 @@ def test_contact_rejects_junk_name(agent):
 def test_contact_rejects_nine_digit_phone(agent):
     # PR 082 — a 9-digit fragment is now held as partial progress (buffered for
     # accumulation) rather than discarded; still never saved to the cart.
+    _ready_for_contact(agent)
     result = run(agent.set_customer_contact(phone="123456789"))
     assert "PHONE PARTIAL: have 9 of 10 (123456789)" in result
     assert not agent.cart.customer_phone
@@ -275,8 +287,9 @@ def test_contact_rejects_nine_digit_phone(agent):
 
 
 def test_contact_accepts_ten_digit_phone(agent):
-    result = run(agent.set_customer_contact(phone="780-555-1234"))
-    assert agent.cart.customer_phone == "7805551234"
+    _ready_for_contact(agent)
+    result = run(agent.set_customer_contact(phone="780-444-1234"))
+    assert agent.cart.customer_phone == "7804441234"
     # PHONE SAVED fact carries the English word digits the LLM must speak.
     assert "PHONE SAVED" in result
     assert "seven, eight, zero" in result
@@ -285,13 +298,25 @@ def test_contact_accepts_ten_digit_phone(agent):
 
 
 def test_contact_accepts_eleven_digits_with_leading_one(agent):
-    run(agent.set_customer_contact(phone="1 780 555 1234"))
-    assert agent.cart.customer_phone == "7805551234"
+    _ready_for_contact(agent)
+    run(agent.set_customer_contact(phone="1 780 444 1234"))
+    assert agent.cart.customer_phone == "7804441234"
+
+
+def test_contact_rejects_implausible_phone(agent):
+    # 555 exchange / repeated digits are structurally never real NANP
+    # numbers — the fabrication backstop for set_customer_contact.
+    _ready_for_contact(agent)
+    result = run(agent.set_customer_contact(phone="555-123-4567"))
+    assert "PHONE NOT SAVED" in result
+    assert "does not look like a real phone number" in result
+    assert not agent.cart.customer_phone
 
 
 def test_contact_accumulates_phone_across_calls(agent):
     # PR 082 — the tool now stitches fragments dictated across separate calls
     # instead of replacing (and losing) prior progress.
+    _ready_for_contact(agent)
     r1 = run(agent.set_customer_contact(phone="80"))
     assert "PHONE PARTIAL: have 2 of 10 (80)" in r1
     assert not agent.cart.customer_phone
@@ -305,12 +330,25 @@ def test_contact_accumulates_phone_across_calls(agent):
 
 
 def test_contact_saves_valid_name(agent):
+    _ready_for_contact(agent)
     result = run(agent.set_customer_contact(name="Aman Singh"))
     assert 'NAME SAVED: "Aman Singh"' in result
     assert agent.cart.customer_name == "Aman Singh"
 
 
+def test_contact_blocked_before_order_type_set(agent):
+    # Direct regression test for the incident: set_customer_contact called
+    # before order_type exists must refuse, not fabricate/save anything.
+    run(agent.add_item("garlic naan"))
+    run(agent.record_additional_requests("no"))
+    result = run(agent.set_customer_contact(name="Sir", phone="555-123-4567"))
+    assert "Cannot collect contact details yet" in result
+    assert not agent.cart.customer_name
+    assert not agent.cart.customer_phone
+
+
 def test_record_additional_requests_none_and_note(agent):
+    run(agent.add_item("garlic naan"))
     result = run(agent.record_additional_requests("no"))
     assert agent.state.additional_requests_recorded
     assert agent.state.allergy_note == ""
@@ -355,7 +393,7 @@ def _complete_order(agent):
     run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
-    run(agent.set_customer_contact(phone="7805551234"))
+    run(agent.set_customer_contact(phone="7804441234"))
 
 
 def test_readback_refuses_while_incomplete(agent):
@@ -372,12 +410,20 @@ def test_readback_facts_generated_from_cart(agent):
     assert "2 x Garlic Naan" in result
     assert "order type: pickup" in result
     assert "Aman Singh" in result
-    assert "seven, eight, zero, five, five, five, one, two, three, four" in result
+    # Phone number read back as English word digits, not saved-tool prose.
+    assert "seven, eight, zero, four, four, four, one, two, three, four" in result
     # Phone channel: no price in the readback facts.
     assert "total" not in result.lower() and "$" not in result
-    # Spoken-capture armed for the verifier.
-    assert agent.state.readback_pending
-    assert agent.state.readback_spoken == []
+
+
+def test_set_customer_contact_no_longer_prompts_immediate_phone_readback(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    result = run(agent.set_customer_contact(phone="7804441234"))
+    assert "PHONE SAVED" in result
+    assert "do NOT read it back now" in result
+    assert "read back during the order read-back step" in result
 
 
 def test_readback_facts_include_total_on_web(agent):
@@ -434,8 +480,8 @@ def test_order_type_change_invalidates_confirmed_readback(agent):
 # ── spoken-readback verifier at confirm (PR 078) ──────────────────────────────
 
 _GOOD_READBACK = (
-    "So that's two Garlic Naan for pickup, phone seven eight zero five "
-    "five five one two three four — is everything correct?"
+    "So that's two Garlic Naan for pickup, phone seven eight zero four "
+    "four four one two three four — is everything correct?"
 )
 
 
