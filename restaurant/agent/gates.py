@@ -92,3 +92,46 @@ def place_order_blockers(cart: "OrderCart", state: OrderSessionState) -> list[st
             "call get_order_readback, read it verbatim, and get a yes."
         )
     return blockers
+
+
+def additional_requests_blockers(cart: "OrderCart") -> list[str]:
+    """Must have at least one item before the closing additional-requests
+    question makes sense."""
+    if cart.is_empty:
+        return [
+            "The order is empty — add at least one item before asking the "
+            "additional-requests question."
+        ]
+    return []
+
+
+def order_type_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
+    """Pickup/delivery is asked only after items are in and the final
+    additional-requests question has been recorded (prompt.py _your_job order)."""
+    blockers = additional_requests_blockers(cart)
+    if not state.additional_requests_recorded:
+        blockers.append(
+            "The final additional-requests question (spice preferences, "
+            "allergies, special instructions) has not been asked yet — ask "
+            "it and call record_additional_requests before pickup/delivery."
+        )
+    return blockers
+
+
+def contact_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
+    """set_customer_contact may not run until items, additional requests, and
+    order type (+ delivery address) are already settled — this is the check
+    that stops the LLM from inventing a name/phone before the flow has
+    actually reached that point."""
+    blockers = order_type_blockers(cart, state)
+    if not cart.order_type:
+        blockers.append(
+            "Pickup or delivery has not been set — ask and call "
+            "set_order_type before collecting the name/phone."
+        )
+    elif cart.order_type == "delivery" and not cart.delivery_address:
+        blockers.append(
+            "Delivery needs an address — ask and call set_delivery_address "
+            "before collecting the name/phone."
+        )
+    return blockers
