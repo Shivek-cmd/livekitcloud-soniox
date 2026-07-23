@@ -108,7 +108,7 @@ Open: **http://localhost:5173**
 Vite proxies `/token`, `/menu`, `/health`, `/store` → `http://127.0.0.1:8001` (see `web/vite.config.ts`).  
 If you change the proxy, **restart** `npm run dev`.
 
-**Store tab:** needs token server + web only (no agent). Full place uses `POST /store/checkout` (Clover + n8n kill switches same as voice). Confirm SMS fires for **pickup and delivery** when `N8N_SYNC_ENABLED=1`. Demo dish photos: `STORE_DEMO_IMAGES=1` (default) fills missing Clover images via Unsplash on `GET /menu`.
+**Store tab:** needs token server + web only (no agent). Full place uses `POST /store/checkout` (Clover + n8n kill switches same as voice). Confirm SMS fires for **pickup and delivery** when `N8N_SYNC_ENABLED=1`. Optional **Pay now** when `STORE_PAY_NOW_ENABLED=1` + Ecommerce token (see [`plan/15-store-optional-payment.md`](plan/15-store-optional-payment.md)). Demo dish photos: `STORE_DEMO_IMAGES=1` (default) fills missing Clover images via Unsplash on `GET /menu`.
 
 Theme: light default; dark/light toggle in the header.
 
@@ -150,6 +150,9 @@ Login: same credentials as production `admin.bizbull.ai` (from project owner).
 | “Couldn’t load the menu” | Token server not running, or Vite proxy missing / frontend not restarted |
 | Store checkout 404 / HTML response | Vite `/store` proxy missing, or VPS Caddy missing `handle /store*` |
 | Store “too many attempts” | Rate limit — wait ~60s or raise `STORE_CHECKOUT_RATE_LIMIT` |
+| Pay now button missing | `STORE_PAY_NOW_ENABLED` off or `/store/config` unreachable |
+| Pay now places but no Clover page | Missing `CLOVER_ECOM_PRIVATE_TOKEN` / HCO create failed (order still placed) |
+| No receipt after pay | Clover webhook URL/secret not set, or n8n `order.paid` branch missing |
 | Menu OK, call fails | Start agent (`agent.py dev`) |
 | `uv trampoline failed…` | Use `uv run python -m uvicorn ...` |
 | Empty menu / 500 on `/menu` | Ensure `USE_CLOVER_MENU=1` and `data/menu_cache_bizbull.json` exists; sync from Clover if needed |

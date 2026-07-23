@@ -7,6 +7,7 @@ Importable n8n workflow. **No secrets in this folder.**
 | Status | Detail |
 |--------|--------|
 | Phase 0 / G1 / G2b | ✅ Live — contact + Voice Orders opp + confirm SMS (Opportunity Created) |
+| Store pay-now receipt | 🔶 PR 090 P4 — Sierra emits `order.paid`; n8n/GHL branch TBD — see [`ORDER_PAID_RECEIPT_SMS.md`](ORDER_PAID_RECEIPT_SMS.md) |
 | Next | **G3** abandoned / **G4** completed |
 
 ---

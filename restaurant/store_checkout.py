@@ -204,6 +204,8 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
         "payment_preference": payment_preference or PAYMENT_PREFERENCE_LATER,
         # P2 will set checkout_url when preference is "now".
         "checkout_url": None,
+        "checkout_session_id": None,
+        "checkout_expires_at_ms": None,
         "subtotal": subtotal,
         "delivery_charge": round(delivery_charge, 2),
         "total": total,
@@ -332,6 +334,26 @@ async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
                 )
                 summary["checkout_url"] = session.href
                 summary["checkout_session_id"] = session.checkout_session_id
+                summary["checkout_expires_at_ms"] = session.expiration_time
+                if session.checkout_session_id:
+                    try:
+                        from restaurant.store_pay_now_store import record_pending_checkout
+
+                        record_pending_checkout(
+                            checkout_session_id=session.checkout_session_id,
+                            order_id=clover_order_id,
+                            customer_name=summary["customer"]["name"],
+                            customer_phone=summary["customer"]["phone"],
+                            total=float(summary.get("total") or 0),
+                            order_type=summary.get("order_type"),
+                            session_id=session_id,
+                            checkout_expires_at_ms=session.expiration_time,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "STORE_PAY_PENDING record failed order_id=%s",
+                            clover_order_id,
+                        )
                 logger.info(
                     "STORE_PAY_NOW checkout_url order_id=%s session=%s",
                     clover_order_id,

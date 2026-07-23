@@ -7,7 +7,7 @@
 Adds **optional Pay now** on the web **Store** tab only (not phone).  
 Customer chooses **Pay at pickup / on delivery** (default) or **Pay now**.  
 Order always goes to Clover + confirm SMS. Pay-now uses Clover Hosted Checkout;  
-after payment, receipt link is sent via n8n/GHL SMS.
+after payment, receipt URL is stored and `order.paid` is sent to n8n for receipt SMS.
 
 Plan: [`docs/plan/15-store-optional-payment.md`](../docs/plan/15-store-optional-payment.md)
 
@@ -18,74 +18,57 @@ Plan: [`docs/plan/15-store-optional-payment.md`](../docs/plan/15-store-optional-
 - Never collect cards in our UI
 - Kitchen ticket always on successful checkout
 - Receipt SMS only after online payment succeeds
-- Build in phases **P0→P5**; **approval required between phases**
+- Phases **P0→P5** on this branch
 
 ## Current status
 | Phase | Scope | Status |
 |-------|--------|--------|
-| **P0** | Plan + branch + this doc | ✅ Done |
-| **P1** | Store checkout UI: pay choice | ✅ Done |
-| **P2** | Clover Hosted Checkout link | ✅ Done — waiting approval before P3 |
-| **P3** | Payment success → receipt URL | ☐ Not started |
-| **P4** | Receipt SMS via n8n/GHL | ☐ Not started |
-| **P5** | Hardening, tests, docs, deploy notes | ☐ Not started |
+| **P0** | Plan + branch + this doc | ✅ |
+| **P1** | Store checkout UI: pay choice | ✅ |
+| **P2** | Clover Hosted Checkout link | ✅ |
+| **P3** | Payment success → receipt URL | ✅ |
+| **P4** | Receipt SMS via n8n (`order.paid`) | ✅ Sierra emit; n8n branch manual |
+| **P5** | Hardening + docs + checklist | ✅ |
 
 ## Files Added
-### `docs/plan/15-store-optional-payment.md`
-Full product + architecture + phased build plan.
-
-### `pr/pr_090_store-optional-payment.md`
-This ship record (updated as phases land).
-
-### `restaurant/clover/hosted_checkout.py` (P2)
-Create Clover Hosted Checkout session; kill switch `STORE_PAY_NOW_ENABLED`.
-
-### `tests/test_hosted_checkout.py` (P2)
-HCO body + create + store pay-now wiring tests.
+- `docs/plan/15-store-optional-payment.md`
+- `pr/pr_090_store-optional-payment.md`
+- `restaurant/clover/hosted_checkout.py`
+- `restaurant/clover/hco_webhook.py`
+- `restaurant/store_pay_now_store.py`
+- `tests/test_hosted_checkout.py`
+- `tests/test_store_pay_now.py`
+- `n8n/ORDER_PAID_RECEIPT_SMS.md`
 
 ## Files Modified
-### `docs/README.md`
-Index link to plan 15.
-
-### `restaurant/store_checkout.py` (P1–P2)
-`payment_preference`; after place, create HCO when pay-now enabled.
-
-### `web/src/lib/api.ts` (P1–P2)
-Request/summary types for preference + `checkout_url` / `checkout_session_id`.
-
-### `web/src/components/StoreTab.tsx` (P1–P2)
-Pay radios; thank-you opens HCO URL + Pay now button.
-
-### `web/src/App.css` (P2)
-Pay-now link button styling.
-
-### `tests/test_store_checkout.py` (P1)
-Preference default, now, alias, invalid, place keep.
-
-### `.env.example` (P2)
-`STORE_PAY_NOW_ENABLED`, `CLOVER_ECOM_PRIVATE_TOKEN`, redirect URLs.
-
-## Files Deleted
-None.
+- `restaurant/store_checkout.py`, `restaurant/integrations/n8n_webhook.py`, `restaurant/store_rate_limit.py`
+- `token_server.py` — preference, config, webhook, payment-status
+- `web/src/components/StoreTab.tsx`, `web/src/lib/api.ts`, `web/src/App.css`
+- `web/src/App.tsx` — remember last tab (`order` / `store`) in `sessionStorage`
+- `tests/test_store_checkout.py`, `tests/test_n8n_webhook.py`
+- `.env.example`, `.gitignore`
+- `docs/plan/14-web-store.md`, `docs/vps-config.md`, `docs/LOCAL_DEV.md`, `docs/README.md`
+- `n8n/README.md`
 
 ## What's NOT in This PR
 - Phone / Sierra voice payment
-- Payment webhook / receipt SMS (P3–P4)
+- Pre-built n8n workflow JSON for `order.paid` (manual — see guide)
 - Forced prepay before kitchen
 - Tips / refunds
 
 ## How to Test
-**P1–P2**
+See plan §10 checklist. Quick unit:
 ```
-PYTHONPATH=. uv run --with pytest pytest tests/test_store_checkout.py tests/test_hosted_checkout.py -q
+PYTHONPATH=. uv run --with pytest pytest tests/test_store_checkout.py tests/test_hosted_checkout.py tests/test_store_pay_now.py tests/test_n8n_webhook.py tests/test_store_rate_limit.py -q
 ```
-Local pay-now (sandbox):
-1. Set `STORE_PAY_NOW_ENABLED=1` and `CLOVER_ECOM_PRIVATE_TOKEN` (Hosted Checkout private key) in `.env`
-2. Token server + `cd web && npm run dev`
-3. Store → Pay now → Place → Clover checkout should open (or use the thank-you button)
 
-Pay later: unchanged. If kill switch off, pay-now still places order with no link.
-
-## Post-Merge: VPS Pull Command
-`cd /opt/livekit-sarvam && git pull origin main && uv sync`  
-(+ rebuild `web/`, restart `restaurant-token`, set `STORE_PAY_NOW_ENABLED=1` + Ecommerce token)
+## Post-Merge: VPS
+```bash
+cd /opt/livekit-sarvam
+git pull origin main && uv sync
+(cd web && npm install && npm run build)
+systemctl restart restaurant-token
+# set STORE_PAY_NOW_ENABLED + CLOVER_ECOM_PRIVATE_TOKEN + CLOVER_HCO_WEBHOOK_SECRET
+# Clover webhook → https://voice.bizbull.ai/store/clover-hco-webhook
+# n8n: branch on order.paid (n8n/ORDER_PAID_RECEIPT_SMS.md)
+```

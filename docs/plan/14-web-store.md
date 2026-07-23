@@ -1,10 +1,11 @@
 # Web Store Plan — Classic browse & checkout (production)
 
-> **Status:** **S0→S8 ✅** on PR 089 (place + demo photos + Store UX polish). Do not push until asked.  
-> **Last updated:** 2026-07-22  
-> **Goal:** Production-grade **Store** tab at `voice.bizbull.ai` where anyone can browse the Clover menu, build a cart, and place a pickup or delivery order **without** talking to Sierra — pay later at the restaurant / door.  
+> **Status:** **S0→S8 ✅** (PR 089) · **optional pay-now P0→P5 ✅** (PR 090)  
+> **Last updated:** 2026-07-23  
+> **Goal:** Production-grade **Store** tab at `voice.bizbull.ai` where anyone can browse the Clover menu, build a cart, and place a pickup or delivery order **without** talking to Sierra — **pay later** by default, optional **Pay now** via Clover Hosted Checkout.  
 > **Sibling:** [`11-web-order-with-sierra.md`](11-web-order-with-sierra.md) covers the voice tab only.  
-> **CRM:** Reuse GHL/n8n `order.placed` path — [`13-ghl-n8n-order-sync.md`](13-ghl-n8n-order-sync.md).  
+> **Payments:** [`15-store-optional-payment.md`](15-store-optional-payment.md) · [`pr/pr_090_store-optional-payment.md`](../../pr/pr_090_store-optional-payment.md)  
+> **CRM:** GHL/n8n `order.placed` + `order.paid` (receipt) — [`13-ghl-n8n-order-sync.md`](13-ghl-n8n-order-sync.md) · [`n8n/ORDER_PAID_RECEIPT_SMS.md`](../../n8n/ORDER_PAID_RECEIPT_SMS.md)  
 > **POS:** Same Clover submit as voice — [`09-clover-pos.md`](09-clover-pos.md), `restaurant/clover/order_submit.py`.  
 > **PR rules:** [`pr/pr_rules.md`](../../pr/pr_rules.md) · ship record [`pr/pr_089_web-store-plan.md`](../../pr/pr_089_web-store-plan.md)
 
@@ -15,7 +16,7 @@
 | # | Decision | Value |
 |---|----------|--------|
 | 1 | Channel | Web **Store** tab — no LiveKit / Sierra session for checkout |
-| 2 | Fulfillment | **Pickup + delivery**; **pay later** (matches voice / Clover plan) |
+| 2 | Fulfillment | **Pickup + delivery**; **pay later** default; optional **Pay now** (PR 090) |
 | 3 | Contact | Name + phone always; **address required** when delivery |
 | 4 | Architecture | **Thin Store API on VPS** — browser is not trusted for prices / availability / place |
 | 5 | CRM | Same n8n → GHL Voice Orders / **Placed** + confirm SMS as voice (**pickup and delivery**) |
@@ -32,7 +33,8 @@
 | Store tab UI | ✅ Full browse → cart → checkout → thank-you (`StoreTab.tsx`) |
 | Menu API | `GET /menu` → catalog + optional `image_url` (Clover or demo fill) |
 | Store place | `POST /store/checkout` → validate / place → Clover + `notify_order_placed` (`channel=web_store`) |
-| GHL / SMS | Same as voice: Placed opp + confirm SMS for **pickup and delivery** |
+| Pay now (optional) | `STORE_PAY_NOW_ENABLED=1` → Hosted Checkout URL; webhook → receipt; `order.paid` → n8n (PR 090) |
+| GHL / SMS | Confirm on place; receipt SMS after online pay (n8n branch for `order.paid`) |
 | Clover submit | `restaurant/clover/order_submit.py` (kill switch `CLOVER_SUBMIT_ORDERS`) |
 
 ---

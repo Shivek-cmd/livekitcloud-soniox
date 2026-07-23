@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   fetchMenu,
+  fetchStoreConfig,
+  fetchStorePaymentStatus,
   postStoreCheckout,
   type MenuCatalog,
   type MenuItem,
@@ -39,6 +41,9 @@ export function StoreTab() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string[] | null>(null)
   const [summary, setSummary] = useState<StoreCheckoutSummary | null>(null)
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const [payNowEnabled, setPayNowEnabled] = useState(false)
+  const [paymentPollTimedOut, setPaymentPollTimedOut] = useState(false)
   const cart = useStoreCart()
 
   useEffect(() => {
@@ -53,10 +58,19 @@ export function StoreTab() {
       .catch(() => {
         if (!cancelled) setError(true)
       })
+    fetchStoreConfig().then((cfg) => {
+      if (!cancelled) setPayNowEnabled(cfg.pay_now_enabled)
+    })
     return () => {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!payNowEnabled && paymentPreference === 'now') {
+      setPaymentPreference('later')
+    }
+  }, [payNowEnabled, paymentPreference])
 
   useEffect(() => {
     setSpicePick(null)
@@ -72,6 +86,51 @@ export function StoreTab() {
       console.info('Store pay-now popup blocked; use Pay now button')
     }
   }, [pane, summary?.checkout_url, summary?.order_id])
+
+  // Pay now — poll until Clover HCO webhook records a receipt URL (P3).
+  useEffect(() => {
+    if (pane !== 'placed') return
+    if ((summary?.payment_preference ?? paymentPreference) !== 'now') return
+    const sessionId = summary?.checkout_session_id
+    const orderId = summary?.order_id
+    if (!sessionId && !orderId) return
+
+    let cancelled = false
+    let tries = 0
+    setPaymentPollTimedOut(false)
+    const tick = async () => {
+      tries += 1
+      try {
+        const pay = await fetchStorePaymentStatus({
+          checkoutSessionId: sessionId,
+          orderId: sessionId ? null : orderId,
+        })
+        if (cancelled) return
+        if (pay?.status === 'paid' && pay.receipt_url) {
+          setReceiptUrl(pay.receipt_url)
+          return
+        }
+      } catch {
+        // ignore transient poll errors
+      }
+      if (cancelled) return
+      if (tries >= 40) {
+        setPaymentPollTimedOut(true)
+        return
+      }
+      window.setTimeout(tick, 3000)
+    }
+    tick()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    pane,
+    summary?.checkout_session_id,
+    summary?.order_id,
+    summary?.payment_preference,
+    paymentPreference,
+  ])
 
   const matchesDiet = (item: MenuItem) => {
     if (diet === 'veg') return item.veg
@@ -191,6 +250,8 @@ export function StoreTab() {
   const startNewOrder = () => {
     setPane('cart')
     setSummary(null)
+    setReceiptUrl(null)
+    setPaymentPollTimedOut(false)
     setFormError(null)
     setNote('')
   }
@@ -724,26 +785,32 @@ export function StoreTab() {
                 >
                   {orderType === 'delivery' ? 'Pay on delivery' : 'Pay at pickup'}
                 </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={paymentPreference === 'now'}
-                  className={
-                    paymentPreference === 'now'
-                      ? 'store-type-btn active'
-                      : 'store-type-btn'
-                  }
-                  onClick={() => setPaymentPreference('now')}
-                >
-                  Pay now
-                </button>
+                {payNowEnabled && (
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={paymentPreference === 'now'}
+                    className={
+                      paymentPreference === 'now'
+                        ? 'store-type-btn active'
+                        : 'store-type-btn'
+                    }
+                    onClick={() => setPaymentPreference('now')}
+                  >
+                    Pay now
+                  </button>
+                )}
               </div>
               <p className="store-pay-note">
-                {paymentPreference === 'now'
-                  ? 'Pay online after you place — secure Clover checkout page.'
-                  : orderType === 'delivery'
+                {!payNowEnabled
+                  ? orderType === 'delivery'
                     ? 'Pay when your order arrives.'
-                    : 'Pay when you pick up.'}
+                    : 'Pay when you pick up.'
+                  : paymentPreference === 'now'
+                    ? 'Pay online after you place — secure Clover checkout page (link expires in about 15 minutes).'
+                    : orderType === 'delivery'
+                      ? 'Pay when your order arrives.'
+                      : 'Pay when you pick up.'}
               </p>
 
               {formError && (
@@ -991,11 +1058,25 @@ export function StoreTab() {
                       Pay now — open secure checkout
                     </a>
                   )}
+                {receiptUrl && (
+                  <a
+                    className="store-checkout-btn ready store-pay-now-link"
+                    href={receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View receipt
+                  </a>
+                )}
                 <p className="store-pay-note">
                   {(summary.payment_preference ?? paymentPreference) === 'now'
-                    ? summary.checkout_url
-                      ? 'Complete payment on the Clover page (link opens in a new tab). Your order is already with the kitchen.'
-                      : 'You chose pay now, but the online payment link is unavailable right now — please pay at pickup or delivery. Your order is still with the kitchen.'
+                    ? receiptUrl
+                      ? 'Payment received — open your receipt above.'
+                      : paymentPollTimedOut
+                        ? 'Still waiting for online payment. If the Clover link expired (~15 min), you can still pay at pickup or delivery — your order is already with the kitchen.'
+                        : summary.checkout_url
+                          ? 'Complete payment on the Clover page (link expires in about 15 minutes). This screen updates when payment is confirmed.'
+                          : 'You chose pay now, but the online payment link is unavailable right now — please pay at pickup or delivery. Your order is still with the kitchen.'
                     : `Pay later at ${
                         summary.order_type === 'delivery' ? 'the door' : 'pickup'
                       }.`}

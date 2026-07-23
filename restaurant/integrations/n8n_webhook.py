@@ -122,6 +122,60 @@ def build_order_placed_envelope(
     }
 
 
+def build_order_paid_envelope(
+    *,
+    channel: str,
+    customer_name: str | None,
+    customer_phone: str | None,
+    order_type: str | None = None,
+    clover_order_id: str | None = None,
+    payment_id: str | None = None,
+    receipt_url: str | None = None,
+    checkout_session_id: str | None = None,
+    total: float | None = None,
+    session_id: str | None = None,
+    event_id: str | None = None,
+) -> dict[str, Any]:
+    """Normalized order.paid envelope for receipt SMS (PR 090 P4)."""
+    phone_raw = (customer_phone or "").strip()
+    phone_e164 = phone_to_e164(phone_raw)
+    eid = (
+        event_id
+        or (f"order.paid:{payment_id}" if payment_id else None)
+        or (f"order.paid:session:{checkout_session_id}" if checkout_session_id else None)
+        or str(uuid4())
+    )
+    return {
+        "schema_version": 1,
+        "event": "order.paid",
+        "event_id": eid,
+        "occurred_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "tenant_id": _TENANT_ID,
+        "channel": channel or "web_store",
+        "session_id": session_id,
+        "customer": {
+            "name": (customer_name or "").strip() or None,
+            "phone_e164": phone_e164 or None,
+            "phone_raw": phone_raw or None,
+        },
+        "order": {
+            "clover_order_id": clover_order_id,
+            "order_type": order_type,
+            "status": "paid",
+            "total": total,
+            "payment_id": payment_id,
+            "receipt_url": receipt_url,
+            "checkout_session_id": checkout_session_id,
+        },
+        "meta": {
+            "source": "sierra",
+            "sms_hint": (
+                "Send receipt SMS with receipt_url. Do not re-send order-placed confirm."
+            ),
+        },
+    }
+
+
 def _post_json_sync(url: str, payload: dict[str, Any], *, secret: str | None, timeout: float) -> int:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     headers = {
@@ -209,6 +263,82 @@ async def notify_order_placed(
     except Exception:
         logger.exception(
             "N8N_ORDER_PLACED failed event_id=%s — continuing voice path",
+            envelope.get("event_id"),
+        )
+        return False
+
+
+async def notify_order_paid(
+    *,
+    channel: str,
+    customer_name: str | None,
+    customer_phone: str | None,
+    order_type: str | None = None,
+    clover_order_id: str | None = None,
+    payment_id: str | None = None,
+    receipt_url: str | None = None,
+    checkout_session_id: str | None = None,
+    total: float | None = None,
+    session_id: str | None = None,
+) -> bool:
+    """POST order.paid to n8n (receipt SMS). Fail-open — never raises."""
+    import asyncio
+
+    if not n8n_sync_enabled():
+        return False
+    url = n8n_webhook_url()
+    if not url:
+        logger.warning("N8N_SYNC_ENABLED but N8N_WEBHOOK_ORDERS_URL is empty — skip paid")
+        return False
+    if not receipt_url:
+        logger.warning("N8N_ORDER_PAID skip — missing receipt_url payment_id=%s", payment_id)
+        return False
+    if not phone_to_e164(customer_phone):
+        logger.warning("N8N_ORDER_PAID skip — missing phone payment_id=%s", payment_id)
+        return False
+
+    envelope = build_order_paid_envelope(
+        channel=channel,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        order_type=order_type,
+        clover_order_id=clover_order_id,
+        payment_id=payment_id,
+        receipt_url=receipt_url,
+        checkout_session_id=checkout_session_id,
+        total=total,
+        session_id=session_id,
+    )
+    timeout = n8n_timeout_seconds()
+    secret = n8n_webhook_secret()
+    try:
+        status = await asyncio.to_thread(
+            _post_json_sync, url, envelope, secret=secret, timeout=timeout
+        )
+        if 200 <= status < 300:
+            logger.info(
+                "N8N_ORDER_PAID ok status=%s event_id=%s phone=%s",
+                status,
+                envelope.get("event_id"),
+                (envelope.get("customer") or {}).get("phone_e164"),
+            )
+            return True
+        logger.warning(
+            "N8N_ORDER_PAID unexpected status=%s event_id=%s",
+            status,
+            envelope.get("event_id"),
+        )
+        return False
+    except urllib.error.HTTPError as e:
+        logger.warning(
+            "N8N_ORDER_PAID http_error status=%s event_id=%s",
+            e.code,
+            envelope.get("event_id"),
+        )
+        return False
+    except Exception:
+        logger.exception(
+            "N8N_ORDER_PAID failed event_id=%s — continuing",
             envelope.get("event_id"),
         )
         return False
