@@ -174,6 +174,19 @@ async def store_clover_hco_webhook(request: Request):
             message=parsed.get("message"),
             raw=payload,
         )
+        # Pay-first: kitchen ticket + confirm SMS only after successful payment.
+        try:
+            from restaurant.store_checkout import fulfill_store_order_after_payment
+
+            rec = await fulfill_store_order_after_payment(checkout_session_id) or rec
+        except Exception:
+            import logging
+
+            logging.getLogger("token-server").exception(
+                "pay-now kitchen fulfill raised — payment still recorded"
+            )
+            rec = get_by_checkout_session(checkout_session_id) or rec
+
         n8n_notified = False
         if rec and not rec.get("n8n_paid_notified_at"):
             try:

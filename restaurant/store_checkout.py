@@ -52,7 +52,7 @@ def parse_payment_preference(payload: dict[str, Any]) -> tuple[str | None, str |
 @dataclass
 class StoreCheckoutResult:
     ok: bool
-    status: str = "validated"  # validated | invalid | placed
+    status: str = "validated"  # validated | invalid | placed | awaiting_payment
     blockers: list[str] = field(default_factory=list)
     summary: dict[str, Any] | None = None
 
@@ -239,18 +239,13 @@ def _summary_to_cart(summary: dict[str, Any]) -> OrderCart:
     return cart
 
 
-async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
-    """Validate, then place (Clover if enabled) + n8n notify (fail-open)."""
-    validated = validate_store_checkout(payload)
-    if not validated.ok or not validated.summary:
-        return validated
-
-    summary = dict(validated.summary)
+async def _submit_kitchen(
+    summary: dict[str, Any],
+    *,
+    session_id: str,
+) -> tuple[str | None, list[str]]:
+    """Submit to Clover (or log-only). Returns (order_id, blockers)."""
     cart = _summary_to_cart(summary)
-    session_id = f"web-store-{uuid.uuid4().hex[:12]}"
-    eta = "30-40 min" if cart.order_type == "delivery" else "20-25 min"
-    clover_order_id: str | None = None
-
     from restaurant.clover.order_submit import (
         CloverOrderSubmitError,
         clover_submit_enabled,
@@ -269,108 +264,27 @@ async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
                 channel=STORE_CHANNEL,
                 allergy_note=summary.get("note"),
             )
-            clover_order_id = result.clover_order_id
+            return result.clover_order_id, []
         except CloverOrderSubmitError as e:
             logger.error("Store Clover submit failed: %s", e)
-            return StoreCheckoutResult(
-                ok=False,
-                status="invalid",
-                blockers=[f"Could not place order with the kitchen: {e}"],
-                summary=summary,
-            )
+            return None, [f"Could not place order with the kitchen: {e}"]
         except Exception:
             logger.exception("Store Clover submit unexpected error")
-            return StoreCheckoutResult(
-                ok=False,
-                status="invalid",
-                blockers=[
-                    "Could not reach the restaurant POS. Please try again in a moment."
-                ],
-                summary=summary,
-            )
-    else:
-        # Log-only place (same idea as voice when CLOVER_SUBMIT_ORDERS is off).
-        clover_order_id = f"LOG-{session_id}"
-        logger.info(
-            "STORE_ORDER_PLACED_LOG_ONLY session=%s total=%s items=%s",
-            session_id,
-            summary["total"],
-            len(summary["items"]),
-        )
+            return None, [
+                "Could not reach the restaurant POS. Please try again in a moment."
+            ]
 
-    summary["placed"] = True
-    summary["order_id"] = clover_order_id
-    summary["eta"] = eta
-    summary["clover_submitted"] = bool(
-        clover_order_id and not str(clover_order_id).startswith("LOG-")
+    clover_order_id = f"LOG-{session_id}"
+    logger.info(
+        "STORE_ORDER_PLACED_LOG_ONLY session=%s total=%s items=%s",
+        session_id,
+        summary["total"],
+        len(summary["items"]),
     )
-    summary["session_id"] = session_id
+    return clover_order_id, []
 
-    # Pay now → Hosted Checkout link (fail-open: order already placed).
-    if summary.get("payment_preference") == PAYMENT_PREFERENCE_NOW:
-        from restaurant.clover.hosted_checkout import (
-            HostedCheckoutError,
-            create_hosted_checkout_session,
-            store_pay_now_enabled,
-        )
 
-        if not store_pay_now_enabled():
-            logger.info(
-                "STORE_PAY_NOW skipped — STORE_PAY_NOW_ENABLED off order_id=%s",
-                clover_order_id,
-            )
-        else:
-            try:
-                from restaurant.tenants.config import get_default_tenant
-
-                tenant = get_default_tenant()
-                session = await asyncio.to_thread(
-                    create_hosted_checkout_session,
-                    summary,
-                    order_id=clover_order_id,
-                    merchant_id=tenant.clover_merchant_id,
-                    base_url=tenant.clover_base_url,
-                    token=None,  # env Ecommerce token (or API token fallback)
-                )
-                summary["checkout_url"] = session.href
-                summary["checkout_session_id"] = session.checkout_session_id
-                summary["checkout_expires_at_ms"] = session.expiration_time
-                if session.checkout_session_id:
-                    try:
-                        from restaurant.store_pay_now_store import record_pending_checkout
-
-                        record_pending_checkout(
-                            checkout_session_id=session.checkout_session_id,
-                            order_id=clover_order_id,
-                            customer_name=summary["customer"]["name"],
-                            customer_phone=summary["customer"]["phone"],
-                            total=float(summary.get("total") or 0),
-                            order_type=summary.get("order_type"),
-                            session_id=session_id,
-                            checkout_expires_at_ms=session.expiration_time,
-                        )
-                    except Exception:
-                        logger.exception(
-                            "STORE_PAY_PENDING record failed order_id=%s",
-                            clover_order_id,
-                        )
-                logger.info(
-                    "STORE_PAY_NOW checkout_url order_id=%s session=%s",
-                    clover_order_id,
-                    session.checkout_session_id,
-                )
-            except HostedCheckoutError as e:
-                logger.warning(
-                    "STORE_PAY_NOW HCO failed order_id=%s err=%s — order still placed",
-                    clover_order_id,
-                    e,
-                )
-            except Exception:
-                logger.exception(
-                    "STORE_PAY_NOW unexpected error order_id=%s — order still placed",
-                    clover_order_id,
-                )
-
+async def _notify_order_placed(summary: dict[str, Any], *, session_id: str) -> None:
     try:
         from restaurant.integrations.n8n_webhook import notify_order_placed
 
@@ -392,20 +306,222 @@ async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
             total=summary["total"],
             address=summary.get("delivery_address"),
             allergy_note=summary.get("note"),
-            clover_order_id=clover_order_id if summary["clover_submitted"] else None,
-            clover_submitted=summary["clover_submitted"],
+            clover_order_id=summary["order_id"]
+            if summary.get("clover_submitted")
+            else None,
+            clover_submitted=bool(summary.get("clover_submitted")),
             session_id=session_id,
-            eta=eta,
+            eta=summary.get("eta"),
         )
     except Exception:
         logger.exception("n8n store order.placed notify raised — ignored")
 
+
+async def _start_pay_now_checkout(
+    summary: dict[str, Any],
+    *,
+    session_id: str,
+) -> StoreCheckoutResult:
+    """Pay now: create HCO first — kitchen place waits for webhook APPROVED."""
+    from restaurant.clover.hosted_checkout import (
+        HostedCheckoutError,
+        create_hosted_checkout_session,
+        store_pay_now_enabled,
+    )
+
+    if not store_pay_now_enabled():
+        return StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=[
+                "Online pay now is not available right now. Choose pay later, or try again shortly."
+            ],
+            summary=summary,
+        )
+
+    try:
+        from restaurant.tenants.config import get_default_tenant
+
+        tenant = get_default_tenant()
+        session = await asyncio.to_thread(
+            create_hosted_checkout_session,
+            summary,
+            order_id=None,
+            merchant_id=tenant.clover_merchant_id,
+            base_url=tenant.clover_base_url,
+            token=None,
+        )
+    except HostedCheckoutError as e:
+        logger.warning("STORE_PAY_NOW HCO failed before place err=%s", e)
+        return StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=[
+                "Could not start online payment. Please try again or choose pay later."
+            ],
+            summary=summary,
+        )
+    except Exception:
+        logger.exception("STORE_PAY_NOW unexpected error before place")
+        return StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=[
+                "Could not start online payment. Please try again or choose pay later."
+            ],
+            summary=summary,
+        )
+
+    if not session.checkout_session_id or not session.href:
+        return StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=["Online payment did not return a checkout link. Try again."],
+            summary=summary,
+        )
+
+    out = dict(summary)
+    out["placed"] = False
+    out["order_id"] = None
+    out["eta"] = "30-40 min" if out["order_type"] == "delivery" else "20-25 min"
+    out["clover_submitted"] = False
+    out["session_id"] = session_id
+    out["checkout_url"] = session.href
+    out["checkout_session_id"] = session.checkout_session_id
+    out["checkout_expires_at_ms"] = session.expiration_time
+
+    try:
+        from restaurant.store_pay_now_store import record_pending_checkout
+
+        record_pending_checkout(
+            checkout_session_id=session.checkout_session_id,
+            order_id=None,
+            customer_name=out["customer"]["name"],
+            customer_phone=out["customer"]["phone"],
+            total=float(out.get("total") or 0),
+            order_type=out.get("order_type"),
+            session_id=session_id,
+            checkout_expires_at_ms=session.expiration_time,
+            place_summary=out,
+        )
+    except Exception:
+        logger.exception("STORE_PAY_PENDING record failed session=%s", session_id)
+        return StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=["Could not save payment session. Please try again."],
+            summary=summary,
+        )
+
     logger.info(
-        "STORE_ORDER_PLACED order_id=%s clover=%s total=%s pay=%s checkout=%s",
+        "STORE_PAY_NOW awaiting_payment session=%s checkout=%s total=%s",
+        session_id,
+        session.checkout_session_id,
+        out["total"],
+    )
+    return StoreCheckoutResult(ok=True, status="awaiting_payment", summary=out)
+
+
+async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
+    """Validate, then pay-later place OR pay-now Hosted Checkout (kitchen after pay)."""
+    validated = validate_store_checkout(payload)
+    if not validated.ok or not validated.summary:
+        return validated
+
+    summary = dict(validated.summary)
+    session_id = f"web-store-{uuid.uuid4().hex[:12]}"
+
+    if summary.get("payment_preference") == PAYMENT_PREFERENCE_NOW:
+        return await _start_pay_now_checkout(summary, session_id=session_id)
+
+    clover_order_id, blockers = await _submit_kitchen(summary, session_id=session_id)
+    if blockers or not clover_order_id:
+        return StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=blockers
+            or ["Could not place order with the kitchen. Please try again."],
+            summary=summary,
+        )
+
+    eta = "30-40 min" if summary["order_type"] == "delivery" else "20-25 min"
+    summary["placed"] = True
+    summary["order_id"] = clover_order_id
+    summary["eta"] = eta
+    summary["clover_submitted"] = bool(
+        clover_order_id and not str(clover_order_id).startswith("LOG-")
+    )
+    summary["session_id"] = session_id
+
+    await _notify_order_placed(summary, session_id=session_id)
+
+    logger.info(
+        "STORE_ORDER_PLACED order_id=%s clover=%s total=%s pay=later",
         clover_order_id,
         summary["clover_submitted"],
         summary["total"],
-        summary.get("payment_preference"),
-        bool(summary.get("checkout_url")),
     )
     return StoreCheckoutResult(ok=True, status="placed", summary=summary)
+
+
+async def fulfill_store_order_after_payment(
+    checkout_session_id: str,
+) -> dict[str, Any] | None:
+    """After HCO APPROVED: place kitchen ticket + confirm SMS (idempotent)."""
+    from restaurant.store_pay_now_store import (
+        claim_pending_place_summary,
+        get_by_checkout_session,
+        mark_kitchen_placed,
+    )
+
+    sid = (checkout_session_id or "").strip()
+    if not sid:
+        return None
+
+    claimed = claim_pending_place_summary(sid)
+    if claimed is None:
+        # Already placed, or no pending cart — return current record.
+        return get_by_checkout_session(sid)
+
+    place_summary, session_id = claimed
+    session_id = session_id or f"web-store-{uuid.uuid4().hex[:12]}"
+    clover_order_id, blockers = await _submit_kitchen(
+        place_summary, session_id=session_id
+    )
+    if blockers or not clover_order_id:
+        logger.error(
+            "STORE_PAY_FULFILL kitchen failed session=%s blockers=%s",
+            sid,
+            blockers,
+        )
+        from restaurant.store_pay_now_store import mark_kitchen_place_failed
+
+        mark_kitchen_place_failed(sid, "; ".join(blockers) if blockers else "unknown")
+        return get_by_checkout_session(sid)
+
+    eta = (
+        "30-40 min"
+        if place_summary.get("order_type") == "delivery"
+        else "20-25 min"
+    )
+    placed_summary = dict(place_summary)
+    placed_summary["placed"] = True
+    placed_summary["order_id"] = clover_order_id
+    placed_summary["eta"] = eta
+    placed_summary["clover_submitted"] = bool(
+        clover_order_id and not str(clover_order_id).startswith("LOG-")
+    )
+    placed_summary["session_id"] = session_id
+
+    mark_kitchen_placed(
+        checkout_session_id=sid,
+        order_id=clover_order_id,
+        place_summary=placed_summary,
+    )
+    await _notify_order_placed(placed_summary, session_id=session_id)
+    logger.info(
+        "STORE_PAY_FULFILL placed order_id=%s checkout_session=%s",
+        clover_order_id,
+        sid,
+    )
+    return get_by_checkout_session(sid)

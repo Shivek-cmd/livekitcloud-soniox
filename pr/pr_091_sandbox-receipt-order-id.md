@@ -10,6 +10,23 @@ Sandbox also rejects production `www.clover.com` links.
 After Hosted Checkout webhook APPROVED, we look up `payment → order.id` and build:
 `https://sandbox.dev.clover.com/r/{order_id}` (or `www.clover.com` when not sandbox).
 
+**Also on this branch:** Pay now is **pay-first**. Choosing Pay now opens Hosted Checkout
+without placing a kitchen ticket or showing “thank you / order placed”. After payment
+succeeds, the webhook places the kitchen order + confirm SMS, then receipt SMS.
+
+## Files Modified (pay-first)
+### `restaurant/store_checkout.py`
+Pay-now returns `awaiting_payment`; `fulfill_store_order_after_payment` places after pay.
+
+### `restaurant/store_pay_now_store.py`
+Stores `place_summary`; claim/mark kitchen place after APPROVED.
+
+### `token_server.py`
+Webhook APPROVED → fulfill kitchen → `order.paid`.
+
+### `web/src/components/StoreTab.tsx`
+`awaiting_payment` pane until paid; thank-you only after kitchen order id.
+
 ## Files Added
 ### `pr/pr_091_sandbox-receipt-order-id.md`
 This ship record.

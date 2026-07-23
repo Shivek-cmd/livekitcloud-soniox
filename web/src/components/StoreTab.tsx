@@ -15,7 +15,7 @@ import { SPICE_LEVELS, type SpiceLevel } from '../lib/storeCart'
 import { useStoreCart } from '../hooks/useStoreCart'
 
 type DietFilter = 'all' | 'veg' | 'nonveg'
-type CartPane = 'cart' | 'checkout' | 'validated' | 'placed'
+type CartPane = 'cart' | 'checkout' | 'validated' | 'awaiting_payment' | 'placed'
 
 const DELIVERY_FEE_HINT = 5 // display hint; server is authoritative
 
@@ -76,24 +76,22 @@ export function StoreTab() {
     setSpicePick(null)
   }, [diet, search, activeCategory])
 
-  // Pay now — open Clover Hosted Checkout when the place response includes a URL.
+  // Pay now — open Clover Hosted Checkout (before kitchen place).
   useEffect(() => {
-    if (pane !== 'placed' || !summary?.checkout_url) return
+    if (pane !== 'awaiting_payment' || !summary?.checkout_url) return
     const url = summary.checkout_url
     const w = window.open(url, '_blank', 'noopener,noreferrer')
     if (!w) {
-      // Popup blocked — user can tap the Pay now button on the thank-you pane.
       console.info('Store pay-now popup blocked; use Pay now button')
     }
-  }, [pane, summary?.checkout_url, summary?.order_id])
+  }, [pane, summary?.checkout_url, summary?.checkout_session_id])
 
-  // Pay now — poll until Clover HCO webhook records a receipt URL (P3).
+  // Pay now — poll until paid + kitchen order id (then thank-you).
   useEffect(() => {
-    if (pane !== 'placed') return
+    if (pane !== 'awaiting_payment') return
     if ((summary?.payment_preference ?? paymentPreference) !== 'now') return
     const sessionId = summary?.checkout_session_id
-    const orderId = summary?.order_id
-    if (!sessionId && !orderId) return
+    if (!sessionId) return
 
     let cancelled = false
     let tries = 0
@@ -103,12 +101,26 @@ export function StoreTab() {
       try {
         const pay = await fetchStorePaymentStatus({
           checkoutSessionId: sessionId,
-          orderId: sessionId ? null : orderId,
         })
         if (cancelled) return
         if (pay?.status === 'paid' && pay.receipt_url) {
           setReceiptUrl(pay.receipt_url)
-          return
+          if (pay.order_id) {
+            setSummary((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    placed: true,
+                    order_id: pay.order_id ?? prev.order_id,
+                    eta: pay.eta ?? prev.eta,
+                    clover_submitted: !String(pay.order_id || '').startsWith('LOG-'),
+                  }
+                : prev,
+            )
+            setPane('placed')
+            return
+          }
+          // Paid but kitchen not placed yet — keep polling briefly.
         }
       } catch {
         // ignore transient poll errors
@@ -127,7 +139,6 @@ export function StoreTab() {
   }, [
     pane,
     summary?.checkout_session_id,
-    summary?.order_id,
     summary?.payment_preference,
     paymentPreference,
   ])
@@ -150,7 +161,7 @@ export function StoreTab() {
       unitPrice: item.price,
       imageUrl: item.image_url,
     })
-    if (pane === 'validated' || pane === 'placed') {
+    if (pane === 'validated' || pane === 'awaiting_payment' || pane === 'placed') {
       setPane('cart')
       setSummary(null)
     }
@@ -166,7 +177,7 @@ export function StoreTab() {
       imageUrl: spicePick.image_url,
     })
     setSpicePick(null)
-    if (pane === 'validated' || pane === 'placed') {
+    if (pane === 'validated' || pane === 'awaiting_payment' || pane === 'placed') {
       setPane('cart')
       setSummary(null)
     }
@@ -238,7 +249,11 @@ export function StoreTab() {
         return
       }
       setSummary(res.summary)
-      setPane('placed')
+      if (res.status === 'awaiting_payment' || res.summary.checkout_url) {
+        setPane('awaiting_payment')
+      } else {
+        setPane('placed')
+      }
       cart.clear()
     } catch {
       setFormError(['Could not reach the server. Is the token server running?'])
@@ -302,6 +317,7 @@ export function StoreTab() {
     cart.itemCount > 0 ||
     pane === 'checkout' ||
     pane === 'validated' ||
+    pane === 'awaiting_payment' ||
     pane === 'placed'
 
   return (
@@ -581,9 +597,11 @@ export function StoreTab() {
               ? 'Checkout'
               : pane === 'validated'
                 ? 'Review'
-                : pane === 'placed'
-                  ? 'Order placed'
-                  : 'Your order'}
+                : pane === 'awaiting_payment'
+                  ? 'Complete payment'
+                  : pane === 'placed'
+                    ? 'Order placed'
+                    : 'Your order'}
             {pane === 'cart' && cart.itemCount > 0 && (
               <span className="store-item-count">{cart.itemCount}</span>
             )}
@@ -862,12 +880,12 @@ export function StoreTab() {
           {pane === 'validated' && summary && (
             <div className="store-validated">
               <p className="store-validated-banner">
-                Prices confirmed. Ready to place —{' '}
+                Prices confirmed.{' '}
                 {(summary.payment_preference ?? paymentPreference) === 'now'
-                  ? 'you chose pay now.'
+                  ? 'Next: pay online — we send the order to the kitchen after payment.'
                   : summary.order_type === 'delivery'
-                    ? 'pay when it arrives.'
-                    : 'pay at pickup.'}
+                    ? 'Ready to place — pay when it arrives.'
+                    : 'Ready to place — pay at pickup.'}
               </p>
               <ul className="store-cart-lines">
                 {summary.items.map((line) => {
@@ -957,7 +975,13 @@ export function StoreTab() {
                   disabled={submitting}
                   onClick={placeOrder}
                 >
-                  {submitting ? 'Placing…' : 'Place order'}
+                  {submitting
+                    ? (summary.payment_preference ?? paymentPreference) === 'now'
+                      ? 'Starting payment…'
+                      : 'Placing…'
+                    : (summary.payment_preference ?? paymentPreference) === 'now'
+                      ? 'Pay now'
+                      : 'Place order'}
                 </button>
                 <button
                   type="button"
@@ -969,6 +993,89 @@ export function StoreTab() {
                   disabled={submitting}
                 >
                   Edit details
+                </button>
+              </div>
+            </div>
+          )}
+
+          {pane === 'awaiting_payment' && summary && (
+            <div className="store-placed">
+              <p className="store-placed-banner">
+                Complete payment to send your order to the kitchen.
+              </p>
+              <ul className="store-cart-lines">
+                {summary.items.map((line) => {
+                  const img = lineImage(line.id)
+                  return (
+                    <li
+                      key={`${line.id}-${line.modifiers.join('-')}-pay`}
+                      className="store-cart-line"
+                    >
+                      <div className="store-cart-line-row">
+                        <div
+                          className={
+                            img ? 'store-cart-thumb has-photo' : 'store-cart-thumb'
+                          }
+                          aria-hidden
+                        >
+                          {img ? (
+                            <img
+                              src={img}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <span>{line.name.slice(0, 1)}</span>
+                          )}
+                        </div>
+                        <div className="store-cart-line-body">
+                          <div className="store-cart-line-main">
+                            <span className="store-cart-name">
+                              {line.qty}× {line.name}
+                            </span>
+                            {line.modifiers.length > 0 && (
+                              <span className="store-cart-mod">
+                                {line.modifiers.join(', ')}
+                              </span>
+                            )}
+                            <span className="store-cart-line-price">
+                              ${line.line_total.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+              <div className="store-cart-footer">
+                <div className="ot-row ot-total">
+                  <span>Total</span>
+                  <span>${summary.total.toFixed(2)}</span>
+                </div>
+                {summary.checkout_url && (
+                  <a
+                    className="store-checkout-btn ready store-pay-now-link"
+                    href={summary.checkout_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open secure checkout
+                  </a>
+                )}
+                <p className="store-pay-note">
+                  {paymentPollTimedOut
+                    ? 'Still waiting for payment. Open the checkout link again if it expired (~15 min). Your order is not sent to the kitchen until payment succeeds.'
+                    : 'Pay on the Clover page. This screen updates when payment is confirmed — then we place your order.'}
+                </p>
+                <button
+                  type="button"
+                  className="store-back-btn"
+                  onClick={startNewOrder}
+                >
+                  Cancel / new order
                 </button>
               </div>
             </div>
@@ -1047,17 +1154,6 @@ export function StoreTab() {
                   <span>Total</span>
                   <span>${summary.total.toFixed(2)}</span>
                 </div>
-                {(summary.payment_preference ?? paymentPreference) === 'now' &&
-                  summary.checkout_url && (
-                    <a
-                      className="store-checkout-btn ready store-pay-now-link"
-                      href={summary.checkout_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Pay now — open secure checkout
-                    </a>
-                  )}
                 {receiptUrl && (
                   <a
                     className="store-checkout-btn ready store-pay-now-link"
@@ -1071,18 +1167,16 @@ export function StoreTab() {
                 <p className="store-pay-note">
                   {(summary.payment_preference ?? paymentPreference) === 'now'
                     ? receiptUrl
-                      ? 'Payment received — open your receipt above.'
-                      : paymentPollTimedOut
-                        ? 'Still waiting for online payment. If the Clover link expired (~15 min), you can still pay at pickup or delivery — your order is already with the kitchen.'
-                        : summary.checkout_url
-                          ? 'Complete payment on the Clover page (link expires in about 15 minutes). This screen updates when payment is confirmed.'
-                          : 'You chose pay now, but the online payment link is unavailable right now — please pay at pickup or delivery. Your order is still with the kitchen.'
+                      ? 'Payment received — order is with the kitchen. Open your receipt above.'
+                      : 'Payment received — order is with the kitchen.'
                     : `Pay later at ${
                         summary.order_type === 'delivery' ? 'the door' : 'pickup'
                       }.`}
                   {summary.clover_submitted
                     ? ' Sent to the kitchen.'
-                    : ' Logged locally (Clover submit off).'}
+                    : summary.order_id
+                      ? ' Logged locally (Clover submit off).'
+                      : ''}
                 </p>
                 <button
                   type="button"

@@ -132,6 +132,7 @@ def record_pending_checkout(
     order_type: str | None = None,
     session_id: str | None = None,
     checkout_expires_at_ms: int | None = None,
+    place_summary: dict[str, Any] | None = None,
 ) -> None:
     sid = (checkout_session_id or "").strip()
     if not sid:
@@ -151,6 +152,9 @@ def record_pending_checkout(
             "order_type": order_type,
             "sierra_session_id": session_id,
             "checkout_expires_at_ms": checkout_expires_at_ms,
+            "place_summary": place_summary
+            if place_summary is not None
+            else prev.get("place_summary"),
             "status": prev.get("status") or "pending",
             "created_at": prev.get("created_at") or _now(),
             "updated_at": _now(),
@@ -159,6 +163,89 @@ def record_pending_checkout(
     logger.info(
         "STORE_PAY_PENDING session=%s order_id=%s", sid, order_id
     )
+
+
+def claim_pending_place_summary(
+    checkout_session_id: str,
+) -> tuple[dict[str, Any], str | None] | None:
+    """Atomically claim kitchen place work.
+
+    Returns (place_summary, sierra_session_id) once; None if already claimed/placed
+    or missing cart snapshot.
+    """
+    sid = (checkout_session_id or "").strip()
+    if not sid:
+        return None
+    path = _store_path()
+    with _lock:
+        data = _load(path)
+        sessions: dict[str, Any] = data.setdefault("sessions", {})
+        prev = sessions.get(sid)
+        if not isinstance(prev, dict):
+            return None
+        if prev.get("kitchen_placed_at") or prev.get("kitchen_place_claimed_at"):
+            return None
+        place_summary = prev.get("place_summary")
+        if not isinstance(place_summary, dict):
+            return None
+        prev = {
+            **prev,
+            "kitchen_place_claimed_at": _now(),
+            "updated_at": _now(),
+        }
+        sessions[sid] = prev
+        _save(path, data)
+        return dict(place_summary), prev.get("sierra_session_id")
+
+
+def mark_kitchen_placed(
+    *,
+    checkout_session_id: str,
+    order_id: str,
+    place_summary: dict[str, Any] | None = None,
+) -> None:
+    sid = (checkout_session_id or "").strip()
+    oid = (order_id or "").strip()
+    if not sid or not oid:
+        return
+    path = _store_path()
+    with _lock:
+        data = _load(path)
+        sessions: dict[str, Any] = data.setdefault("sessions", {})
+        prev = sessions.get(sid) if isinstance(sessions.get(sid), dict) else {
+            "checkout_session_id": sid,
+            "created_at": _now(),
+        }
+        sessions[sid] = {
+            **prev,
+            "order_id": oid,
+            "kitchen_placed_at": _now(),
+            "kitchen_place_error": None,
+            "place_summary": place_summary
+            if place_summary is not None
+            else prev.get("place_summary"),
+            "updated_at": _now(),
+        }
+        _save(path, data)
+
+
+def mark_kitchen_place_failed(checkout_session_id: str, error: str) -> None:
+    sid = (checkout_session_id or "").strip()
+    if not sid:
+        return
+    path = _store_path()
+    with _lock:
+        data = _load(path)
+        sessions: dict[str, Any] = data.setdefault("sessions", {})
+        prev = sessions.get(sid)
+        if not isinstance(prev, dict):
+            return
+        # Allow a later retry (clear claim).
+        prev.pop("kitchen_place_claimed_at", None)
+        prev["kitchen_place_error"] = (error or "")[:500]
+        prev["updated_at"] = _now()
+        sessions[sid] = prev
+        _save(path, data)
 
 
 def record_payment_approved(
@@ -298,4 +385,8 @@ def public_payment_view(rec: dict[str, Any] | None) -> dict[str, Any] | None:
         "payment_id": rec.get("payment_id"),
         "receipt_url": rec.get("receipt_url"),
         "paid_at": rec.get("paid_at"),
+        "kitchen_placed_at": rec.get("kitchen_placed_at"),
+        "eta": (rec.get("place_summary") or {}).get("eta")
+        if isinstance(rec.get("place_summary"), dict)
+        else None,
     }
