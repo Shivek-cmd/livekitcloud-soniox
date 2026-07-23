@@ -215,8 +215,11 @@ def test_goodbye_spoken_and_sentinel_with_session(agent, monkeypatch):
     result = run(agent.place_order())
     assert result.startswith("ORDER COMPLETE")
     assert "Do NOT generate any assistant speech" in result
-    # Goodbye spoken uninterruptible, from code — not the LLM.
-    goodbye = [s for s in session.said if "ਧੰਨਵਾਦ" in s[0]]
+    # Goodbye spoken uninterruptible, from code — not the LLM. The whole
+    # conversation in _make_ready is English, so the fixed goodbye-language
+    # bug (PR 092) means this must be the English variant, not the Punjabi
+    # default that used to leak here regardless of session language.
+    goodbye = [s for s in session.said if "Thank you so much ji" in s[0]]
     assert goodbye and goodbye[0][1] is False
 
 

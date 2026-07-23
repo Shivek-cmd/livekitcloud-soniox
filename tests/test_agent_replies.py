@@ -2,6 +2,7 @@
 (The VERBATIM readback formatter moved to READBACK FACTS in PR 078; the
 log-only speech guard was deleted in PR 079.)"""
 
+from restaurant.agent.language import CustomerLanguage
 from restaurant.agent.replies import (
     format_order_status,
     order_placed_goodbye,
@@ -45,6 +46,23 @@ def test_goodbye_language_variants():
 
     hi = order_placed_goodbye(order_type="pickup", language="hi")
     assert "आपका ऑर्डर" in hi and "धन्यवाद" in hi and "20-25" in hi
+
+
+def test_goodbye_accepts_enum_not_just_raw_value():
+    """PR 092 regression: core.py passes the CustomerLanguage enum object
+    itself (not .value) to order_placed_goodbye. CustomerLanguage subclasses
+    (str, Enum), so str(CustomerLanguage.ENGLISH) is "CustomerLanguage.ENGLISH"
+    — not "en" — because Enum.__str__ wins over the str mixin. That silently
+    defaulted every non-Hindi/English enum call to the Punjabi fallback,
+    including English/Hindi sessions, since the string never matched "en"/"hi"."""
+    en = order_placed_goodbye(order_type="delivery", language=CustomerLanguage.ENGLISH)
+    assert "30 to 40 minutes" in en and "Thank you" in en
+
+    hi = order_placed_goodbye(order_type="pickup", language=CustomerLanguage.HINDI)
+    assert "आपका ऑर्डर" in hi and "धन्यवाद" in hi
+
+    pa = order_placed_goodbye(order_type="pickup", language=CustomerLanguage.PUNJABI)
+    assert "ਤੁਹਾਡਾ ਆਰਡਰ" in pa and "ਧੰਨਵਾਦ" in pa
 
 
 def test_reprompt_pools_no_immediate_repeat():
