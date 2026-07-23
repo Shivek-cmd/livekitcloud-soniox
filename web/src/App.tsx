@@ -70,9 +70,29 @@ function MoonIcon({ size = 14 }: { size?: number }) {
   )
 }
 
+const TAB_SESSION_KEY = 'voice_active_tab'
+
+function readStoredTab(): Tab {
+  try {
+    const v = sessionStorage.getItem(TAB_SESSION_KEY)
+    if (v === 'store' || v === 'order') return v
+  } catch {
+    /* ignore */
+  }
+  return 'order'
+}
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>('order')
+  const [tab, setTab] = useState<Tab>(readStoredTab)
   const [theme, toggleTheme] = useTheme()
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(TAB_SESSION_KEY, tab)
+    } catch {
+      /* ignore */
+    }
+  }, [tab])
 
   return (
     <div className="app">

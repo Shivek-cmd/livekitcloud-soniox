@@ -34,9 +34,26 @@ _hits: dict[str, deque[float]] = defaultdict(deque)
 
 def allow_store_checkout(client_key: str) -> bool:
     """Return True if this client may call checkout now; else False (429)."""
+    return _allow(client_key, limit=_limit(), window=_window_sec())
+
+
+def allow_hco_webhook(client_key: str) -> bool:
+    """Rate-limit Clover HCO webhook POSTs (abuse / accidental floods)."""
+    raw_lim = (os.getenv("STORE_HCO_WEBHOOK_RATE_LIMIT") or "120").strip()
+    raw_win = (os.getenv("STORE_HCO_WEBHOOK_RATE_WINDOW_SEC") or "60").strip()
+    try:
+        lim = max(1, int(raw_lim))
+    except ValueError:
+        lim = 120
+    try:
+        win = max(1.0, float(raw_win))
+    except ValueError:
+        win = 60.0
+    return _allow(f"hco:{client_key}", limit=lim, window=win)
+
+
+def _allow(client_key: str, *, limit: int, window: float) -> bool:
     now = time.monotonic()
-    window = _window_sec()
-    limit = _limit()
     key = (client_key or "unknown").strip() or "unknown"
     with _lock:
         q = _hits[key]

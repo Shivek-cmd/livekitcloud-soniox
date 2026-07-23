@@ -189,3 +189,71 @@ def test_post_json_sync_builds_request(monkeypatch):
         "headers"
     ].get("X-Webhook-Secret") == "tok"
     assert captured["timeout"] == 2.5
+
+def test_order_paid_envelope_shape():
+    env = n8n.build_order_paid_envelope(
+        channel="web_store",
+        customer_name="Alex",
+        customer_phone="5875551234",
+        order_type="pickup",
+        clover_order_id="ORD1",
+        payment_id="PAY1",
+        receipt_url="https://www.clover.com/r/PAY1",
+        checkout_session_id="sess-1",
+        total=12.5,
+    )
+    assert env["event"] == "order.paid"
+    assert env["event_id"] == "order.paid:PAY1"
+    assert env["order"]["status"] == "paid"
+    assert env["order"]["receipt_url"] == "https://www.clover.com/r/PAY1"
+    assert env["customer"]["phone_e164"] == "+15875551234"
+
+
+def test_notify_order_paid_posts(monkeypatch):
+    monkeypatch.setenv("N8N_SYNC_ENABLED", "1")
+    monkeypatch.setenv("N8N_WEBHOOK_ORDERS_URL", "https://n8n.example/hook")
+    captured = {}
+
+    class _Resp:
+        status = 202
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def _urlopen(req, timeout=None):
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _Resp()
+
+    monkeypatch.setattr(n8n.urllib.request, "urlopen", _urlopen)
+    ok = run(
+        n8n.notify_order_paid(
+            channel="web_store",
+            customer_name="Alex",
+            customer_phone="5875551234",
+            clover_order_id="ORD1",
+            payment_id="PAY1",
+            receipt_url="https://www.clover.com/r/PAY1",
+            checkout_session_id="sess-1",
+        )
+    )
+    assert ok is True
+    assert captured["body"]["event"] == "order.paid"
+    assert captured["body"]["order"]["receipt_url"].endswith("PAY1")
+
+
+def test_notify_order_paid_skips_without_receipt(monkeypatch):
+    monkeypatch.setenv("N8N_SYNC_ENABLED", "1")
+    monkeypatch.setenv("N8N_WEBHOOK_ORDERS_URL", "https://n8n.example/hook")
+    ok = run(
+        n8n.notify_order_paid(
+            channel="web_store",
+            customer_name="Alex",
+            customer_phone="5875551234",
+            payment_id="PAY1",
+            receipt_url=None,
+        )
+    )
+    assert ok is False

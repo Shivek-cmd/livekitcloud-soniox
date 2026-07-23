@@ -273,3 +273,83 @@ def test_place_notifies_n8n(monkeypatch):
     assert len(calls) == 1
     assert calls[0]["channel"] == "web_store"
     assert calls[0]["customer_name"] == "Alex"
+
+
+def test_payment_preference_defaults_to_later(monkeypatch):
+    _install_cache(monkeypatch)
+    result = validate_store_checkout(
+        {
+            "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+            "order_type": "pickup",
+            "customer": {"name": "Alex", "phone": "5875551234"},
+        }
+    )
+    assert result.ok
+    assert result.summary["payment_preference"] == "later"
+    assert result.summary["checkout_url"] is None
+
+
+def test_payment_preference_now_echoed(monkeypatch):
+    _install_cache(monkeypatch)
+    result = validate_store_checkout(
+        {
+            "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+            "order_type": "delivery",
+            "customer": {"name": "Alex", "phone": "5875551234"},
+            "delivery_address": "123 Main St, Calgary",
+            "payment_preference": "now",
+        }
+    )
+    assert result.ok
+    assert result.summary["payment_preference"] == "now"
+    assert result.summary["checkout_url"] is None
+
+
+def test_payment_preference_alias_pay_later(monkeypatch):
+    _install_cache(monkeypatch)
+    result = validate_store_checkout(
+        {
+            "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+            "order_type": "pickup",
+            "customer": {"name": "Alex", "phone": "5875551234"},
+            "payment_preference": "pay-later",
+        }
+    )
+    assert result.ok
+    assert result.summary["payment_preference"] == "later"
+
+
+def test_payment_preference_invalid(monkeypatch):
+    _install_cache(monkeypatch)
+    result = validate_store_checkout(
+        {
+            "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+            "order_type": "pickup",
+            "customer": {"name": "Alex", "phone": "5875551234"},
+            "payment_preference": "bitcoin",
+        }
+    )
+    assert not result.ok
+    assert any("pay" in b.lower() for b in result.blockers)
+
+
+def test_place_keeps_payment_preference(monkeypatch):
+    _install_cache(monkeypatch)
+    monkeypatch.setenv("CLOVER_SUBMIT_ORDERS", "0")
+    monkeypatch.setenv("N8N_SYNC_ENABLED", "0")
+    import asyncio
+    from restaurant.store_checkout import place_store_order
+
+    result = asyncio.run(
+        place_store_order(
+            {
+                "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+                "order_type": "pickup",
+                "customer": {"name": "Alex", "phone": "5875551234"},
+                "payment_preference": "now",
+            }
+        )
+    )
+    assert result.ok
+    assert result.summary["payment_preference"] == "now"
+    assert result.summary["checkout_url"] is None

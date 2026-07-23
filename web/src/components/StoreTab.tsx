@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
   fetchMenu,
+  fetchStoreConfig,
+  fetchStorePaymentStatus,
   postStoreCheckout,
   type MenuCatalog,
   type MenuItem,
   type StoreCheckoutSummary,
+  type StorePaymentPreference,
 } from '../lib/api'
 import { sortCategories } from '../lib/menuSort'
 import { categoryInitials, categoryTheme } from '../lib/categoryTheme'
@@ -33,9 +36,14 @@ export function StoreTab() {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [note, setNote] = useState('')
+  const [paymentPreference, setPaymentPreference] =
+    useState<StorePaymentPreference>('later')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string[] | null>(null)
   const [summary, setSummary] = useState<StoreCheckoutSummary | null>(null)
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const [payNowEnabled, setPayNowEnabled] = useState(false)
+  const [paymentPollTimedOut, setPaymentPollTimedOut] = useState(false)
   const cart = useStoreCart()
 
   useEffect(() => {
@@ -50,14 +58,79 @@ export function StoreTab() {
       .catch(() => {
         if (!cancelled) setError(true)
       })
+    fetchStoreConfig().then((cfg) => {
+      if (!cancelled) setPayNowEnabled(cfg.pay_now_enabled)
+    })
     return () => {
       cancelled = true
     }
   }, [])
 
   useEffect(() => {
+    if (!payNowEnabled && paymentPreference === 'now') {
+      setPaymentPreference('later')
+    }
+  }, [payNowEnabled, paymentPreference])
+
+  useEffect(() => {
     setSpicePick(null)
   }, [diet, search, activeCategory])
+
+  // Pay now — open Clover Hosted Checkout when the place response includes a URL.
+  useEffect(() => {
+    if (pane !== 'placed' || !summary?.checkout_url) return
+    const url = summary.checkout_url
+    const w = window.open(url, '_blank', 'noopener,noreferrer')
+    if (!w) {
+      // Popup blocked — user can tap the Pay now button on the thank-you pane.
+      console.info('Store pay-now popup blocked; use Pay now button')
+    }
+  }, [pane, summary?.checkout_url, summary?.order_id])
+
+  // Pay now — poll until Clover HCO webhook records a receipt URL (P3).
+  useEffect(() => {
+    if (pane !== 'placed') return
+    if ((summary?.payment_preference ?? paymentPreference) !== 'now') return
+    const sessionId = summary?.checkout_session_id
+    const orderId = summary?.order_id
+    if (!sessionId && !orderId) return
+
+    let cancelled = false
+    let tries = 0
+    setPaymentPollTimedOut(false)
+    const tick = async () => {
+      tries += 1
+      try {
+        const pay = await fetchStorePaymentStatus({
+          checkoutSessionId: sessionId,
+          orderId: sessionId ? null : orderId,
+        })
+        if (cancelled) return
+        if (pay?.status === 'paid' && pay.receipt_url) {
+          setReceiptUrl(pay.receipt_url)
+          return
+        }
+      } catch {
+        // ignore transient poll errors
+      }
+      if (cancelled) return
+      if (tries >= 40) {
+        setPaymentPollTimedOut(true)
+        return
+      }
+      window.setTimeout(tick, 3000)
+    }
+    tick()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    pane,
+    summary?.checkout_session_id,
+    summary?.order_id,
+    summary?.payment_preference,
+    paymentPreference,
+  ])
 
   const matchesDiet = (item: MenuItem) => {
     if (diet === 'veg') return item.veg
@@ -117,11 +190,18 @@ export function StoreTab() {
         customer: { name: name.trim(), phone: phone.trim() },
         delivery_address: orderType === 'delivery' ? address.trim() : null,
         note: note.trim() || null,
+        payment_preference: paymentPreference,
         place: false,
       })
       if (!res.ok || !res.summary) {
         setFormError(res.blockers?.length ? res.blockers : ['Validation failed.'])
         return
+      }
+      if (
+        res.summary.payment_preference === 'now' ||
+        res.summary.payment_preference === 'later'
+      ) {
+        setPaymentPreference(res.summary.payment_preference)
       }
       setSummary(res.summary)
       setPane('validated')
@@ -146,6 +226,7 @@ export function StoreTab() {
         customer: { name: name.trim(), phone: phone.trim() },
         delivery_address: orderType === 'delivery' ? address.trim() : null,
         note: note.trim() || null,
+        payment_preference: paymentPreference,
         place: true,
       })
       if (!res.ok || !res.summary) {
@@ -169,6 +250,8 @@ export function StoreTab() {
   const startNewOrder = () => {
     setPane('cart')
     setSummary(null)
+    setReceiptUrl(null)
+    setPaymentPollTimedOut(false)
     setFormError(null)
     setNote('')
   }
@@ -609,7 +692,9 @@ export function StoreTab() {
                 >
                   Checkout
                 </button>
-                <p className="store-pay-note">Pay later at pickup or delivery.</p>
+                <p className="store-pay-note">
+                  Pay at pickup/delivery, or pay now online at checkout.
+                </p>
               </div>
             </>
           )}
@@ -682,6 +767,52 @@ export function StoreTab() {
                 />
               </label>
 
+              <div
+                className="store-order-type"
+                role="radiogroup"
+                aria-label="Payment"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={paymentPreference === 'later'}
+                  className={
+                    paymentPreference === 'later'
+                      ? 'store-type-btn active'
+                      : 'store-type-btn'
+                  }
+                  onClick={() => setPaymentPreference('later')}
+                >
+                  {orderType === 'delivery' ? 'Pay on delivery' : 'Pay at pickup'}
+                </button>
+                {payNowEnabled && (
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={paymentPreference === 'now'}
+                    className={
+                      paymentPreference === 'now'
+                        ? 'store-type-btn active'
+                        : 'store-type-btn'
+                    }
+                    onClick={() => setPaymentPreference('now')}
+                  >
+                    Pay now
+                  </button>
+                )}
+              </div>
+              <p className="store-pay-note">
+                {!payNowEnabled
+                  ? orderType === 'delivery'
+                    ? 'Pay when your order arrives.'
+                    : 'Pay when you pick up.'
+                  : paymentPreference === 'now'
+                    ? 'Pay online after you place — secure Clover checkout page (link expires in about 15 minutes).'
+                    : orderType === 'delivery'
+                      ? 'Pay when your order arrives.'
+                      : 'Pay when you pick up.'}
+              </p>
+
               {formError && (
                 <ul className="store-form-errors">
                   {formError.map((b) => (
@@ -731,7 +862,12 @@ export function StoreTab() {
           {pane === 'validated' && summary && (
             <div className="store-validated">
               <p className="store-validated-banner">
-                Prices confirmed. Ready to place — pay later at pickup or delivery.
+                Prices confirmed. Ready to place —{' '}
+                {(summary.payment_preference ?? paymentPreference) === 'now'
+                  ? 'you chose pay now.'
+                  : summary.order_type === 'delivery'
+                    ? 'pay when it arrives.'
+                    : 'pay at pickup.'}
               </p>
               <ul className="store-cart-lines">
                 {summary.items.map((line) => {
@@ -911,8 +1047,39 @@ export function StoreTab() {
                   <span>Total</span>
                   <span>${summary.total.toFixed(2)}</span>
                 </div>
+                {(summary.payment_preference ?? paymentPreference) === 'now' &&
+                  summary.checkout_url && (
+                    <a
+                      className="store-checkout-btn ready store-pay-now-link"
+                      href={summary.checkout_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Pay now — open secure checkout
+                    </a>
+                  )}
+                {receiptUrl && (
+                  <a
+                    className="store-checkout-btn ready store-pay-now-link"
+                    href={receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View receipt
+                  </a>
+                )}
                 <p className="store-pay-note">
-                  Pay later at {summary.order_type === 'delivery' ? 'the door' : 'pickup'}.
+                  {(summary.payment_preference ?? paymentPreference) === 'now'
+                    ? receiptUrl
+                      ? 'Payment received — open your receipt above.'
+                      : paymentPollTimedOut
+                        ? 'Still waiting for online payment. If the Clover link expired (~15 min), you can still pay at pickup or delivery — your order is already with the kitchen.'
+                        : summary.checkout_url
+                          ? 'Complete payment on the Clover page (link expires in about 15 minutes). This screen updates when payment is confirmed.'
+                          : 'You chose pay now, but the online payment link is unavailable right now — please pay at pickup or delivery. Your order is still with the kitchen.'
+                    : `Pay later at ${
+                        summary.order_type === 'delivery' ? 'the door' : 'pickup'
+                      }.`}
                   {summary.clover_submitted
                     ? ' Sent to the kitchen.'
                     : ' Logged locally (Clover submit off).'}

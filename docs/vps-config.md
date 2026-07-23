@@ -88,6 +88,15 @@ N8N_SYNC_ENABLED=1
 N8N_WEBHOOK_ORDERS_URL=https://n8n.bizbull.ai/webhook/sierra-ghl-sync
 #N8N_WEBHOOK_SECRET=optional-shared-secret
 #N8N_WEBHOOK_TIMEOUT_SEC=3.0
+
+# Store optional pay-now (PR 090) — off until Ecommerce Hosted Checkout is configured
+# STORE_PAY_NOW_ENABLED=1
+# CLOVER_ECOM_PRIVATE_TOKEN=...
+# CLOVER_HCO_WEBHOOK_SECRET=...   # from Merchant Dashboard → Hosted Checkout → Webhook
+# Webhook URL to paste in Clover: https://voice.bizbull.ai/store/clover-hco-webhook
+# CLOVER_RECEIPT_URL_TEMPLATE=https://www.clover.com/r/{payment_id}
+# STORE_PAY_SUCCESS_URL=https://voice.bizbull.ai/
+# STORE_PAY_FAILURE_URL=https://voice.bizbull.ai/
 ```
 
 Plan: `docs/plan/13-ghl-n8n-order-sync.md`. Workflow export: `n8n/`.
@@ -260,7 +269,7 @@ voice.bizbull.ai {
 }
 ```
 
-> **Store tab (PR 089):** `POST /store/checkout` must reach the token server. Without `handle /store*`, Caddy serves `index.html` and place-order fails in production. After changing Caddy: `systemctl reload caddy` (or `caddy reload`).
+> **Store tab (PR 089 + 090):** `handle /store*` must reach the token server (`/store/checkout`, `/store/config`, `/store/payment-status`, `/store/clover-hco-webhook`). Without it, Caddy serves `index.html` and Store APIs fail. After changing Caddy: `systemctl reload caddy`.
 
 > **`sarvam.bizbull.ai` retired** (PR 009). Use **`voice.bizbull.ai`** only.
 
