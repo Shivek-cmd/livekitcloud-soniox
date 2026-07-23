@@ -94,7 +94,8 @@ N8N_WEBHOOK_ORDERS_URL=https://n8n.bizbull.ai/webhook/sierra-ghl-sync
 # CLOVER_ECOM_PRIVATE_TOKEN=...
 # CLOVER_HCO_WEBHOOK_SECRET=...   # from Merchant Dashboard → Hosted Checkout → Webhook
 # Webhook URL to paste in Clover: https://voice.bizbull.ai/store/clover-hco-webhook
-# CLOVER_RECEIPT_URL_TEMPLATE=https://www.clover.com/r/{payment_id}
+# CLOVER_RECEIPT_URL_TEMPLATE=https://sandbox.dev.clover.com/r/{order_id}
+# (omit to auto-pick host; /r/ needs Clover order id, resolved from payment)
 # STORE_PAY_SUCCESS_URL=https://voice.bizbull.ai/
 # STORE_PAY_FAILURE_URL=https://voice.bizbull.ai/
 ```

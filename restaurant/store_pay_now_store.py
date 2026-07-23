@@ -54,17 +54,72 @@ def _save(path: Path, data: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
-def receipt_url_for_payment(payment_id: str) -> str:
+def _receipt_host() -> str:
+    """Public receipt host — sandbox payments are not on www.clover.com."""
+    base = (os.getenv("CLOVER_BASE_URL") or "").strip().lower()
+    if "sandbox" in base or "dev.clover" in base:
+        return "https://sandbox.dev.clover.com"
+    return "https://www.clover.com"
+
+
+def receipt_url_for_ids(
+    *,
+    order_id: str | None = None,
+    payment_id: str | None = None,
+) -> str:
     """Build a customer-facing Clover web receipt URL.
 
-    Override with CLOVER_RECEIPT_URL_TEMPLATE using `{payment_id}` placeholder.
-    Default matches common Clover web receipt links.
+    Clover's ``/r/{id}`` page expects an **order** id (not payment id).
+    Override with ``CLOVER_RECEIPT_URL_TEMPLATE`` using ``{order_id}`` and/or
+    ``{payment_id}``. Default: ``{host}/r/{order_id}`` (host from CLOVER_BASE_URL).
     """
+    oid = (order_id or "").strip()
     pid = (payment_id or "").strip()
-    template = (
-        os.getenv("CLOVER_RECEIPT_URL_TEMPLATE") or "https://www.clover.com/r/{payment_id}"
-    ).strip()
-    return template.replace("{payment_id}", pid)
+    template = (os.getenv("CLOVER_RECEIPT_URL_TEMPLATE") or "").strip()
+    if not template:
+        template = f"{_receipt_host()}/r/{{order_id}}"
+    url = template
+    # Prefer order id in {order_id}; fall back to payment id only if order missing.
+    if "{order_id}" in url:
+        url = url.replace("{order_id}", oid or pid)
+    if "{payment_id}" in url:
+        url = url.replace("{payment_id}", pid or oid)
+    return url
+
+
+def receipt_url_for_payment(payment_id: str) -> str:
+    """Backward-compatible helper — prefer ``receipt_url_for_ids`` with order id."""
+    return receipt_url_for_ids(payment_id=payment_id)
+
+
+def fetch_clover_order_id_for_payment(payment_id: str) -> str | None:
+    """Resolve Hosted Checkout payment → Clover order id (for /r/{order_id})."""
+    pid = (payment_id or "").strip()
+    if not pid:
+        return None
+    base = (os.getenv("CLOVER_BASE_URL") or "").rstrip("/")
+    mid = (os.getenv("CLOVER_MID") or "").strip()
+    token = (os.getenv("CLOVER_API_TOKEN") or "").strip()
+    if not (base and mid and token):
+        logger.warning("receipt order lookup skipped — missing Clover env")
+        return None
+    try:
+        from restaurant.clover.client import CloverClient
+
+        client = CloverClient(base_url=base, merchant_id=mid, token=token)
+        data = client.get(client.merchant_path(f"/payments/{pid}"))
+    except Exception:
+        logger.exception("Failed to resolve order id for payment %s", pid)
+        return None
+    if not isinstance(data, dict):
+        return None
+    order = data.get("order")
+    if isinstance(order, dict):
+        oid = str(order.get("id") or "").strip()
+        return oid or None
+    if isinstance(order, str) and order.strip():
+        return order.strip()
+    return None
 
 
 def record_pending_checkout(
@@ -113,13 +168,17 @@ def record_payment_approved(
     merchant_id: str | None = None,
     message: str | None = None,
     raw: dict[str, Any] | None = None,
+    clover_payment_order_id: str | None = None,
 ) -> dict[str, Any] | None:
     """Mark session paid. Returns the updated record, or None if unknown session."""
     sid = (checkout_session_id or "").strip()
     pid = (payment_id or "").strip()
     if not sid or not pid:
         return None
-    receipt_url = receipt_url_for_payment(pid)
+    pay_order_id = (clover_payment_order_id or "").strip() or None
+    if not pay_order_id:
+        pay_order_id = fetch_clover_order_id_for_payment(pid)
+    receipt_url = receipt_url_for_ids(order_id=pay_order_id, payment_id=pid)
     path = _store_path()
     with _lock:
         data = _load(path)
@@ -137,6 +196,7 @@ def record_payment_approved(
             **prev,
             "checkout_session_id": sid,
             "payment_id": pid,
+            "clover_payment_order_id": pay_order_id,
             "receipt_url": receipt_url,
             "merchant_id": merchant_id,
             "status": "paid",

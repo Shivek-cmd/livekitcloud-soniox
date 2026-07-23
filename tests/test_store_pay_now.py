@@ -14,6 +14,7 @@ from restaurant.store_pay_now_store import (
     get_by_checkout_session,
     get_by_order_id,
     public_payment_view,
+    receipt_url_for_ids,
     receipt_url_for_payment,
     record_payment_approved,
     record_pending_checkout,
@@ -21,6 +22,23 @@ from restaurant.store_pay_now_store import (
 
 
 def test_receipt_url_template(monkeypatch):
+    monkeypatch.setenv(
+        "CLOVER_RECEIPT_URL_TEMPLATE",
+        "https://example.test/r/{order_id}",
+    )
+    assert receipt_url_for_ids(order_id="ORD123") == "https://example.test/r/ORD123"
+
+
+def test_receipt_url_auto_sandbox_host(monkeypatch):
+    monkeypatch.delenv("CLOVER_RECEIPT_URL_TEMPLATE", raising=False)
+    monkeypatch.setenv("CLOVER_BASE_URL", "https://apisandbox.dev.clover.com")
+    assert (
+        receipt_url_for_ids(order_id="ORD9", payment_id="PAY1")
+        == "https://sandbox.dev.clover.com/r/ORD9"
+    )
+
+
+def test_receipt_url_payment_placeholder_compat(monkeypatch):
     monkeypatch.setenv(
         "CLOVER_RECEIPT_URL_TEMPLATE",
         "https://example.test/r/{payment_id}",
@@ -31,6 +49,10 @@ def test_receipt_url_template(monkeypatch):
 def test_record_pending_and_approved(tmp_path, monkeypatch):
     path = tmp_path / "pay.json"
     monkeypatch.setenv("STORE_PAY_NOW_STORE_PATH", str(path))
+    monkeypatch.setenv(
+        "CLOVER_RECEIPT_URL_TEMPLATE",
+        "https://example.test/r/{order_id}",
+    )
 
     record_pending_checkout(
         checkout_session_id="sess-1",
@@ -50,11 +72,13 @@ def test_record_pending_and_approved(tmp_path, monkeypatch):
         payment_id="PAY-1",
         merchant_id="MID",
         message="Approved for 1250",
+        clover_payment_order_id="HCO-ORD-1",
     )
     assert paid is not None
     assert paid["status"] == "paid"
     assert paid["payment_id"] == "PAY-1"
-    assert paid["receipt_url"].endswith("PAY-1")
+    assert paid["clover_payment_order_id"] == "HCO-ORD-1"
+    assert paid["receipt_url"] == "https://example.test/r/HCO-ORD-1"
     assert get_by_order_id("ORD-9")["receipt_url"] == paid["receipt_url"]
 
     view = public_payment_view(paid)
@@ -111,6 +135,10 @@ def test_verify_unsigned_allowed(monkeypatch):
 def test_approved_marks_n8n_notified(tmp_path, monkeypatch):
     path = tmp_path / "pay.json"
     monkeypatch.setenv("STORE_PAY_NOW_STORE_PATH", str(path))
+    monkeypatch.setenv(
+        "CLOVER_RECEIPT_URL_TEMPLATE",
+        "https://example.test/r/{order_id}",
+    )
     from restaurant.store_pay_now_store import (
         get_by_checkout_session,
         mark_n8n_paid_notified,
@@ -127,6 +155,7 @@ def test_approved_marks_n8n_notified(tmp_path, monkeypatch):
     record_payment_approved(
         checkout_session_id="sess-n8n",
         payment_id="PAY-9",
+        clover_payment_order_id="HCO-1",
     )
     mark_n8n_paid_notified("sess-n8n")
     rec = get_by_checkout_session("sess-n8n")
