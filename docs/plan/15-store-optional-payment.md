@@ -134,7 +134,8 @@ Browser never talks to Clover or GHL directly.
 
 **Done:**
 - `GET /store/config` → UI hides **Pay now** when kill switch off
-- HCO expiry echoed (`checkout_expires_at_ms`); thank-you copy for ~15 min expiry + poll timeout fallback
+- HCO expiry echoed (`checkout_expires_at_ms`); awaiting-payment copy for ~15 min expiry + poll timeout fallback
+- Animated order-success screen (checkmark) for pay later + pay now; **View receipt** when paid
 - Webhook rate limit (`STORE_HCO_WEBHOOK_RATE_LIMIT`, default 120/60s)
 - Docs: `14-web-store.md`, `vps-config.md`, `LOCAL_DEV.md`, this plan, PR 090
 - Test checklist below
@@ -153,7 +154,7 @@ PYTHONPATH=. uv run --with pytest pytest tests/test_store_checkout.py tests/test
 2. **Pay later** pickup + delivery → place → confirm SMS if n8n on
 3. With `STORE_PAY_NOW_ENABLED=0` → Pay now button **hidden**
 4. With `STORE_PAY_NOW_ENABLED=1` + Ecommerce token → Pay now → Clover page opens
-5. Complete sandbox pay → thank-you shows **View receipt** (needs webhook; local may use webhook.site + forward, or unsigned only in dev)
+5. Complete sandbox pay → animated success shows **View receipt** (needs webhook; local may use webhook.site + forward, or unsigned only in dev)
 
 ### VPS (when you deploy)
 1. Pull branch / merge → rebuild `web/` → restart `restaurant-token`

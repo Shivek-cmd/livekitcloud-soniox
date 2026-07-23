@@ -30,7 +30,7 @@
 
 | Piece | State |
 |-------|--------|
-| Store tab UI | ✅ Full browse → cart → checkout → thank-you (`StoreTab.tsx`) |
+| Store tab UI | ✅ Full browse → cart → checkout → animated success (`StoreTab.tsx`) |
 | Menu API | `GET /menu` → catalog + optional `image_url` (Clover or demo fill) |
 | Store place | `POST /store/checkout` → validate / place → Clover + `notify_order_placed` (`channel=web_store`) |
 | Pay now (optional) | `STORE_PAY_NOW_ENABLED=1` → Hosted Checkout URL; webhook → receipt; `order.paid` → n8n (PR 090) |
@@ -217,7 +217,7 @@ UI language: English labels for v1. Same Bizbull menu cache as voice.
 Everything stays on branch `pr_089_web-store-plan`. **No push until you say so.**
 
 ```
-  S0 → S1 → S2 → S3 → S4 → S5 → S6 → S7 → S8  (all ✅ on branch)
+  S0 → S1 → S2 → S3 → S4 → S5 → S6 → S7 → S8 → S9  (all ✅ on branch)
 ```
 
 | Phase | Scope | Done when |
@@ -226,11 +226,12 @@ Everything stays on branch `pr_089_web-store-plan`. **No push until you say so.*
 | **S1** | Store browse UI | ✅ Categories, items, prices, veg; `GET /menu` |
 | **S2** | Client cart + modifiers | ✅ Add, qty, remove, spice when `has_spice` |
 | **S3** | Checkout form + validate API | ✅ `POST /store/checkout` validates + priced summary |
-| **S4** | Place for real | ✅ Clover + n8n; thank-you + order id |
+| **S4** | Place for real | ✅ Clover + n8n; animated success screen + order id |
 | **S5** | Production polish | ✅ Rate limit, errors, mobile, Caddy `/store*`, ops docs |
 | **S6** | Card grid UI | ✅ Premium dish cards |
 | **S7** | Dish photos | ✅ `image_url` on `/menu`; demo fill (`STORE_DEMO_IMAGES`) |
 | **S8** | UX polish | ✅ Search; left category nav; diet chips; inline spice; cart slide + thumbs |
+| **S9** | Order success UI | ✅ Animated checkmark success (pay later + pay now); receipt CTA when paid |
 
 ### Image path (S7)
 
