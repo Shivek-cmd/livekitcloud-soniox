@@ -202,6 +202,8 @@ export interface StorePaymentStatus {
   payment_id?: string | null
   receipt_url?: string | null
   paid_at?: string | null
+  kitchen_placed_at?: string | null
+  eta?: string | null
 }
 
 export async function fetchStorePaymentStatus(opts: {

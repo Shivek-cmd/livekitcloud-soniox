@@ -337,6 +337,89 @@ def test_place_keeps_payment_preference(monkeypatch):
     _install_cache(monkeypatch)
     monkeypatch.setenv("CLOVER_SUBMIT_ORDERS", "0")
     monkeypatch.setenv("N8N_SYNC_ENABLED", "0")
+    monkeypatch.setenv("STORE_PAY_NOW_ENABLED", "0")
+    import asyncio
+    from restaurant.store_checkout import place_store_order
+
+    result = asyncio.run(
+        place_store_order(
+            {
+                "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+                "order_type": "pickup",
+                "customer": {"name": "Alex", "phone": "5875551234"},
+                "payment_preference": "later",
+            }
+        )
+    )
+    assert result.ok
+    assert result.summary["payment_preference"] == "later"
+    assert result.status == "placed"
+
+
+def test_pay_now_awaits_payment_before_kitchen(monkeypatch, tmp_path):
+    _install_cache(monkeypatch)
+    monkeypatch.setenv("CLOVER_SUBMIT_ORDERS", "0")
+    monkeypatch.setenv("N8N_SYNC_ENABLED", "0")
+    monkeypatch.setenv("STORE_PAY_NOW_ENABLED", "1")
+    monkeypatch.setenv("STORE_PAY_NOW_STORE_PATH", str(tmp_path / "pay.json"))
+    import asyncio
+    from restaurant.clover.hosted_checkout import HostedCheckoutSession
+    from restaurant.store_checkout import place_store_order
+    from restaurant.store_pay_now_store import get_by_checkout_session
+
+    monkeypatch.setattr(
+        "restaurant.clover.hosted_checkout.create_hosted_checkout_session",
+        lambda *_a, **_k: HostedCheckoutSession(
+            href="https://checkout.example/x",
+            checkout_session_id="sess-pay",
+        ),
+    )
+
+    class _Tenant:
+        clover_merchant_id = "MID"
+        clover_base_url = "https://apisandbox.dev.clover.com"
+
+    monkeypatch.setattr(
+        "restaurant.tenants.config.get_default_tenant",
+        lambda: _Tenant(),
+    )
+
+    n8n_calls: list = []
+
+    async def _fake_notify(**kwargs):
+        n8n_calls.append(kwargs)
+        return True
+
+    monkeypatch.setattr(
+        "restaurant.integrations.n8n_webhook.notify_order_placed",
+        _fake_notify,
+    )
+
+    result = asyncio.run(
+        place_store_order(
+            {
+                "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+                "order_type": "pickup",
+                "customer": {"name": "Alex", "phone": "5875551234"},
+                "payment_preference": "now",
+            }
+        )
+    )
+    assert result.ok
+    assert result.status == "awaiting_payment"
+    assert result.summary["placed"] is False
+    assert result.summary["order_id"] is None
+    assert result.summary["checkout_url"] == "https://checkout.example/x"
+    assert n8n_calls == []
+    pending = get_by_checkout_session("sess-pay")
+    assert pending is not None
+    assert pending["order_id"] is None
+    assert isinstance(pending.get("place_summary"), dict)
+
+
+def test_pay_now_disabled_fails_closed(monkeypatch):
+    _install_cache(monkeypatch)
+    monkeypatch.setenv("STORE_PAY_NOW_ENABLED", "0")
     import asyncio
     from restaurant.store_checkout import place_store_order
 
@@ -350,6 +433,5 @@ def test_place_keeps_payment_preference(monkeypatch):
             }
         )
     )
-    assert result.ok
-    assert result.summary["payment_preference"] == "now"
-    assert result.summary["checkout_url"] is None
+    assert not result.ok
+    assert any("pay now" in b.lower() or "online" in b.lower() for b in result.blockers)

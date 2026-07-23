@@ -227,8 +227,12 @@ def test_place_records_pending(monkeypatch, tmp_path):
         )
     )
     assert result.ok
+    assert result.status == "awaiting_payment"
     assert result.summary["checkout_session_id"] == "sess-live"
+    assert result.summary["placed"] is False
+    assert result.summary["order_id"] is None
     pending = get_by_checkout_session("sess-live")
     assert pending is not None
-    assert pending["order_id"] == result.summary["order_id"]
+    assert pending["order_id"] is None
     assert pending["status"] == "pending"
+    assert isinstance(pending.get("place_summary"), dict)
