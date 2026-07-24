@@ -88,6 +88,35 @@ def test_validate_delivery_adds_charge(monkeypatch):
     assert result.summary["total"] == round(5.0 + float(DELIVERY_CHARGE), 2)
 
 
+def test_validate_delivery_uses_uber_quote_when_enabled(monkeypatch, tmp_path):
+    _install_cache(monkeypatch)
+    monkeypatch.setenv("STORE_UBER_DIRECT_ENABLED", "1")
+    monkeypatch.setenv("UBER_DIRECT_QUOTE_STORE_PATH", str(tmp_path / "quotes.json"))
+    from restaurant.uber_direct.quote_store import record_quote
+
+    record_quote(
+        quote_id="dqt_live",
+        fee_cents=840,
+        currency="CAD",
+        expires_at="2099-01-01T00:00:00Z",
+        dropoff_line="123 Main St, Edmonton, AB T5J 0N3, CA",
+    )
+    result = validate_store_checkout(
+        {
+            "items": [{"id": "DRINK1", "qty": 1, "modifiers": []}],
+            "order_type": "delivery",
+            "customer": {"name": "Alex", "phone": "+15875551234"},
+            "delivery_address": "123 Main St, Edmonton, AB T5J 0N3, CA",
+            "uber_quote_id": "dqt_live",
+        }
+    )
+    assert result.ok
+    assert result.summary["delivery_charge"] == 8.4
+    assert result.summary["uber_quote_applied"] is True
+    assert result.summary["uber_quote_id"] == "dqt_live"
+    assert result.summary["total"] == round(5.0 + 8.4, 2)
+
+
 def test_spice_required(monkeypatch):
     _install_cache(monkeypatch)
     result = validate_store_checkout(

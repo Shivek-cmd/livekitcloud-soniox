@@ -17,3 +17,7 @@ web/dist/
 data/sessions/
 data/store_pay_now.json
 data/store_pay_now.json.tmp
+data/store_uber_quotes.json
+data/store_uber_quotes.json.tmp
+data/store_uber_deliveries.json
+data/store_uber_deliveries.json.tmp

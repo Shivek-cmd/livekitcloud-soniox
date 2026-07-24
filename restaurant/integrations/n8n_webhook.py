@@ -342,3 +342,122 @@ async def notify_order_paid(
             envelope.get("event_id"),
         )
         return False
+
+
+def build_delivery_dispatched_envelope(
+    *,
+    channel: str,
+    customer_name: str | None,
+    customer_phone: str | None,
+    order_type: str | None = None,
+    clover_order_id: str | None = None,
+    delivery_id: str | None = None,
+    tracking_url: str | None = None,
+    total: float | None = None,
+    session_id: str | None = None,
+    event_id: str | None = None,
+) -> dict[str, Any]:
+    """Normalized delivery.dispatched envelope for tracking SMS (PR 093)."""
+    phone_raw = (customer_phone or "").strip()
+    phone_e164 = phone_to_e164(phone_raw)
+    eid = (
+        event_id
+        or (f"delivery.dispatched:{delivery_id}" if delivery_id else None)
+        or str(uuid4())
+    )
+    return {
+        "schema_version": 1,
+        "event": "delivery.dispatched",
+        "event_id": eid,
+        "occurred_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "tenant_id": _TENANT_ID,
+        "channel": channel or "web_store",
+        "session_id": session_id,
+        "customer": {
+            "name": (customer_name or "").strip() or None,
+            "phone_e164": phone_e164 or None,
+            "phone_raw": phone_raw or None,
+        },
+        "order": {
+            "clover_order_id": clover_order_id,
+            "order_type": order_type or "delivery",
+            "status": "delivery_dispatched",
+            "total": total,
+            "uber_delivery_id": delivery_id,
+            "tracking_url": tracking_url,
+        },
+    }
+
+
+async def notify_delivery_dispatched(
+    *,
+    channel: str,
+    customer_name: str | None,
+    customer_phone: str | None,
+    order_type: str | None = None,
+    clover_order_id: str | None = None,
+    delivery_id: str | None = None,
+    tracking_url: str | None = None,
+    total: float | None = None,
+    session_id: str | None = None,
+) -> bool:
+    """POST delivery.dispatched to n8n (tracking SMS). Fail-open — never raises."""
+    import asyncio
+
+    if not n8n_sync_enabled():
+        return False
+    url = n8n_webhook_url()
+    if not url:
+        logger.warning(
+            "N8N_SYNC_ENABLED but N8N_WEBHOOK_ORDERS_URL is empty — skip dispatch"
+        )
+        return False
+    if not tracking_url:
+        logger.warning(
+            "N8N_DELIVERY_DISPATCHED skip — missing tracking_url delivery_id=%s",
+            delivery_id,
+        )
+        return False
+    if not phone_to_e164(customer_phone):
+        logger.warning(
+            "N8N_DELIVERY_DISPATCHED skip — missing phone delivery_id=%s",
+            delivery_id,
+        )
+        return False
+
+    envelope = build_delivery_dispatched_envelope(
+        channel=channel,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        order_type=order_type,
+        clover_order_id=clover_order_id,
+        delivery_id=delivery_id,
+        tracking_url=tracking_url,
+        total=total,
+        session_id=session_id,
+    )
+    timeout = n8n_timeout_seconds()
+    secret = n8n_webhook_secret()
+    try:
+        status = await asyncio.to_thread(
+            _post_json_sync, url, envelope, secret=secret, timeout=timeout
+        )
+        if 200 <= status < 300:
+            logger.info(
+                "N8N_DELIVERY_DISPATCHED ok status=%s event_id=%s",
+                status,
+                envelope.get("event_id"),
+            )
+            return True
+        logger.warning(
+            "N8N_DELIVERY_DISPATCHED unexpected status=%s event_id=%s",
+            status,
+            envelope.get("event_id"),
+        )
+        return False
+    except Exception:
+        logger.exception(
+            "N8N_DELIVERY_DISPATCHED failed event_id=%s — continuing",
+            envelope.get("event_id"),
+        )
+        return False
