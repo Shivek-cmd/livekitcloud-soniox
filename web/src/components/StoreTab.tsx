@@ -4,6 +4,7 @@ import {
   fetchStoreConfig,
   fetchStorePaymentStatus,
   postStoreCheckout,
+  postStoreDeliveryQuote,
   type MenuCatalog,
   type MenuItem,
   type StoreCheckoutSummary,
@@ -19,11 +20,17 @@ import {
   stripStorePayQueryParams,
 } from '../lib/storePayPending'
 import { useStoreCart } from '../hooks/useStoreCart'
+import {
+  composeDeliveryAddressLine,
+  EMPTY_DELIVERY_ADDRESS,
+  validateDeliveryAddressFields,
+  type StoreDeliveryAddressFields,
+} from '../lib/storeDeliveryAddress'
 
 type DietFilter = 'all' | 'veg' | 'nonveg'
 type CartPane = 'cart' | 'checkout' | 'validated' | 'awaiting_payment' | 'placed'
 
-const DELIVERY_FEE_HINT = 5 // display hint; server is authoritative
+const DELIVERY_FEE_HINT = 5 // display hint when Direct off; server is authoritative
 
 /**
  * Store browse + cart + checkout (S1–S7).
@@ -40,7 +47,8 @@ export function StoreTab() {
   const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
+  const [deliveryAddr, setDeliveryAddr] =
+    useState<StoreDeliveryAddressFields>(EMPTY_DELIVERY_ADDRESS)
   const [note, setNote] = useState('')
   const [paymentPreference, setPaymentPreference] =
     useState<StorePaymentPreference>('later')
@@ -49,6 +57,14 @@ export function StoreTab() {
   const [summary, setSummary] = useState<StoreCheckoutSummary | null>(null)
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const [payNowEnabled, setPayNowEnabled] = useState(false)
+  const [uberDirectEnabled, setUberDirectEnabled] = useState(false)
+  const [deliveryFeeFallback, setDeliveryFeeFallback] =
+    useState(DELIVERY_FEE_HINT)
+  const [uberQuoteId, setUberQuoteId] = useState<string | null>(null)
+  const [uberQuoteFee, setUberQuoteFee] = useState<number | null>(null)
+  const [uberQuoteMinutes, setUberQuoteMinutes] = useState<number | null>(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
+  const [quoteHint, setQuoteHint] = useState<string | null>(null)
   const [paymentPollTimedOut, setPaymentPollTimedOut] = useState(false)
   const [payReturnNote, setPayReturnNote] = useState<string | null>(null)
   const skipAutoOpenCheckout = useRef(false)
@@ -98,7 +114,12 @@ export function StoreTab() {
         if (!cancelled) setError(true)
       })
     fetchStoreConfig().then((cfg) => {
-      if (!cancelled) setPayNowEnabled(cfg.pay_now_enabled)
+      if (cancelled) return
+      setPayNowEnabled(cfg.pay_now_enabled)
+      setUberDirectEnabled(Boolean(cfg.uber_direct_enabled))
+      if (typeof cfg.delivery_charge_fallback === 'number') {
+        setDeliveryFeeFallback(cfg.delivery_charge_fallback)
+      }
     })
     return () => {
       cancelled = true
@@ -110,6 +131,102 @@ export function StoreTab() {
       setPaymentPreference('later')
     }
   }, [payNowEnabled, paymentPreference])
+
+  // Debounced Uber Direct quote when delivery address looks complete.
+  useEffect(() => {
+    if (pane !== 'checkout' || orderType !== 'delivery') {
+      return
+    }
+    if (!uberDirectEnabled) {
+      setUberQuoteId(null)
+      setUberQuoteFee(null)
+      setUberQuoteMinutes(null)
+      setQuoteLoading(false)
+      setQuoteHint(null)
+      return
+    }
+    const blockers = validateDeliveryAddressFields(deliveryAddr)
+    if (blockers.length) {
+      setUberQuoteId(null)
+      setUberQuoteFee(null)
+      setUberQuoteMinutes(null)
+      setQuoteLoading(false)
+      setQuoteHint(null)
+      return
+    }
+
+    let cancelled = false
+    setQuoteLoading(true)
+    setQuoteHint('Getting delivery quote…')
+    const timer = window.setTimeout(() => {
+      postStoreDeliveryQuote({
+        dropoff: {
+          street: deliveryAddr.street,
+          city: deliveryAddr.city,
+          state: deliveryAddr.state,
+          postal: deliveryAddr.postal,
+          country: deliveryAddr.country || 'CA',
+          unit: deliveryAddr.unit || null,
+          phone: phone.trim() || null,
+          notes: deliveryAddr.notes || null,
+        },
+        dropoff_phone: phone.trim() || null,
+        subtotal: cart.subtotal,
+      })
+        .then((res) => {
+          if (cancelled) return
+          if (!res.enabled) {
+            setUberQuoteId(null)
+            setUberQuoteFee(res.fee ?? deliveryFeeFallback)
+            setUberQuoteMinutes(null)
+            setQuoteHint(null)
+            return
+          }
+          if (!res.ok || !res.quote_id || res.fee == null) {
+            setUberQuoteId(null)
+            setUberQuoteFee(deliveryFeeFallback)
+            setUberQuoteMinutes(null)
+            setQuoteHint(
+              res.blockers?.[0] ||
+                `Using flat delivery $${deliveryFeeFallback.toFixed(2)} for now.`,
+            )
+            return
+          }
+          setUberQuoteId(res.quote_id)
+          setUberQuoteFee(res.fee)
+          setUberQuoteMinutes(res.duration_minutes ?? null)
+          setQuoteHint(
+            res.duration_minutes
+              ? `About ${res.duration_minutes} min · quote holds ~15 min`
+              : 'Quote holds about 15 minutes',
+          )
+        })
+        .catch(() => {
+          if (cancelled) return
+          setUberQuoteId(null)
+          setUberQuoteFee(deliveryFeeFallback)
+          setQuoteHint(
+            `Could not reach Uber — using flat $${deliveryFeeFallback.toFixed(2)}.`,
+          )
+        })
+        .finally(() => {
+          if (!cancelled) setQuoteLoading(false)
+        })
+    }, 550)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [
+    pane,
+    orderType,
+    uberDirectEnabled,
+    deliveryAddr,
+    phone,
+    cart.subtotal,
+    deliveryFeeFallback,
+  ])
 
   useEffect(() => {
     setSpicePick(null)
@@ -247,11 +364,29 @@ export function StoreTab() {
   }
 
   const displayDelivery =
-    pane === 'checkout' && orderType === 'delivery' ? DELIVERY_FEE_HINT : 0
+    pane === 'checkout' && orderType === 'delivery'
+      ? uberQuoteFee ?? deliveryFeeFallback
+      : 0
   const displayTotal = cart.subtotal + displayDelivery
+
+  const checkoutNote = () => {
+    const parts = [note.trim()]
+    if (orderType === 'delivery' && deliveryAddr.notes.trim()) {
+      parts.push(`Delivery notes: ${deliveryAddr.notes.trim()}`)
+    }
+    const joined = parts.filter(Boolean).join(' | ')
+    return joined || null
+  }
 
   const submitCheckout = async () => {
     setFormError(null)
+    if (orderType === 'delivery') {
+      const addrBlockers = validateDeliveryAddressFields(deliveryAddr)
+      if (addrBlockers.length) {
+        setFormError(addrBlockers)
+        return
+      }
+    }
     setSubmitting(true)
     try {
       const res = await postStoreCheckout({
@@ -262,9 +397,13 @@ export function StoreTab() {
         })),
         order_type: orderType,
         customer: { name: name.trim(), phone: phone.trim() },
-        delivery_address: orderType === 'delivery' ? address.trim() : null,
-        note: note.trim() || null,
+        delivery_address:
+          orderType === 'delivery'
+            ? composeDeliveryAddressLine(deliveryAddr)
+            : null,
+        note: checkoutNote(),
         payment_preference: paymentPreference,
+        uber_quote_id: orderType === 'delivery' ? uberQuoteId : null,
         place: false,
       })
       if (!res.ok || !res.summary) {
@@ -288,6 +427,13 @@ export function StoreTab() {
 
   const placeOrder = async () => {
     setFormError(null)
+    if (orderType === 'delivery') {
+      const addrBlockers = validateDeliveryAddressFields(deliveryAddr)
+      if (addrBlockers.length) {
+        setFormError(addrBlockers)
+        return
+      }
+    }
     setSubmitting(true)
     try {
       const res = await postStoreCheckout({
@@ -298,9 +444,13 @@ export function StoreTab() {
         })),
         order_type: orderType,
         customer: { name: name.trim(), phone: phone.trim() },
-        delivery_address: orderType === 'delivery' ? address.trim() : null,
-        note: note.trim() || null,
+        delivery_address:
+          orderType === 'delivery'
+            ? composeDeliveryAddressLine(deliveryAddr)
+            : null,
+        note: checkoutNote(),
         payment_preference: paymentPreference,
+        uber_quote_id: orderType === 'delivery' ? uberQuoteId : null,
         place: true,
       })
       if (!res.ok || !res.summary) {
@@ -343,6 +493,11 @@ export function StoreTab() {
     setPayReturnNote(null)
     setFormError(null)
     setNote('')
+    setDeliveryAddr(EMPTY_DELIVERY_ADDRESS)
+    setUberQuoteId(null)
+    setUberQuoteFee(null)
+    setUberQuoteMinutes(null)
+    setQuoteHint(null)
   }
 
   const categories = menu?.categories ?? []
@@ -839,15 +994,107 @@ export function StoreTab() {
                 />
               </label>
               {orderType === 'delivery' && (
-                <label className="store-field">
-                  <span>Delivery address</span>
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    rows={3}
-                    placeholder="Street, city, postal code"
-                  />
-                </label>
+                <div className="store-address-block">
+                  <p className="store-address-heading">Delivery address</p>
+                  <label className="store-field">
+                    <span>Street</span>
+                    <input
+                      type="text"
+                      value={deliveryAddr.street}
+                      onChange={(e) =>
+                        setDeliveryAddr((a) => ({ ...a, street: e.target.value }))
+                      }
+                      autoComplete="street-address"
+                      placeholder="99 Wye Rd"
+                    />
+                  </label>
+                  <label className="store-field">
+                    <span>Unit / suite (optional)</span>
+                    <input
+                      type="text"
+                      value={deliveryAddr.unit}
+                      onChange={(e) =>
+                        setDeliveryAddr((a) => ({ ...a, unit: e.target.value }))
+                      }
+                      autoComplete="address-line2"
+                      placeholder="#31"
+                    />
+                  </label>
+                  <div className="store-address-row">
+                    <label className="store-field">
+                      <span>City</span>
+                      <input
+                        type="text"
+                        value={deliveryAddr.city}
+                        onChange={(e) =>
+                          setDeliveryAddr((a) => ({ ...a, city: e.target.value }))
+                        }
+                        autoComplete="address-level2"
+                        placeholder="Sherwood Park"
+                      />
+                    </label>
+                    <label className="store-field store-field-narrow">
+                      <span>Province</span>
+                      <input
+                        type="text"
+                        value={deliveryAddr.state}
+                        onChange={(e) =>
+                          setDeliveryAddr((a) => ({
+                            ...a,
+                            state: e.target.value.toUpperCase(),
+                          }))
+                        }
+                        autoComplete="address-level1"
+                        placeholder="AB"
+                        maxLength={2}
+                      />
+                    </label>
+                  </div>
+                  <div className="store-address-row">
+                    <label className="store-field">
+                      <span>Postal code</span>
+                      <input
+                        type="text"
+                        value={deliveryAddr.postal}
+                        onChange={(e) =>
+                          setDeliveryAddr((a) => ({
+                            ...a,
+                            postal: e.target.value.toUpperCase(),
+                          }))
+                        }
+                        autoComplete="postal-code"
+                        placeholder="T8B 1C9"
+                      />
+                    </label>
+                    <label className="store-field store-field-narrow">
+                      <span>Country</span>
+                      <input
+                        type="text"
+                        value={deliveryAddr.country}
+                        onChange={(e) =>
+                          setDeliveryAddr((a) => ({
+                            ...a,
+                            country: e.target.value.toUpperCase(),
+                          }))
+                        }
+                        autoComplete="country"
+                        placeholder="CA"
+                        maxLength={2}
+                      />
+                    </label>
+                  </div>
+                  <label className="store-field">
+                    <span>Delivery notes (optional)</span>
+                    <input
+                      type="text"
+                      value={deliveryAddr.notes}
+                      onChange={(e) =>
+                        setDeliveryAddr((a) => ({ ...a, notes: e.target.value }))
+                      }
+                      placeholder="Buzzer, gate code, leave at door…"
+                    />
+                  </label>
+                </div>
               )}
               <label className="store-field">
                 <span>Note (optional)</span>
@@ -920,9 +1167,12 @@ export function StoreTab() {
                 </div>
                 {orderType === 'delivery' && (
                   <div className="ot-row">
-                    <span>Delivery</span>
-                    <span>${DELIVERY_FEE_HINT.toFixed(2)}</span>
+                    <span>Delivery{quoteLoading ? '…' : ''}</span>
+                    <span>${displayDelivery.toFixed(2)}</span>
                   </div>
+                )}
+                {orderType === 'delivery' && quoteHint && (
+                  <p className="store-pay-note store-quote-hint">{quoteHint}</p>
                 )}
                 <div className="ot-row ot-total">
                   <span>Total</span>
@@ -1195,6 +1445,16 @@ export function StoreTab() {
                   <div className="store-success-eta">
                     Ready in about <strong>{summary.eta}</strong>
                   </div>
+                )}
+                {summary.uber_tracking_url && (
+                  <a
+                    className="store-checkout-btn ready store-pay-now-link"
+                    href={summary.uber_tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Track delivery
+                  </a>
                 )}
                 <div className="store-success-pills">
                   <span className="store-success-pill">

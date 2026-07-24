@@ -19,6 +19,11 @@ from restaurant.integrations.n8n_webhook import phone_to_e164
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant import menu_provider
 from restaurant.orders import CartItem, OrderCart
+from restaurant.uber_direct.config import (
+    fallback_delivery_charge,
+    store_uber_direct_enabled,
+)
+from restaurant.uber_direct.quote_store import get_valid_quote
 
 logger = logging.getLogger("store-checkout")
 
@@ -192,7 +197,23 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
         return StoreCheckoutResult(ok=False, status="invalid", blockers=blockers)
 
     subtotal = round(sum(l["line_total"] for l in priced_lines), 2)
-    delivery_charge = float(DELIVERY_CHARGE) if order_type == "delivery" else 0.0
+    delivery_charge = 0.0
+    uber_quote_id = None
+    uber_quote_applied = False
+    if order_type == "delivery":
+        delivery_charge = float(fallback_delivery_charge())
+        # Prefer flat DELIVERY_CHARGE / tenant fallback when Direct off.
+        if not store_uber_direct_enabled():
+            delivery_charge = float(DELIVERY_CHARGE)
+        else:
+            raw_qid = (payload.get("uber_quote_id") or "").strip()
+            rec = get_valid_quote(raw_qid) if raw_qid else None
+            if rec is not None:
+                delivery_charge = float(rec.get("fee") or delivery_charge)
+                uber_quote_id = rec.get("quote_id") or raw_qid
+                uber_quote_applied = True
+            # Fail-open: missing/expired quote → flat fallback (already set)
+
     total = round(subtotal + delivery_charge, 2)
 
     summary = {
@@ -213,6 +234,8 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
         "order_id": None,
         "eta": None,
         "clover_submitted": False,
+        "uber_quote_id": uber_quote_id,
+        "uber_quote_applied": uber_quote_applied,
     }
     return StoreCheckoutResult(ok=True, status="validated", summary=summary)
 
@@ -455,11 +478,41 @@ async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
 
     await _notify_order_placed(summary, session_id=session_id)
 
+    # Uber Direct courier (fail-open) — after kitchen + confirm SMS.
+    try:
+        from restaurant.uber_direct.service import dispatch_store_delivery
+
+        dispatched = await asyncio.to_thread(dispatch_store_delivery, summary)
+        if dispatched.get("ok") and summary.get("uber_tracking_url"):
+            try:
+                from restaurant.integrations.n8n_webhook import (
+                    notify_delivery_dispatched,
+                )
+
+                await notify_delivery_dispatched(
+                    channel=STORE_CHANNEL,
+                    customer_name=summary["customer"]["name"],
+                    customer_phone=summary["customer"]["phone"],
+                    order_type=summary.get("order_type"),
+                    clover_order_id=summary.get("order_id")
+                    if summary.get("clover_submitted")
+                    else None,
+                    delivery_id=summary.get("uber_delivery_id"),
+                    tracking_url=summary.get("uber_tracking_url"),
+                    total=summary.get("total"),
+                    session_id=session_id,
+                )
+            except Exception:
+                logger.exception("delivery.dispatched n8n notify raised — ignored")
+    except Exception:
+        logger.exception("Uber dispatch raised — order still placed")
+
     logger.info(
-        "STORE_ORDER_PLACED order_id=%s clover=%s total=%s pay=later",
+        "STORE_ORDER_PLACED order_id=%s clover=%s total=%s pay=later tracking=%s",
         clover_order_id,
         summary["clover_submitted"],
         summary["total"],
+        summary.get("uber_tracking_url"),
     )
     return StoreCheckoutResult(ok=True, status="placed", summary=summary)
 
@@ -519,9 +572,50 @@ async def fulfill_store_order_after_payment(
         place_summary=placed_summary,
     )
     await _notify_order_placed(placed_summary, session_id=session_id)
+
+    try:
+        from restaurant.uber_direct.service import dispatch_store_delivery
+
+        dispatched = await asyncio.to_thread(dispatch_store_delivery, placed_summary)
+        if placed_summary.get("uber_tracking_url"):
+            try:
+                from restaurant.store_pay_now_store import mark_kitchen_placed
+
+                mark_kitchen_placed(
+                    checkout_session_id=sid,
+                    order_id=clover_order_id,
+                    place_summary=placed_summary,
+                )
+            except Exception:
+                logger.exception("pay-now record update after Uber dispatch failed")
+        if dispatched.get("ok") and placed_summary.get("uber_tracking_url"):
+            try:
+                from restaurant.integrations.n8n_webhook import (
+                    notify_delivery_dispatched,
+                )
+
+                await notify_delivery_dispatched(
+                    channel=STORE_CHANNEL,
+                    customer_name=placed_summary["customer"]["name"],
+                    customer_phone=placed_summary["customer"]["phone"],
+                    order_type=placed_summary.get("order_type"),
+                    clover_order_id=clover_order_id
+                    if placed_summary.get("clover_submitted")
+                    else None,
+                    delivery_id=placed_summary.get("uber_delivery_id"),
+                    tracking_url=placed_summary.get("uber_tracking_url"),
+                    total=placed_summary.get("total"),
+                    session_id=session_id,
+                )
+            except Exception:
+                logger.exception("delivery.dispatched n8n notify raised — ignored")
+    except Exception:
+        logger.exception("Uber dispatch raised on pay-now fulfill — order still placed")
+
     logger.info(
-        "STORE_PAY_FULFILL placed order_id=%s checkout_session=%s",
+        "STORE_PAY_FULFILL placed order_id=%s checkout_session=%s tracking=%s",
         clover_order_id,
         sid,
+        placed_summary.get("uber_tracking_url"),
     )
     return get_by_checkout_session(sid)

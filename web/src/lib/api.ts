@@ -101,10 +101,13 @@ export interface StoreCheckoutRequest {
   items: StoreCheckoutItemPayload[]
   order_type: 'pickup' | 'delivery'
   customer: { name: string; phone: string }
+  /** One-line address (composed from structured Store fields for Clover/n8n). */
   delivery_address?: string | null
   note?: string | null
   /** later = pay at pickup/door (default); now = online pay (Hosted Checkout in P2+) */
   payment_preference?: StorePaymentPreference
+  /** Uber Direct quote id from POST /store/delivery-quote (PR 093) */
+  uber_quote_id?: string | null
   place?: boolean
 }
 
@@ -138,6 +141,11 @@ export interface StoreCheckoutSummary {
   eta?: string | null
   clover_submitted?: boolean
   session_id?: string | null
+  uber_quote_id?: string | null
+  uber_quote_applied?: boolean
+  uber_delivery_id?: string | null
+  uber_tracking_url?: string | null
+  uber_delivery_status?: string | null
 }
 
 export interface StoreCheckoutResponse {
@@ -228,13 +236,88 @@ export async function fetchStorePaymentStatus(opts: {
   return data.payment
 }
 
-export async function fetchStoreConfig(): Promise<{ pay_now_enabled: boolean }> {
+export interface StoreConfig {
+  pay_now_enabled: boolean
+  uber_direct_enabled?: boolean
+  uber_direct_fee_policy?: string
+  uber_direct_prep_minutes?: number
+  delivery_charge_fallback?: number
+}
+
+export async function fetchStoreConfig(): Promise<StoreConfig> {
   try {
     const resp = await fetch('/store/config')
     if (!resp.ok) return { pay_now_enabled: false }
-    const data = (await resp.json()) as { pay_now_enabled?: boolean }
-    return { pay_now_enabled: Boolean(data.pay_now_enabled) }
+    const data = (await resp.json()) as StoreConfig
+    return {
+      pay_now_enabled: Boolean(data.pay_now_enabled),
+      uber_direct_enabled: Boolean(data.uber_direct_enabled),
+      uber_direct_fee_policy: data.uber_direct_fee_policy,
+      uber_direct_prep_minutes: data.uber_direct_prep_minutes,
+      delivery_charge_fallback:
+        typeof data.delivery_charge_fallback === 'number'
+          ? data.delivery_charge_fallback
+          : 5,
+    }
   } catch {
     return { pay_now_enabled: false }
   }
+}
+
+export interface StoreDeliveryQuoteRequest {
+  dropoff: {
+    street: string
+    city: string
+    state: string
+    postal: string
+    country?: string
+    unit?: string | null
+    phone?: string | null
+    notes?: string | null
+  }
+  dropoff_phone?: string | null
+  subtotal?: number | null
+}
+
+export interface StoreDeliveryQuoteResponse {
+  ok: boolean
+  enabled: boolean
+  blockers?: string[]
+  quote_id?: string | null
+  fee?: number | null
+  fee_cents?: number | null
+  currency?: string | null
+  duration_minutes?: number | null
+  expires_at?: string | null
+  fee_policy?: string
+  fallback_fee?: number | null
+  dropoff_line?: string | null
+}
+
+export async function postStoreDeliveryQuote(
+  body: StoreDeliveryQuoteRequest,
+): Promise<StoreDeliveryQuoteResponse> {
+  const resp = await fetch('/store/delivery-quote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = (await resp.json().catch(() => null)) as
+    | StoreDeliveryQuoteResponse
+    | { detail?: StoreDeliveryQuoteResponse | string }
+    | null
+
+  if (!resp.ok) {
+    const detail =
+      data && typeof data === 'object' && 'detail' in data ? data.detail : null
+    if (detail && typeof detail === 'object' && 'ok' in detail) {
+      return detail as StoreDeliveryQuoteResponse
+    }
+    return {
+      ok: false,
+      enabled: true,
+      blockers: ['Could not get a delivery quote. Try again.'],
+    }
+  }
+  return data as StoreDeliveryQuoteResponse
 }

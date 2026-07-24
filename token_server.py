@@ -28,6 +28,13 @@ from restaurant.store_pay_now_store import (
 )
 from restaurant.store_rate_limit import allow_hco_webhook, allow_store_checkout
 from restaurant.clover.hosted_checkout import store_pay_now_enabled
+from restaurant.uber_direct import (
+    public_store_flags,
+    request_store_delivery_quote,
+    store_uber_direct_enabled,
+)
+from restaurant.uber_direct.delivery_store import get_delivery, record_delivery_status
+from restaurant.uber_direct.webhook import parse_uber_delivery_webhook
 
 load_dotenv()
 
@@ -63,7 +70,28 @@ class StoreCheckoutRequest(BaseModel):
     delivery_address: str | None = None
     note: str | None = None
     payment_preference: str | None = None  # later | now (PR 090)
+    uber_quote_id: str | None = None  # PR 093 — Uber Direct quote
     place: bool = False
+
+
+class StoreDeliveryDropoff(BaseModel):
+    street: str = ""
+    city: str = ""
+    state: str = ""  # province
+    postal: str = ""
+    country: str = "CA"
+    unit: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    phone: str | None = None
+    name: str | None = None
+    notes: str | None = None
+
+
+class StoreDeliveryQuoteRequest(BaseModel):
+    dropoff: StoreDeliveryDropoff = Field(default_factory=StoreDeliveryDropoff)
+    dropoff_phone: str | None = None
+    subtotal: float | None = None
 
 
 def _client_key(request: Request) -> str:
@@ -92,10 +120,75 @@ async def get_menu():
 @app.get("/store/config")
 async def store_config():
     """Public Store flags for the web UI (no secrets)."""
-    return {
+    flags = {
         "pay_now_enabled": store_pay_now_enabled(),
         "channel": STORE_CHANNEL,
     }
+    flags.update(public_store_flags())
+    return flags
+
+
+@app.post("/store/delivery-quote")
+async def store_delivery_quote(body: StoreDeliveryQuoteRequest, request: Request):
+    """Uber Direct Create Quote for Store delivery (PR 093 P1).
+
+    Kill switch off → ok + enabled=False + flat fallback fee (no Uber call).
+    """
+    if not allow_store_checkout(_client_key(request)):
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "ok": False,
+                "enabled": store_uber_direct_enabled(),
+                "blockers": [
+                    "Too many requests. Please wait a minute and try again."
+                ],
+            },
+        )
+
+    result = request_store_delivery_quote(body.model_dump())
+    if not result.ok:
+        raise HTTPException(status_code=400, detail=result.to_dict())
+    return result.to_dict()
+
+
+@app.post("/store/uber-direct-webhook")
+async def store_uber_direct_webhook(request: Request):
+    """Uber Direct delivery status webhook (PR 093 P5). Fail-open ACK."""
+    if not allow_hco_webhook(_client_key(request)):
+        raise HTTPException(status_code=429, detail="Too many webhook requests")
+
+    raw = await request.body()
+    try:
+        import json
+
+        payload = json.loads(raw.decode("utf-8") or "{}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON") from None
+
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Expected JSON object")
+
+    parsed = parse_uber_delivery_webhook(payload)
+    if parsed.get("delivery_id"):
+        record_delivery_status(
+            delivery_id=parsed["delivery_id"],
+            status=parsed.get("status"),
+            tracking_url=parsed.get("tracking_url"),
+            raw=payload,
+        )
+    return {"ok": True, "handled": bool(parsed.get("delivery_id")), **parsed}
+
+
+@app.get("/store/delivery-status")
+async def store_delivery_status(delivery_id: str | None = None):
+    """Poll Uber delivery status we recorded from webhooks."""
+    if not delivery_id:
+        raise HTTPException(status_code=400, detail="delivery_id required")
+    rec = get_delivery(delivery_id)
+    if not rec:
+        return {"found": False, "delivery": None}
+    return {"found": True, "delivery": rec}
 
 
 @app.post("/store/checkout")
