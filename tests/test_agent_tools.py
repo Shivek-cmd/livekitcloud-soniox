@@ -394,6 +394,24 @@ _SPOKEN_CONTACT = (
 )
 
 
+def test_non_roman_name_refused_and_not_saved(agent):
+    # PR 092 — the kitchen ticket, the spelled-out contact read-back and the
+    # spoken-name check all assume Roman letters.
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    result = run(agent.set_customer_contact(name="ਅਮਨ ਸਿੰਘ"))
+    assert "NAME NOT SAVED" in result
+    assert "English/Roman letters" in result
+    # The LLM transliterates — the customer is never asked to repeat it.
+    assert "do NOT ask the customer" in result
+    assert not agent.cart.customer_name
+
+    result = run(agent.set_customer_contact(name="Aman Singh"))
+    assert "NAME SAVED" in result
+    assert agent.cart.customer_name == "Aman Singh"
+
+
 def _complete_order(agent):
     run(agent.add_item("garlic naan", quantity=2))
     run(agent.record_additional_requests("no"))

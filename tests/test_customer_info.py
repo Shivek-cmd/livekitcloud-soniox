@@ -11,6 +11,7 @@ from restaurant.customer_info import (
     extract_phone_digits,
     format_phone_spoken,
     is_plausible_phone,
+    is_roman_name,
     is_valid_customer_name,
     looks_like_phone_utterance,
     parse_customer_name,
@@ -338,3 +339,26 @@ def test_accumulate_overflow_restatement():
 def test_accumulate_non_fragment_leaves_buffer():
     buf, event = accumulate_phone("80770", "Thanks, that's all.")
     assert (buf, event) == ("80770", "none")
+
+
+# ── Roman-script names (PR 092) ──────────────────────────────────────────────
+
+
+def test_roman_names_accepted():
+    assert is_roman_name("Aman Singh")
+    assert is_roman_name("O'Brien")
+    assert is_roman_name("Jean-Luc")
+    # Accents are Roman — combining marks are stripped before the ASCII test.
+    assert is_roman_name("José")
+
+
+def test_indic_script_names_rejected():
+    assert not is_roman_name("ਅਮਨ ਸਿੰਘ")
+    assert not is_roman_name("अमन")
+    # Mixed scripts are still wrong for the kitchen ticket.
+    assert not is_roman_name("Aman ਸਿੰਘ")
+
+
+def test_nameless_input_is_not_roman():
+    assert not is_roman_name("")
+    assert not is_roman_name("   ")

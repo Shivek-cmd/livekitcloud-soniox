@@ -78,6 +78,7 @@ from restaurant.customer_info import (
     accumulate_phone,
     format_phone_spoken,
     is_plausible_phone,
+    is_roman_name,
     is_valid_customer_name,
     parse_customer_name,
     phone_digit_custody_enabled,
@@ -857,6 +858,24 @@ class RestaurantAgent(Agent):
                 result = format_contact_reply(
                     [f'NAME NOT SAVED: "{name}" does not look like a real name.'],
                     ["ask for the customer's name again."],
+                )
+                self._record_tool("set_customer_contact", {"name": name}, result)
+                return result
+            if not is_roman_name(clean):
+                # The LLM already heard the name — it transliterates, code just
+                # refuses the wrong script. No customer-facing turn is spent:
+                # this result is never spoken.
+                result = format_contact_reply(
+                    [
+                        f'NAME NOT SAVED: "{clean}" is not written in '
+                        "English/Roman letters."
+                    ],
+                    [
+                        "write that same name yourself in English/Roman "
+                        "letters (ਅਮਨ ਸਿੰਘ → Aman Singh) and call "
+                        "set_customer_contact again — do NOT ask the customer "
+                        "to repeat or spell it, you already have it."
+                    ],
                 )
                 self._record_tool("set_customer_contact", {"name": name}, result)
                 return result

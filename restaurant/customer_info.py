@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import unicodedata
 
 # 10-digit local, optional +1 / +91 country prefix. Includes Devanagari/Gurmukhi
 # danda (। ॥) — STT ends spoken digit fragments with it (PR 082).
@@ -450,6 +451,29 @@ def is_valid_customer_name(name: str) -> bool:
         if _PLACEHOLDER_NAME_RE.fullmatch(n.lower()):
             return False
     return True
+
+
+def is_roman_name(name: str) -> bool:
+    """True when the name is written in Roman/English letters.
+
+    The kitchen ticket, the spelled-out contact read-back (facts._spell_out)
+    and the spoken-name check (readback_verify._check_spoken_name) all assume
+    Roman letters — a Gurmukhi/Devanagari name silently degrades all three.
+    Accents are fine ("José"): combining marks are stripped before the ASCII
+    test, so only a genuinely different script is rejected.
+    """
+    n = (name or "").strip()
+    if not n:
+        return False
+    bare = "".join(
+        ch
+        for ch in unicodedata.normalize("NFD", n)
+        if not unicodedata.combining(ch)
+    )
+    letters = [ch for ch in bare if ch.isalpha()]
+    if not letters:
+        return False
+    return all(ch.isascii() for ch in letters)
 
 
 def _clean_name_token(token: str) -> str | None:
