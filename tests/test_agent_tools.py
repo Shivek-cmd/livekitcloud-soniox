@@ -401,10 +401,14 @@ def test_non_roman_name_refused_and_not_saved(agent):
     run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     result = run(agent.set_customer_contact(name="ਅਮਨ ਸਿੰਘ"))
-    assert "NAME NOT SAVED" in result
-    assert "English/Roman letters" in result
+    # Wording tuned against gpt-4.1-mini: without the ⛔ nothing-saved marker
+    # and a named REQUIRED NEXT ACTION the model skipped the retry entirely and
+    # told the customer the name was saved (0/6 recovery).
+    assert result.startswith("⛔ NOTHING WAS SAVED — THE ORDER HAS NO NAME ON IT. ")
+    assert "REQUIRED NEXT ACTION: call set_customer_contact again" in result
+    assert "not in English/Roman letters" in result
     # The LLM transliterates — the customer is never asked to repeat it.
-    assert "do NOT ask the customer" in result
+    assert "Do not ask the customer anything" in result
     assert not agent.cart.customer_name
 
     result = run(agent.set_customer_contact(name="Aman Singh"))

@@ -863,19 +863,22 @@ class RestaurantAgent(Agent):
                 return result
             if not is_roman_name(clean):
                 # The LLM already heard the name — it transliterates, code just
-                # refuses the wrong script. No customer-facing turn is spent:
-                # this result is never spoken.
-                result = format_contact_reply(
-                    [
-                        f'NAME NOT SAVED: "{clean}" is not written in '
-                        "English/Roman letters."
-                    ],
-                    [
-                        "write that same name yourself in English/Roman "
-                        "letters (ਅਮਨ ਸਿੰਘ → Aman Singh) and call "
-                        "set_customer_contact again — do NOT ask the customer "
-                        "to repeat or spell it, you already have it."
-                    ],
+                # refuses the wrong script. Wording is load-bearing and was
+                # tuned against gpt-4.1-mini: a plain "NAME NOT SAVED … write
+                # it in Roman letters" made the model skip the retry and tell
+                # the customer the name was saved (0/6). Leading with the ⛔
+                # nothing-saved marker, naming the required next tool call, and
+                # forbidding speech this turn recovers 6/6.
+                result = (
+                    "⛔ NOTHING WAS SAVED — THE ORDER HAS NO NAME ON IT. "
+                    f'set_customer_contact rejected name="{clean}" because it '
+                    "is not in English/Roman letters.\n"
+                    "REQUIRED NEXT ACTION: call set_customer_contact again "
+                    "immediately with name set to the Roman spelling of "
+                    f'"{clean}" (examples: ਅਮਨ ਸਿੰਘ → Aman Singh, ਜਸ਼ਨ → '
+                    "Jashan, राहुल → Rahul). Produce no speech in this turn. "
+                    "Do not ask the customer anything — you already have the "
+                    "name."
                 )
                 self._record_tool("set_customer_contact", {"name": name}, result)
                 return result
