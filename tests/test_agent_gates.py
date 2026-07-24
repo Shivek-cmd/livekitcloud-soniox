@@ -4,9 +4,11 @@ from restaurant.agent.gates import (
     OrderSessionState,
     additional_requests_blockers,
     contact_blockers,
+    contact_readback_blockers,
     invalidate_readback,
     order_type_blockers,
     place_order_blockers,
+    readback_blockers,
 )
 from restaurant.orders import OrderCart
 
@@ -31,6 +33,7 @@ def _cart_with_items() -> OrderCart:
 def _confirmed_state(cart: OrderCart) -> OrderSessionState:
     state = OrderSessionState()
     state.additional_requests_recorded = True
+    state.contact_confirmed = True
     state.readback_revision = cart.revision
     state.readback_confirmed = True
     return state
@@ -190,3 +193,35 @@ def test_contact_ok_once_order_type_and_requests_set():
 def test_contact_blocked_reproduces_the_incident():
     # Exact repro shape: nothing collected yet, tool called immediately.
     assert contact_blockers(OrderCart(), OrderSessionState()) != []
+
+
+def test_readback_blocked_until_contact_confirmed():
+    # PR 092 — name/phone are confirmed with the customer before the order
+    # read-back, not inside it.
+    cart = _complete_cart()
+    state = _confirmed_state(cart)
+    state.contact_confirmed = False
+    blockers = readback_blockers(cart, state)
+    assert any("confirm_contact" in b for b in blockers)
+
+    state.contact_confirmed = True
+    assert readback_blockers(cart, state) == []
+
+
+def test_contact_confirm_blocker_hidden_while_details_still_missing():
+    # Don't tell the LLM to confirm a phone it hasn't collected yet.
+    cart = _complete_cart()
+    cart.customer_phone = ""
+    state = _confirmed_state(cart)
+    state.contact_confirmed = False
+    blockers = readback_blockers(cart, state)
+    assert not any("confirm_contact" in b for b in blockers)
+    assert any("phone" in b for b in blockers)
+
+
+def test_contact_readback_needs_name_and_phone():
+    assert contact_readback_blockers(OrderCart()) != []
+    cart = _complete_cart()
+    assert contact_readback_blockers(cart) == []
+    cart.customer_phone = "123"
+    assert any("phone" in b for b in contact_readback_blockers(cart))

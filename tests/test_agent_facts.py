@@ -3,6 +3,7 @@
 from restaurant.agent.facts import (
     _qty_word,
     format_cart_facts,
+    format_contact_readback_facts,
     format_mutation_reply,
     format_readback_facts,
 )
@@ -45,26 +46,6 @@ def _ready_cart(order_type: str = "pickup") -> OrderCart:
     if order_type == "delivery":
         cart.delivery_address = "123 Main St, Apt 4"
     return cart
-
-
-def test_readback_facts_always_include_phone():
-    facts = format_readback_facts(_ready_cart(), include_total=False)
-    assert "seven, eight, zero, five, five, five, one, two, three, four" in facts
-    assert "say as English word digits" in facts
-
-
-def test_readback_facts_include_address_only_for_delivery():
-    pickup_facts = format_readback_facts(_ready_cart("pickup"), include_total=False)
-    assert "delivery address" not in pickup_facts
-
-    delivery_facts = format_readback_facts(_ready_cart("delivery"), include_total=False)
-    assert "delivery address: 123 Main St, Apt 4" in delivery_facts
-
-
-def test_readback_facts_guide_mentions_phone_and_address():
-    facts = format_readback_facts(_ready_cart("delivery"), include_total=False)
-    assert "phone number" in facts
-    assert "address" in facts
 
 
 def test_cart_facts_custom_label():
@@ -125,3 +106,18 @@ def test_voice_line_identical_to_name_not_duplicated():
         _cart(),
     )
     assert "Garlic Naan (Garlic Naan)" not in reply
+
+
+def test_readback_facts_exclude_contact_details():
+    # PR 092 — phone/address are confirmed in their own step, not here.
+    facts = format_readback_facts(_ready_cart("delivery"), include_total=False)
+    assert "phone" not in facts
+    assert "address" not in facts
+    assert "name: Aman Singh" in facts
+
+
+def test_contact_readback_spells_name_and_digits():
+    facts = format_contact_readback_facts(_ready_cart())
+    assert "A-M-A-N S-I-N-G-H" in facts
+    assert "seven, eight, zero, five, five, five, one, two, three, four" in facts
+    assert "confirm_contact" in facts

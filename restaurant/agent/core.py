@@ -31,6 +31,7 @@ from restaurant.agent.gates import (
     OrderSessionState,
     additional_requests_blockers,
     contact_blockers,
+    contact_readback_blockers,
     invalidate_readback,
     order_type_blockers,
     place_order_blockers,
@@ -38,6 +39,7 @@ from restaurant.agent.gates import (
 )
 from restaurant.agent.facts import (
     format_cart_facts,
+    format_contact_readback_facts,
     format_contact_reply,
     format_mutation_reply,
     format_readback_facts,
@@ -854,6 +856,8 @@ class RestaurantAgent(Agent):
                 self.cart.revision += 1
                 invalidate_readback(self.state)
             self.cart.customer_name = clean
+            # A new/changed name has not been confirmed by the customer yet.
+            self.state.contact_confirmed = False
             facts.append(f'NAME SAVED: "{clean}".')
             guides.append(
                 "confirm the name briefly in the customer's language."
@@ -879,13 +883,13 @@ class RestaurantAgent(Agent):
             elif event == "saved":
                 self.cart.customer_phone = new_buffer
                 self.state.phone_buffer = ""
+                self.state.contact_confirmed = False
                 spoken = format_phone_spoken(new_buffer)
                 facts.append(f"PHONE SAVED: {spoken}.")
                 guides.append(
                     "the number is already saved — do NOT ask the customer "
-                    "to repeat or re-say it, and do NOT read it back now. "
-                    "It will be read back during the order read-back step. "
-                    "Just continue the order."
+                    "to repeat or re-say it. Call get_contact_readback next "
+                    "and read the name and number back for confirmation."
                 )
             else:
                 self.state.phone_buffer = new_buffer
@@ -912,6 +916,39 @@ class RestaurantAgent(Agent):
         self._record_tool(
             "set_customer_contact", {"name": name, "phone": phone}, result
         )
+        return result
+
+    @function_tool
+    async def get_contact_readback(self) -> str:
+        """Get the customer's saved name and phone spelled out, to read back
+        for confirmation right after collecting them. Call again after any
+        correction to either one."""
+        blockers = contact_readback_blockers(self.cart)
+        if blockers:
+            result = "Cannot read the contact details back yet:\n- " + "\n- ".join(
+                blockers
+            )
+            self._record_tool("get_contact_readback", {}, result)
+            return result
+        result = format_contact_readback_facts(self.cart)
+        self._record_tool("get_contact_readback", {}, result)
+        return result
+
+    @function_tool
+    async def confirm_contact(self) -> str:
+        """Call when the customer confirms their name and phone number are
+        correct. Must come after get_contact_readback."""
+        blockers = contact_readback_blockers(self.cart)
+        if blockers:
+            result = "Cannot confirm contact details:\n- " + "\n- ".join(blockers)
+            self._record_tool("confirm_contact", {}, result)
+            return result
+        self.state.contact_confirmed = True
+        result = (
+            "Name and phone confirmed. Continue with the order read-back "
+            "(get_order_readback)."
+        )
+        self._record_tool("confirm_contact", {}, result)
         return result
 
     @function_tool

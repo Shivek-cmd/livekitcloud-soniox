@@ -73,14 +73,12 @@ def _make_ready(agent):
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+    run(agent.confirm_contact())
     run(agent.get_order_readback())
     # Feed the spoken readback so the confirm is verifier-clean in any
-    # READBACK_VERIFY mode (PR 078) — must include the phone digits too
-    # (PR 088) or strict mode refuses and confirm_readback never finalizes.
-    agent.note_agent_speech(
-        "So that's two Garlic Naan for pickup, phone seven eight zero four "
-        "four four one two three four — correct?"
-    )
+    # READBACK_VERIFY mode (PR 078).
+    agent.note_agent_speech("So that's two Garlic Naan for pickup — correct?")
     run(agent.confirm_readback())
 
 

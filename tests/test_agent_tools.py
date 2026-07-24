@@ -394,6 +394,54 @@ def _complete_order(agent):
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+    run(agent.confirm_contact())
+
+
+def test_contact_readback_refuses_before_details_saved(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    result = run(agent.get_contact_readback())
+    assert "Cannot read the contact details back yet" in result
+    assert not run(agent.confirm_contact()).startswith("Name and phone confirmed")
+
+
+def test_contact_readback_spells_name_and_phone(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    result = run(agent.get_contact_readback())
+    assert "A-M-A-N S-I-N-G-H" in result
+    assert "seven, eight, zero, four, four, four, one, two, three, four" in result
+
+
+def test_order_readback_blocked_until_contact_confirmed(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    blocked = run(agent.get_order_readback())
+    assert "Cannot read back yet" in blocked
+    assert "confirm_contact" in blocked
+
+    run(agent.confirm_contact())
+    assert "READBACK FACTS" in run(agent.get_order_readback())
+
+
+def test_contact_correction_rearms_the_confirmation(agent):
+    _complete_order(agent)
+    assert agent.state.contact_confirmed
+    # Customer catches a mis-heard name during (or after) the readback.
+    run(agent.set_customer_contact(name="Amrit Singh"))
+    assert not agent.state.contact_confirmed
+    assert "confirm_contact" in run(agent.get_order_readback())
+
+    run(agent.set_customer_contact(phone="7804445678"))
+    assert not agent.state.contact_confirmed
 
 
 def test_readback_refuses_while_incomplete(agent):
@@ -410,20 +458,22 @@ def test_readback_facts_generated_from_cart(agent):
     assert "2 x Garlic Naan" in result
     assert "order type: pickup" in result
     assert "Aman Singh" in result
-    # Phone number read back as English word digits, not saved-tool prose.
-    assert "seven, eight, zero, four, four, four, one, two, three, four" in result
+    # Phone/address are confirmed in their own step, not in the order readback.
+    assert "phone" not in result.lower()
     # Phone channel: no price in the readback facts.
     assert "total" not in result.lower() and "$" not in result
 
 
-def test_set_customer_contact_no_longer_prompts_immediate_phone_readback(agent):
+def test_set_customer_contact_routes_to_contact_readback(agent):
     run(agent.add_item("garlic naan", quantity=2))
     run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     result = run(agent.set_customer_contact(phone="7804441234"))
     assert "PHONE SAVED" in result
-    assert "do NOT read it back now" in result
-    assert "read back during the order read-back step" in result
+    # Never ask the customer to re-say a number that is already captured —
+    # it gets read back to them instead, in the contact-confirmation step.
+    assert "do NOT ask the customer to repeat" in result
+    assert "get_contact_readback" in result
 
 
 def test_readback_facts_include_total_on_web(agent):
@@ -480,8 +530,7 @@ def test_order_type_change_invalidates_confirmed_readback(agent):
 # ── spoken-readback verifier at confirm (PR 078) ──────────────────────────────
 
 _GOOD_READBACK = (
-    "So that's two Garlic Naan for pickup, phone seven eight zero four "
-    "four four one two three four — is everything correct?"
+    "So that's two Garlic Naan for pickup — is everything correct?"
 )
 
 
