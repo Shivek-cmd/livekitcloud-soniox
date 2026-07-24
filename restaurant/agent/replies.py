@@ -29,7 +29,7 @@ def order_placed_goodbye(*, order_type: str | None, language: str | None = None)
     choreography), variant keyed off the customer's preferred language.
     Punjabi remains the default for pa/mixed/unknown."""
     delivery = order_type == "delivery"
-    lang = str(language or "").lower()
+    lang = str(getattr(language, "value", language) or "").lower()
     if lang == "en":
         wait = "30 to 40 minutes" if delivery else "20 to 25 minutes"
         return (
@@ -85,7 +85,7 @@ def false_add_correction_phrase(query: str, language: str | None = None) -> str:
     """PR 081 strict mode — one warm corrective line after the LLM falsely
     claimed a refused item was added. Punjabi default for pa/mixed/unknown,
     like order_placed_goodbye."""
-    lang = str(language or "").lower()
+    lang = str(getattr(language, "value", language) or "").lower()
     if lang == "en":
         return (
             f"Oh — sorry, I actually don't have {query} on our menu, so "
