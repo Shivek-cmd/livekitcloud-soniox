@@ -42,6 +42,14 @@ class OrderSessionState:
     # PR 082 — code-side phone digit custody: digits stitched across turns while
     # the phone is being collected. Owned by accumulate_phone, never the LLM.
     phone_buffer: str = ""
+    # PR 092 — name/phone are read back and confirmed right after they are
+    # collected, not during the final order read-back. Any later change to
+    # either re-arms this gate. Same capture shape as the order readback:
+    # pending is set by get_contact_readback, every assistant line while
+    # pending lands in contact_spoken, and confirm_contact verifies it.
+    contact_confirmed: bool = False
+    contact_readback_pending: bool = False
+    contact_spoken: list[str] = field(default_factory=list)
     real_user_turns: int = 0
 
 
@@ -54,6 +62,14 @@ def invalidate_readback(state: OrderSessionState) -> None:
     # PR 081 — a successful mutation in the same turn means the upcoming
     # confirm is (at least partly) legitimate; don't flag mixed multi-add turns.
     state.pending_add_refusals.clear()
+
+
+def invalidate_contact_readback(state: OrderSessionState) -> None:
+    """A changed name/phone voids the confirmation and any in-flight capture —
+    speech about the OLD details must not satisfy the next check."""
+    state.contact_confirmed = False
+    state.contact_readback_pending = False
+    state.contact_spoken.clear()
 
 
 def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
@@ -79,6 +95,14 @@ def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
             "The final additional-requests question (spice preferences, allergies, "
             "special instructions) has not been asked — ask it and call "
             "record_additional_requests."
+        )
+    if not blockers and not state.contact_confirmed:
+        # Only raised once name and phone actually exist — otherwise the LLM
+        # gets told to confirm details it hasn't collected yet.
+        blockers.append(
+            "The customer has not confirmed their name and phone number yet — "
+            "call get_contact_readback, read both back, and call "
+            "confirm_contact once the customer says they are right."
         )
     return blockers
 
@@ -114,6 +138,23 @@ def order_type_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str
             "The final additional-requests question (spice preferences, "
             "allergies, special instructions) has not been asked yet — ask "
             "it and call record_additional_requests before pickup/delivery."
+        )
+    return blockers
+
+
+def contact_readback_blockers(cart: "OrderCart") -> list[str]:
+    """Both name and phone must actually be saved before they can be read
+    back for confirmation — there is nothing to spell out otherwise."""
+    blockers: list[str] = []
+    if not (cart.customer_name and is_valid_customer_name(cart.customer_name)):
+        blockers.append(
+            "No valid customer name is saved — ask for it and call "
+            "set_customer_contact first."
+        )
+    if not (cart.customer_phone and extract_phone_digits(cart.customer_phone)):
+        blockers.append(
+            "No valid 10-digit phone number is saved — ask for it and call "
+            "set_customer_contact first."
         )
     return blockers
 

@@ -388,12 +388,158 @@ def test_late_added_spiced_dish_defaulted_at_readback(agent):
 
 # ── readback / confirm cycle ──────────────────────────────────────────────────
 
+_SPOKEN_CONTACT = (
+    "Just to confirm — the name is Aman Singh, A-M-A-N S-I-N-G-H, and the "
+    "number is seven eight zero four four four one two three four."
+)
+
+
+def test_non_roman_name_refused_and_not_saved(agent):
+    # PR 092 — the kitchen ticket, the spelled-out contact read-back and the
+    # spoken-name check all assume Roman letters.
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    result = run(agent.set_customer_contact(name="ਅਮਨ ਸਿੰਘ"))
+    # Wording tuned against gpt-4.1-mini: without the ⛔ nothing-saved marker
+    # and a named REQUIRED NEXT ACTION the model skipped the retry entirely and
+    # told the customer the name was saved (0/6 recovery).
+    assert result.startswith("⛔ NOTHING WAS SAVED — THE ORDER HAS NO NAME ON IT. ")
+    assert "REQUIRED NEXT ACTION: call set_customer_contact again" in result
+    assert "not in English/Roman letters" in result
+    # The LLM transliterates — the customer is never asked to repeat it.
+    assert "Do not ask the customer anything" in result
+    assert not agent.cart.customer_name
+
+    result = run(agent.set_customer_contact(name="Aman Singh"))
+    assert "NAME SAVED" in result
+    assert agent.cart.customer_name == "Aman Singh"
+
+
 def _complete_order(agent):
     run(agent.add_item("garlic naan", quantity=2))
     run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+    # The contact confirmation is verified against what was actually spoken
+    # (PR 092) — feed the name + digits or strict mode refuses.
+    agent.note_agent_speech(_SPOKEN_CONTACT)
+    run(agent.confirm_contact())
+
+
+def test_contact_readback_refuses_before_details_saved(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    result = run(agent.get_contact_readback())
+    assert "Cannot read the contact details back yet" in result
+    assert not run(agent.confirm_contact()).startswith("Name and phone confirmed")
+
+
+def test_contact_readback_spells_name_and_phone(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    result = run(agent.get_contact_readback())
+    assert "A-M-A-N S-I-N-G-H" in result
+    assert "seven, eight, zero, four, four, four, one, two, three, four" in result
+
+
+def test_order_readback_blocked_until_contact_confirmed(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    blocked = run(agent.get_order_readback())
+    assert "Cannot read back yet" in blocked
+    assert "confirm_contact" in blocked
+
+    run(agent.get_contact_readback())
+    agent.note_agent_speech(_SPOKEN_CONTACT)
+    run(agent.confirm_contact())
+    assert "READBACK FACTS" in run(agent.get_order_readback())
+
+
+def test_contact_correction_rearms_the_confirmation(agent):
+    _complete_order(agent)
+    assert agent.state.contact_confirmed
+    # Customer catches a mis-heard name during (or after) the readback.
+    run(agent.set_customer_contact(name="Amrit Singh"))
+    assert not agent.state.contact_confirmed
+    assert "confirm_contact" in run(agent.get_order_readback())
+
+    run(agent.set_customer_contact(phone="7804445678"))
+    assert not agent.state.contact_confirmed
+
+
+def test_contact_confirm_refused_until_details_spoken(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+
+    # The agent claims the customer said yes without ever reading anything.
+    agent.note_agent_speech("Great, all set — anything else?")
+    result = run(agent.confirm_contact())
+    assert "CONTACT READBACK INCOMPLETE" in result
+    assert not agent.state.contact_confirmed
+
+    # A half read-back (name only) is still refused, and names the gap.
+    agent.note_agent_speech("Your name is Aman Singh, correct?")
+    result = run(agent.confirm_contact())
+    assert "phone number" in result
+    assert not agent.state.contact_confirmed
+
+    # Only the full spoken read-back confirms. The buffer restarts on each
+    # refusal, so this line alone has to carry both facts.
+    agent.note_agent_speech(_SPOKEN_CONTACT)
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+
+
+def test_contact_speech_buffered_only_while_pending(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    agent.note_agent_speech("And your phone number?")  # before the readback
+    run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+    agent.note_agent_speech(_SPOKEN_CONTACT)
+    assert agent.state.contact_spoken == [_SPOKEN_CONTACT]
+
+    # A correction voids the in-flight capture — speech about the OLD number
+    # must not satisfy the check for the new one.
+    run(agent.set_customer_contact(phone="7804445678"))
+    assert not agent.state.contact_readback_pending
+    assert agent.state.contact_spoken == []
+
+
+def test_contact_verify_warn_and_off_modes(agent, monkeypatch):
+    monkeypatch.setenv("CONTACT_VERIFY", "warn")
+    run(agent.add_item("garlic naan", quantity=2))
+    run(agent.record_additional_requests("no"))
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+    agent.note_agent_speech("All set ji.")
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+
+    monkeypatch.setenv("CONTACT_VERIFY", "off")
+    run(agent.set_customer_contact(phone="7804445678"))
+    run(agent.get_contact_readback())
+    agent.note_agent_speech("All set ji.")
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
 
 
 def test_readback_refuses_while_incomplete(agent):
@@ -410,20 +556,22 @@ def test_readback_facts_generated_from_cart(agent):
     assert "2 x Garlic Naan" in result
     assert "order type: pickup" in result
     assert "Aman Singh" in result
-    # Phone number read back as English word digits, not saved-tool prose.
-    assert "seven, eight, zero, four, four, four, one, two, three, four" in result
+    # Phone/address are confirmed in their own step, not in the order readback.
+    assert "phone" not in result.lower()
     # Phone channel: no price in the readback facts.
     assert "total" not in result.lower() and "$" not in result
 
 
-def test_set_customer_contact_no_longer_prompts_immediate_phone_readback(agent):
+def test_set_customer_contact_routes_to_contact_readback(agent):
     run(agent.add_item("garlic naan", quantity=2))
     run(agent.record_additional_requests("no"))
     run(agent.set_order_type("pickup"))
     result = run(agent.set_customer_contact(phone="7804441234"))
     assert "PHONE SAVED" in result
-    assert "do NOT read it back now" in result
-    assert "read back during the order read-back step" in result
+    # Never ask the customer to re-say a number that is already captured —
+    # it gets read back to them instead, in the contact-confirmation step.
+    assert "do NOT ask the customer to repeat" in result
+    assert "get_contact_readback" in result
 
 
 def test_readback_facts_include_total_on_web(agent):
@@ -480,8 +628,7 @@ def test_order_type_change_invalidates_confirmed_readback(agent):
 # ── spoken-readback verifier at confirm (PR 078) ──────────────────────────────
 
 _GOOD_READBACK = (
-    "So that's two Garlic Naan for pickup, phone seven eight zero four "
-    "four four one two three four — is everything correct?"
+    "So that's two Garlic Naan for pickup — is everything correct?"
 )
 
 

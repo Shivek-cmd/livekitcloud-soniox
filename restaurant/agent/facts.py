@@ -129,21 +129,48 @@ def format_readback_facts(cart: "OrderCart", *, include_total: bool) -> str:
     lines.append(f'- order type: {order_type} (say "{order_type}" in English)')
     if cart.customer_name:
         lines.append(f"- name: {cart.customer_name}")
-    if cart.customer_phone:
-        lines.append(
-            f"- phone: {format_phone_spoken(cart.customer_phone)} "
-            "(say as English word digits)"
-        )
-    if order_type == "delivery" and cart.delivery_address:
-        lines.append(f"- delivery address: {cart.delivery_address}")
     if include_total:
         lines.append(f"- total: {_money(cart.total)}")
     lines.append(
         "GUIDE: phrase this warmly in your own words in the customer's "
         "language — but every item, its quantity (as a word, never a digit), "
-        "the order type, the phone number, and (for delivery) the address "
-        "must actually be spoken. Your spoken readback is checked — anything "
-        "missing forces a re-read. End by asking if everything is correct."
+        "and the order type must actually be spoken. Your spoken readback is "
+        "checked — anything missing forces a re-read. End by asking if "
+        "everything is correct."
+    )
+    return "\n".join(lines)
+
+
+def _spell_out(name: str) -> str:
+    """Ubair -> U-B-A-I-R — the letter-by-letter form the agent speaks so the
+    customer can catch a mis-heard name before it reaches the kitchen
+    ticket."""
+    return " ".join("-".join(word.upper()) for word in name.split() if word)
+
+
+def format_contact_readback_facts(cart: "OrderCart") -> str:
+    """CONTACT FACTS block — name and phone spelled out for the customer to
+    confirm right after they are collected. Kept out of the final order
+    read-back on purpose: contact is verified once, here, where a correction
+    is cheap and doesn't force a whole-order re-read."""
+    lines = [
+        "CONTACT FACTS — read BOTH of these back to the customer, then ask "
+        "if they are correct:"
+    ]
+    lines.append(
+        f"- name: {cart.customer_name} (say it in English/Roman script, then "
+        f"spell it letter by letter: {_spell_out(cart.customer_name)})"
+    )
+    lines.append(
+        f"- phone: {format_phone_spoken(cart.customer_phone)} (say every "
+        "digit as a separate English word, one at a time)"
+    )
+    lines.append(
+        "GUIDE: phrase the ask warmly in your own words in the customer's "
+        "language, but the name letters and the phone digits themselves must "
+        "be spoken exactly as above. If the customer corrects either one, "
+        "call set_customer_contact with the fix and read it back again. Only "
+        "when they say both are right, call confirm_contact."
     )
     return "\n".join(lines)
 

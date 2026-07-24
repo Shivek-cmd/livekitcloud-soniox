@@ -31,6 +31,8 @@ from restaurant.agent.gates import (
     OrderSessionState,
     additional_requests_blockers,
     contact_blockers,
+    contact_readback_blockers,
+    invalidate_contact_readback,
     invalidate_readback,
     order_type_blockers,
     place_order_blockers,
@@ -38,6 +40,7 @@ from restaurant.agent.gates import (
 )
 from restaurant.agent.facts import (
     format_cart_facts,
+    format_contact_readback_facts,
     format_contact_reply,
     format_mutation_reply,
     format_readback_facts,
@@ -46,7 +49,12 @@ from restaurant.agent.add_claim_verify import add_claim_verify_mode, falsely_cla
 from restaurant.agent.language import update_preferred_language
 from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
 from restaurant.agent.prompt import build_system_prompt, prompt_style
-from restaurant.agent.readback_verify import readback_verify_mode, verify_readback
+from restaurant.agent.readback_verify import (
+    contact_verify_mode,
+    readback_verify_mode,
+    verify_contact_readback,
+    verify_readback,
+)
 from restaurant.agent.tts_transform import (
     dish_english_enforced_stream,
     phone_enforced_stream,
@@ -70,6 +78,7 @@ from restaurant.customer_info import (
     accumulate_phone,
     format_phone_spoken,
     is_plausible_phone,
+    is_roman_name,
     is_valid_customer_name,
     parse_customer_name,
     phone_digit_custody_enabled,
@@ -237,6 +246,9 @@ class RestaurantAgent(Agent):
         # PR 078 — capture the spoken readback for the confirm-time verifier.
         if self.state.readback_pending:
             self.state.readback_spoken.append(line)
+        # PR 092 — same capture for the name/phone confirmation step.
+        if self.state.contact_readback_pending:
+            self.state.contact_spoken.append(line)
         # PR 081 — after add_item refused, the very next spoken line must not
         # claim the item was added (one-shot check; the cart never changed).
         if self.state.pending_add_refusals:
@@ -849,11 +861,34 @@ class RestaurantAgent(Agent):
                 )
                 self._record_tool("set_customer_contact", {"name": name}, result)
                 return result
+            if not is_roman_name(clean):
+                # The LLM already heard the name — it transliterates, code just
+                # refuses the wrong script. Wording is load-bearing and was
+                # tuned against gpt-4.1-mini: a plain "NAME NOT SAVED … write
+                # it in Roman letters" made the model skip the retry and tell
+                # the customer the name was saved (0/6). Leading with the ⛔
+                # nothing-saved marker, naming the required next tool call, and
+                # forbidding speech this turn recovers 6/6.
+                result = (
+                    "⛔ NOTHING WAS SAVED — THE ORDER HAS NO NAME ON IT. "
+                    f'set_customer_contact rejected name="{clean}" because it '
+                    "is not in English/Roman letters.\n"
+                    "REQUIRED NEXT ACTION: call set_customer_contact again "
+                    "immediately with name set to the Roman spelling of "
+                    f'"{clean}" (examples: ਅਮਨ ਸਿੰਘ → Aman Singh, ਜਸ਼ਨ → '
+                    "Jashan, राहुल → Rahul). Produce no speech in this turn. "
+                    "Do not ask the customer anything — you already have the "
+                    "name."
+                )
+                self._record_tool("set_customer_contact", {"name": name}, result)
+                return result
             if self.cart.customer_name and self.cart.customer_name != clean:
                 # Name appears in the spoken readback — force a fresh one.
                 self.cart.revision += 1
                 invalidate_readback(self.state)
             self.cart.customer_name = clean
+            # A new/changed name has not been confirmed by the customer yet.
+            invalidate_contact_readback(self.state)
             facts.append(f'NAME SAVED: "{clean}".')
             guides.append(
                 "confirm the name briefly in the customer's language."
@@ -879,13 +914,13 @@ class RestaurantAgent(Agent):
             elif event == "saved":
                 self.cart.customer_phone = new_buffer
                 self.state.phone_buffer = ""
+                invalidate_contact_readback(self.state)
                 spoken = format_phone_spoken(new_buffer)
                 facts.append(f"PHONE SAVED: {spoken}.")
                 guides.append(
                     "the number is already saved — do NOT ask the customer "
-                    "to repeat or re-say it, and do NOT read it back now. "
-                    "It will be read back during the order read-back step. "
-                    "Just continue the order."
+                    "to repeat or re-say it. Call get_contact_readback next "
+                    "and read the name and number back for confirmation."
                 )
             else:
                 self.state.phone_buffer = new_buffer
@@ -913,6 +948,73 @@ class RestaurantAgent(Agent):
             "set_customer_contact", {"name": name, "phone": phone}, result
         )
         return result
+
+    @function_tool
+    async def get_contact_readback(self) -> str:
+        """Get the customer's saved name and phone spelled out, to read back
+        for confirmation right after collecting them. Call again after any
+        correction to either one."""
+        blockers = contact_readback_blockers(self.cart)
+        if blockers:
+            result = "Cannot read the contact details back yet:\n- " + "\n- ".join(
+                blockers
+            )
+            self._record_tool("get_contact_readback", {}, result)
+            return result
+        result = format_contact_readback_facts(self.cart)
+        self.state.contact_readback_pending = True
+        self.state.contact_spoken.clear()
+        self._record_tool("get_contact_readback", {}, result)
+        return result
+
+    @function_tool
+    async def confirm_contact(self) -> str:
+        """Call when the customer confirms their name and phone number are
+        correct. Must come after get_contact_readback, and only once you have
+        actually spoken the name and every phone digit."""
+        blockers = contact_readback_blockers(self.cart)
+        if blockers:
+            result = "Cannot confirm contact details:\n- " + "\n- ".join(blockers)
+            self._record_tool("confirm_contact", {}, result)
+            return result
+        result = self._verified_contact_confirm()
+        self._record_tool("confirm_contact", {}, result)
+        return result
+
+    def _verified_contact_confirm(self) -> str:
+        """PR 092 — the customer can only confirm details they actually heard,
+        so check the SPOKEN contact readback covers the name and every phone
+        digit. strict (default): refuse and force a re-read; warn: log +
+        analytics, allow; off: rollback."""
+        mode = contact_verify_mode()
+        if mode != "off":
+            check = verify_contact_readback(
+                "\n".join(self.state.contact_spoken), self.cart
+            )
+            if not check.ok:
+                if mode == "strict":
+                    # Keep pending so the fresh re-read is captured; the buffer
+                    # restarts so stale speech can't satisfy the next check.
+                    self.state.contact_spoken.clear()
+                    return (
+                        "CONTACT READBACK INCOMPLETE — the customer has not "
+                        "heard their details:\n- " + "\n- ".join(check.problems)
+                        + "\nCall get_contact_readback and read the name and "
+                        "the phone number back before confirming."
+                    )
+                logger.warning(
+                    "Contact verify (warn mode) problems: %s", check.problems
+                )
+                if self._recorder is not None:
+                    self._recorder.add_event(
+                        "contact_verify_warn", {"problems": check.problems}
+                    )
+        self.state.contact_confirmed = True
+        self.state.contact_readback_pending = False
+        return (
+            "Name and phone confirmed. Continue with the order read-back "
+            "(get_order_readback)."
+        )
 
     @function_tool
     async def get_order_readback(self) -> str:
