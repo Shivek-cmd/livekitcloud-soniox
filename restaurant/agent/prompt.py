@@ -50,7 +50,7 @@ def _your_job() -> str:
 take items (after each add, ask "anything else?") → when they're done, ONE final additional-requests
 question covering spice preferences + allergies + special instructions (record_additional_requests)
 → pickup or delivery (set_order_type; delivery → set_delivery_address) → name, then phone (set_customer_contact)
-→ get_contact_readback, read the name and phone back spelled out and ask if they are right; on yes: confirm_contact
+→ get_contact_readback, read the name and phone back spelled out (this is checked — you must actually say them) and ask if they are right; on yes: confirm_contact
 → get_order_readback, read back ALL of its READBACK FACTS in the customer's language and ask if
 everything is correct → on yes: confirm_readback (this finalizes and places the order automatically).
 NEVER ask about spice while taking items — spice belongs to the final additional-requests question.
@@ -74,7 +74,7 @@ def _tool_contract() -> str:
 - record_additional_requests(response) — record the customer's answer to the final additional-requests question (spice preferences + allergies + special instructions), including "no"
 - set_order_type / set_delivery_address / set_customer_contact — checkout details
 - get_contact_readback — the ONLY source of the name/phone confirmation facts; read the name (English/Roman, then spelled letter by letter) and every phone digit as a separate English word, then ask if both are right. If the customer corrects either, call set_customer_contact with the fix and read it back again
-- confirm_contact — call when the customer says their name and phone are correct; the order read-back is blocked until this succeeds
+- confirm_contact — call when the customer says their name and phone are correct; your spoken contact read-back is checked, so if you never actually said the name and every digit it refuses and forces a re-read; the order read-back is blocked until this succeeds
 - get_order_readback — the ONLY source of the final read-back facts; read ALL of them to the customer in their language (every item, its quantity, the order type), then ask if everything is correct — your spoken readback is checked, anything missing forces a re-read
 - confirm_readback — call when the customer says the read-back is correct; on success this finalizes and places the order automatically
 - place_order — fallback only; normally triggered automatically by confirm_readback, do not call it separately in the normal flow
@@ -135,7 +135,7 @@ TOOLS (always tool-first — you can only touch the order through these):
 - record_additional_requests(response) — record the customer's answer to the final additional-requests question (spice preferences + allergies + special instructions), including "no"
 - set_order_type / set_delivery_address / set_customer_contact — checkout details
 - get_contact_readback — the ONLY source of the name/phone confirmation facts; read the name (English/Roman, then spelled letter by letter) and every phone digit as a separate English word, then ask if both are right. If the customer corrects either, call set_customer_contact with the fix and read it back again
-- confirm_contact — call when the customer says their name and phone are correct; the order read-back is blocked until this succeeds
+- confirm_contact — call when the customer says their name and phone are correct; your spoken contact read-back is checked, so if you never actually said the name and every digit it refuses and forces a re-read; the order read-back is blocked until this succeeds
 - get_order_readback — the ONLY source of the final read-back facts; read ALL of them to the customer in their language (every item, its quantity, the order type), then ask if everything is correct — your spoken readback is checked, anything missing forces a re-read
 - confirm_readback — call when the customer says the read-back is correct; on success this finalizes and places the order automatically
 - place_order — fallback only; normally triggered automatically by confirm_readback, do not call it separately in the normal flow

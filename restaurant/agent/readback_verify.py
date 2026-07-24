@@ -22,6 +22,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from restaurant.customer_info import _INDIC_NUMERAL_MAP, _spoken_words_to_digits
+
 if TYPE_CHECKING:
     from restaurant.orders import OrderCart
 
@@ -29,6 +31,17 @@ if TYPE_CHECKING:
 def readback_verify_mode() -> str:
     """'strict' (default) | 'warn' | 'off' via the READBACK_VERIFY env var."""
     mode = (os.getenv("READBACK_VERIFY") or "").strip().lower()
+    return mode if mode in ("warn", "off") else "strict"
+
+
+def contact_verify_mode() -> str:
+    """'strict' (default) | 'warn' | 'off' via the CONTACT_VERIFY env var.
+
+    Separate from READBACK_VERIFY on purpose: the contact check has its own
+    failure mode (a name/phone the customer never heard) and its own kill
+    switch, so one can be relaxed live without weakening the other.
+    """
+    mode = (os.getenv("CONTACT_VERIFY") or "").strip().lower()
     return mode if mode in ("warn", "off") else "strict"
 
 
@@ -256,4 +269,57 @@ def verify_readback(
         if warning:
             check.warnings.append(warning)
 
+    return check
+
+
+# ── contact readback (PR 092) ────────────────────────────────────────────────
+
+_ASCII_LETTERS_RE = re.compile(r"[^a-z]+")
+
+
+def _check_spoken_phone(spoken: str, phone_digits: str) -> str | None:
+    """The saved phone's digits must appear as a contiguous run somewhere in
+    the spoken contact readback — in any script/word form the LLM is allowed
+    to say (English/Punjabi/Hindi digit words, ASCII/Gurmukhi/Devanagari
+    numerals). The buffer is captured pre-TTS-transform, so this must
+    recognize the same forms `enforce_english_phone_in_speech` rewrites, not
+    just the canonical English-word-digit output."""
+    normalized = _spoken_words_to_digits(spoken.translate(_INDIC_NUMERAL_MAP))
+    digits_only = re.sub(r"\D", "", normalized)
+    if phone_digits in digits_only:
+        return None
+    return "you never said the phone number, digit by digit"
+
+
+def _check_spoken_name(spoken: str, name: str) -> str | None:
+    """Each Roman word of the saved name must appear in the spoken text as a
+    run of letters — which covers both "Aman" and the spelled-out "A-M-A-N",
+    since separators are stripped before matching. A name with no Roman
+    letters at all is not checked (fail safe toward allowing)."""
+    blob = _ASCII_LETTERS_RE.sub("", spoken.lower())
+    missing: list[str] = []
+    for word in name.split():
+        letters = _ASCII_LETTERS_RE.sub("", word.lower())
+        if letters and letters not in blob:
+            missing.append(word)
+    if not missing:
+        return None
+    return (
+        f"you never said the name \"{' '.join(missing)}\" — say it and spell "
+        "it letter by letter"
+    )
+
+
+def verify_contact_readback(spoken: str, cart: "OrderCart") -> ReadbackCheck:
+    """Verify the captured contact readback actually spoke the saved name and
+    every phone digit. `spoken` is the joined contact_spoken buffer."""
+    check = ReadbackCheck()
+    if cart.customer_name:
+        problem = _check_spoken_name(spoken, cart.customer_name)
+        if problem:
+            check.problems.append(problem)
+    if cart.customer_phone:
+        problem = _check_spoken_phone(spoken, cart.customer_phone)
+        if problem:
+            check.problems.append(problem)
     return check

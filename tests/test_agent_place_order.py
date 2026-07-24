@@ -67,6 +67,12 @@ def agent(monkeypatch) -> RestaurantAgent:
     return a
 
 
+_SPOKEN_CONTACT = (
+    "Just to confirm — the name is Aman Singh, A-M-A-N S-I-N-G-H, and the "
+    "number is seven eight zero four four four one two three four."
+)
+
+
 def _make_ready(agent):
     run(agent.add_item("garlic naan", quantity=2))
     run(agent.record_additional_requests("no"))
@@ -74,6 +80,9 @@ def _make_ready(agent):
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
     run(agent.get_contact_readback())
+    # The contact confirmation is verified against what was actually spoken
+    # (PR 092) — feed the name + digits or strict mode refuses.
+    agent.note_agent_speech(_SPOKEN_CONTACT)
     run(agent.confirm_contact())
     run(agent.get_order_readback())
     # Feed the spoken readback so the confirm is verifier-clean in any
