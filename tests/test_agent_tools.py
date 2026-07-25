@@ -82,6 +82,15 @@ def agent(monkeypatch) -> RestaurantAgent:
 
 def run(coro):
     return asyncio.run(coro)
+# PR 095 — record_additional_requests refuses unless the question was actually
+# spoken to the customer, so the tests say it before recording an answer.
+_WRAPUP_QUESTION = "Any allergies or special instructions for the kitchen?"
+
+
+def _record_wrapup(agent, response: str = "no") -> str:
+    agent.note_agent_speech(_WRAPUP_QUESTION)
+    return run(agent.record_additional_requests(response))
+
 
 
 # ── add_item ──────────────────────────────────────────────────────────────────
@@ -303,7 +312,7 @@ def test_set_item_spice_invalid_value(agent):
 
 def test_set_order_type_validates_literal(agent):
     run(agent.add_item("garlic naan"))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     assert "must be" in run(agent.set_order_type("drive-through"))
     assert agent.cart.order_type is None
     result = run(agent.set_order_type("delivery"))
@@ -324,7 +333,7 @@ def _ready_for_contact(agent):
     """Advance past the phase gate (items → additional requests → order
     type) so set_customer_contact's own validation can be exercised."""
     run(agent.add_item("garlic naan"))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
 
 
@@ -400,21 +409,57 @@ def test_contact_blocked_before_order_type_set(agent):
     # Direct regression test for the incident: set_customer_contact called
     # before order_type exists must refuse, not fabricate/save anything.
     run(agent.add_item("garlic naan"))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     result = run(agent.set_customer_contact(name="Sir", phone="555-123-4567"))
     assert "Cannot collect contact details yet" in result
     assert not agent.cart.customer_name
     assert not agent.cart.customer_phone
 
 
-def test_record_additional_requests_none_and_note(agent):
+def test_wrapup_refused_until_the_question_is_actually_asked(agent):
+    # PR 095 — the live gap: the LLM cleared the placement blocker with a
+    # silent tool call, so the customer was never asked about allergies.
     run(agent.add_item("garlic naan"))
     result = run(agent.record_additional_requests("no"))
+    assert result.startswith("⛔ NOTHING WAS RECORDED")
+    assert "REQUIRED NEXT ACTION" in result
+    assert not agent.state.additional_requests_recorded
+    # ...and the order stays unplaceable, which is the whole point.
+    assert "record_additional_requests" in run(agent.get_order_readback())
+
+    # Any spoken line that actually raises the question arms the tool.
+    agent.note_agent_speech("Before I take your details — any allergies or special instructions?")
+    assert agent.state.additional_requests_asked
+    assert "ADDITIONAL REQUESTS RECORDED" in run(agent.record_additional_requests("no"))
+
+
+def test_wrapup_verify_warn_and_off_modes(agent, monkeypatch):
+    monkeypatch.setenv("ADDITIONAL_REQUESTS_VERIFY", "warn")
+    run(agent.add_item("garlic naan"))
+    result = run(agent.record_additional_requests("no"))
+    assert "ADDITIONAL REQUESTS RECORDED" in result
+    assert agent.state.additional_requests_recorded
+
+    monkeypatch.setenv("ADDITIONAL_REQUESTS_VERIFY", "off")
+    agent.state.additional_requests_recorded = False
+    assert "ADDITIONAL REQUESTS RECORDED" in run(agent.record_additional_requests("no"))
+
+
+def test_unrelated_agent_speech_does_not_arm_the_wrapup(agent):
+    run(agent.add_item("garlic naan"))
+    agent.note_agent_speech("That's two Garlic Naan — anything else for you?")
+    agent.note_agent_speech("ਹਾਂ ਜੀ, ਹੋਰ ਕੁਝ?")
+    assert not agent.state.additional_requests_asked
+
+
+def test_record_additional_requests_none_and_note(agent):
+    run(agent.add_item("garlic naan"))
+    result = _record_wrapup(agent, "no")
     assert agent.state.additional_requests_recorded
     assert agent.state.allergy_note == ""
     assert "none" in result
 
-    result = run(agent.record_additional_requests("peanut allergy"))
+    result = _record_wrapup(agent, "peanut allergy")
     assert agent.state.allergy_note == "peanut allergy"
     assert "peanut allergy" in result
 
@@ -429,7 +474,7 @@ def test_wrapup_defaults_unset_spice_to_medium(agent):
     _add_spice_unset(agent, "butter chicken")
     run(agent.add_item("garlic naan"))
     rev = agent.cart.revision
-    result = run(agent.record_additional_requests("no"))
+    result = _record_wrapup(agent, "no")
     assert "SPICE DEFAULTED" in result and "Butter Chicken" in result
     assert agent.cart.items[0].note == "medium"  # spiced dish filled
     assert agent.cart.items[1].note == ""  # non-spiced dish untouched
@@ -438,7 +483,7 @@ def test_wrapup_defaults_unset_spice_to_medium(agent):
 
 def test_wrapup_never_overwrites_explicit_spice(agent):
     run(agent.add_item("butter chicken", spice_level="Spicy"))
-    result = run(agent.record_additional_requests("no allergies"))
+    result = _record_wrapup(agent, "no allergies")
     assert "SPICE DEFAULTED" not in result
     assert agent.cart.items[0].note == "spicy"
 
@@ -464,7 +509,7 @@ def test_non_roman_name_refused_and_not_saved(agent):
     # PR 092 — the kitchen ticket, the spelled-out contact read-back and the
     # spoken-name check all assume Roman letters.
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     result = run(agent.set_customer_contact(name="ਅਮਨ ਸਿੰਘ"))
     # Wording tuned against gpt-4.1-mini: without the ⛔ nothing-saved marker
@@ -484,7 +529,7 @@ def test_non_roman_name_refused_and_not_saved(agent):
 
 def _complete_order(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
@@ -497,7 +542,7 @@ def _complete_order(agent):
 
 def test_contact_readback_refuses_before_details_saved(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     result = run(agent.get_contact_readback())
     assert "Cannot read the contact details back yet" in result
@@ -506,7 +551,7 @@ def test_contact_readback_refuses_before_details_saved(agent):
 
 def test_contact_readback_spells_name_and_phone(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
@@ -517,7 +562,7 @@ def test_contact_readback_spells_name_and_phone(agent):
 
 def test_order_readback_blocked_until_contact_confirmed(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
@@ -545,7 +590,7 @@ def test_contact_correction_rearms_the_confirmation(agent):
 
 def test_contact_confirm_refused_until_details_spoken(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
@@ -572,7 +617,7 @@ def test_contact_confirm_refused_until_details_spoken(agent):
 
 def test_contact_speech_buffered_only_while_pending(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     agent.note_agent_speech("And your phone number?")  # before the readback
@@ -591,7 +636,7 @@ def test_contact_speech_buffered_only_while_pending(agent):
 def test_contact_verify_warn_and_off_modes(agent, monkeypatch):
     monkeypatch.setenv("CONTACT_VERIFY", "warn")
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))
@@ -630,7 +675,7 @@ def test_readback_facts_generated_from_cart(agent):
 
 def test_set_customer_contact_routes_to_contact_readback(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     result = run(agent.set_customer_contact(phone="7804441234"))
     assert "PHONE SAVED" in result

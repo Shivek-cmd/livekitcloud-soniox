@@ -46,6 +46,10 @@ from restaurant.agent.facts import (
     format_readback_facts,
 )
 from restaurant.agent.add_claim_verify import add_claim_verify_mode, falsely_claims_add
+from restaurant.agent.additional_requests_verify import (
+    additional_requests_verify_mode,
+    asks_additional_requests,
+)
 from restaurant.agent.language import update_preferred_language
 from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
 from restaurant.agent.prompt import build_system_prompt, prompt_style
@@ -285,6 +289,11 @@ class RestaurantAgent(Agent):
         # PR 092 — same capture for the name/phone confirmation step.
         if self.state.contact_readback_pending:
             self.state.contact_spoken.append(line)
+        # PR 095 — the wrap-up question must be heard by the customer before
+        # its answer can be recorded. Any line that raises allergies or
+        # special instructions arms record_additional_requests.
+        if not self.state.additional_requests_asked and asks_additional_requests(line):
+            self.state.additional_requests_asked = True
         # PR 081 — after add_item refused, the very next spoken line must not
         # claim the item was added (one-shot check; the cart never changed).
         if self.state.pending_add_refusals:
@@ -807,6 +816,37 @@ class RestaurantAgent(Agent):
             invalidate_readback(self.state)
         return defaulted
 
+    def _unasked_additional_requests_refusal(self) -> str | None:
+        """PR 095 — the live gap: the LLM cleared the placement blocker by
+        calling this tool silently, so the customer was never asked about
+        allergies or special instructions. Recording an answer requires the
+        question to have been SPOKEN. strict (default): refuse; warn: log +
+        analytics, allow; off: rollback."""
+        if self.state.additional_requests_asked:
+            return None
+        mode = additional_requests_verify_mode()
+        if mode == "off":
+            return None
+        if mode == "warn":
+            logger.warning("Additional-requests answer recorded without asking")
+            if self._recorder is not None:
+                self._recorder.add_event("additional_requests_verify_warn", {})
+            return None
+        # Same wording shape as the Roman-name refusal (PR 086): lead with the
+        # nothing-was-saved marker, name the required next action, and forbid
+        # the model from moving on — a plain "not recorded" let it carry on to
+        # the read-back as if the question had been asked.
+        return (
+            "⛔ NOTHING WAS RECORDED — YOU HAVE NOT ASKED THE CUSTOMER ABOUT "
+            "ALLERGIES OR SPECIAL INSTRUCTIONS YET. The order cannot be read "
+            "back or placed until this question is actually asked out loud.\n"
+            "REQUIRED NEXT ACTION: ask the ONE final additional-requests "
+            "question now, in your own words in the customer's language — it "
+            "must cover BOTH allergies and any special instructions for the "
+            "kitchen — then call record_additional_requests again with what "
+            "they answer (including 'no'). Do not move on to the read-back."
+        )
+
     @function_tool
     async def record_additional_requests(
         self,
@@ -823,6 +863,12 @@ class RestaurantAgent(Agent):
             result = "Cannot record additional requests yet:\n- " + "\n- ".join(blockers)
             self._record_tool("record_additional_requests", {"response": response}, result)
             return result
+        refusal = self._unasked_additional_requests_refusal()
+        if refusal:
+            self._record_tool(
+                "record_additional_requests", {"response": response}, refusal
+            )
+            return refusal
         text = (response or "").strip()
         self.state.additional_requests_recorded = True
         if not text or _NO_ALLERGIES_RE.match(text):
