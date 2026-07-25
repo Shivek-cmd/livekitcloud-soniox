@@ -15,7 +15,10 @@ from restaurant.tenants.store import Tenant
 
 logger = logging.getLogger("clover-order-submit")
 
-_SPICE_ALIASES: dict[str, tuple[str, ...]] = {
+# Spoken spice vocabulary → canonical Clover level. Longest label first:
+# "extra spicy" must be tested before "spicy". Shared with the agent's
+# _canonical_spice so what the caller says maps the same way here and there.
+SPICE_ALIASES: dict[str, tuple[str, ...]] = {
     "extra spicy": ("extra spicy", "extra-spicy", "bahut teekha", "bahut spicy"),
     "medium": ("medium spicy", "medium", "med"),
     "mild": ("mild", "kam spicy", "light"),
@@ -133,7 +136,7 @@ def _match_spice_modifier(note: str, clover_item_id: str) -> dict[str, Any] | No
     for group in cached.modifier_groups:
         if group.name != "Spice Level":
             continue
-        for label, aliases in _SPICE_ALIASES.items():
+        for label, aliases in SPICE_ALIASES.items():
             if not any(a in text for a in aliases):
                 continue
             for mod in group.modifiers:

@@ -92,8 +92,8 @@ def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
         blockers.append("A valid 10-digit phone number is missing — ask and call set_customer_contact.")
     if not state.additional_requests_recorded:
         blockers.append(
-            "The final additional-requests question (spice preferences, allergies, "
-            "special instructions) has not been asked — ask it and call "
+            "The final additional-requests question (allergies, special "
+            "instructions) has not been asked — ask it and call "
             "record_additional_requests."
         )
     if not blockers and not state.contact_confirmed:
@@ -135,9 +135,9 @@ def order_type_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str
     blockers = additional_requests_blockers(cart)
     if not state.additional_requests_recorded:
         blockers.append(
-            "The final additional-requests question (spice preferences, "
-            "allergies, special instructions) has not been asked yet — ask "
-            "it and call record_additional_requests before pickup/delivery."
+            "The final additional-requests question (allergies, special "
+            "instructions) has not been asked yet — ask it and call "
+            "record_additional_requests before pickup/delivery."
         )
     return blockers
 

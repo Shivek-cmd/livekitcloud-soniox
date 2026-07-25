@@ -156,11 +156,71 @@ def test_phonetic_only_ascii_single_token_routes_to_clarify(agent, monkeypatch):
     assert agent.cart.is_empty
 
 
-def test_add_without_spice_succeeds_spice_unset(agent):
-    result = run(agent.add_item("butter chicken"))
-    assert "ADDED: 1 x Butter Chicken" in result
+def test_spiced_dish_without_spice_refused_then_added(agent):
+    # PR 094 — same rule the Store enforces: a dish with a Spice Level group
+    # does not enter the cart until the customer names a level.
+    result = run(agent.add_item("butter chicken", quantity=2))
+    assert result.startswith("⛔ NOTHING WAS ADDED — CART UNCHANGED. ")
+    assert "NEEDS SPICE" in result
+    assert "Mild, Medium, Spicy or Extra Spicy" in result
+    assert agent.cart.is_empty
+    # NOT armed for the false-add-claim check: "two Butter Chicken — how
+    # spicy?" is normal phrasing here, and the strict correction line ("not on
+    # our menu") would be wrong for a dish that lands a turn later.
+    assert agent.state.pending_add_refusals == []
+
+    result = run(agent.add_item("butter chicken", quantity=2, spice_level="Medium"))
+    assert "ADDED: 2 x Butter Chicken" in result
+    assert agent.cart.items[0].note == "medium"
+
+
+def test_more_of_an_already_spiced_dish_is_not_asked_again(agent):
+    run(agent.add_item("butter chicken", spice_level="Spicy", note="no onions"))
+    result = run(agent.add_item("butter chicken"))  # "one more of those"
     assert "NEEDS SPICE" not in result
+    assert agent.cart.items[0].quantity == 2
+    assert agent.cart.items[0].note == "spicy, no onions"  # untouched
+
+
+def test_unspiced_dish_never_asks_for_spice(agent):
+    result = run(agent.add_item("garlic naan"))
+    assert "NEEDS SPICE" not in result
+    assert "ADDED: 1 x Garlic Naan" in result
     assert agent.cart.items[0].note == ""
+
+
+def test_spice_and_required_group_asked_in_one_refusal(agent, monkeypatch):
+    # A dish needing both a spice level and another choice costs ONE question.
+    monkeypatch.setattr(menu_provider, "item_has_spice_level", lambda name: True)
+    result = run(agent.add_item("curry combo"))
+    assert "NEEDS SPICE" in result
+    assert "Also needs a choice for: Choose Curry" in result
+    assert agent.cart.is_empty
+
+    result = run(
+        agent.add_item("curry combo", spice_level="Mild", note="butter chicken curry")
+    )
+    assert "ADDED: 1 x Curry Combo" in result
+    assert agent.cart.items[0].note == "mild, butter chicken curry"
+
+
+@pytest.mark.parametrize(
+    "spoken,expected",
+    [
+        ("no preference", "medium"),
+        ("koi bhi", "medium"),
+        ("hot", "spicy"),
+        ("teekha", "spicy"),
+        ("bahut teekha", "extra spicy"),
+        ("medium spicy", "medium"),
+        ("kam spicy", "mild"),
+        ("not spicy", "mild"),
+        ("Extra-Spicy", "extra spicy"),
+    ],
+)
+def test_spoken_spice_vocabulary_canonicalized(agent, spoken, expected):
+    run(agent.add_item("butter chicken", spice_level=spoken))
+    assert agent.cart.items[0].note == expected
 
 
 def test_spice_at_add_still_passes_through(agent):
@@ -359,8 +419,14 @@ def test_record_additional_requests_none_and_note(agent):
     assert "peanut allergy" in result
 
 
+def _add_spice_unset(agent, key: str) -> None:
+    """A spiced line that never went through add_item's spice gate — what the
+    web-RPC tap path (channels/web_sync.py) can still produce."""
+    agent.cart.add_item(dict(_MENU[key]), 1, "")
+
+
 def test_wrapup_defaults_unset_spice_to_medium(agent):
-    run(agent.add_item("butter chicken"))
+    _add_spice_unset(agent, "butter chicken")
     run(agent.add_item("garlic naan"))
     rev = agent.cart.revision
     result = run(agent.record_additional_requests("no"))
@@ -379,7 +445,7 @@ def test_wrapup_never_overwrites_explicit_spice(agent):
 
 def test_late_added_spiced_dish_defaulted_at_readback(agent):
     _complete_order(agent)
-    run(agent.add_item("butter chicken"))  # after the wrap-up, spice unset
+    _add_spice_unset(agent, "butter chicken")  # after the wrap-up, spice unset
     result = run(agent.get_order_readback())
     assert "READBACK FACTS" in result
     line = next(i for i in agent.cart.items if i.name == "Butter Chicken")

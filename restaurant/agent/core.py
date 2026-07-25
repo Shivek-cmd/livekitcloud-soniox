@@ -70,6 +70,7 @@ from restaurant.agent.replies import (
 )
 from restaurant.channels.call_control import hangup_after_order_enabled, schedule_call_hangup
 from restaurant.clover.order_submit import (
+    SPICE_ALIASES,
     CloverOrderSubmitError,
     clover_submit_enabled,
     submit_cart_to_clover,
@@ -131,12 +132,47 @@ _ORDER_COMPLETE_SENTINEL = (
 )
 
 
+# PR 094 — spice is now asked on every spiced dish, so the answer arrives in
+# the caller's own words far more often. "No preference" is the kitchen
+# default; the rest of the vocabulary is SPICE_ALIASES, shared with the Clover
+# note→modifier matcher so both sides read the same words the same way.
+_NO_SPICE_PREFERENCE = (
+    "no preference",
+    "no preferences",
+    "any",
+    "anything",
+    "whatever",
+    "normal",
+    "regular",
+    "koi bhi",
+    "kuch bhi",
+)
+
+_NOT_SPICY_RE = re.compile(r"\b(?:not|no|non|less|little|nahi+n?)\b[\w\s]*\bspic", re.I)
+
+
 def _canonical_spice(spice_level: str) -> str | None:
     """Map free-form spice input to one of the four Clover levels, or None."""
     s = (spice_level or "").strip().lower().replace("-", " ")
+    s = re.sub(r"\s{2,}", " ", s)
+    if not s:
+        return None
     for level in SPICE_LEVELS:
         if s == level.lower():
             return level
+    if s in _NO_SPICE_PREFERENCE:
+        return "Medium"
+    # "not spicy" / "no spice" is Mild — checked before the alias table, whose
+    # substring match would otherwise read the "spicy" inside the negation.
+    if _NOT_SPICY_RE.search(s):
+        return "Mild"
+    # SPICE_ALIASES is ordered longest-label-first, so "extra spicy" can never
+    # be swallowed by the "spicy" entry.
+    for label, aliases in SPICE_ALIASES.items():
+        if any(a in s for a in aliases):
+            return next(
+                (lvl for lvl in SPICE_LEVELS if lvl.lower() == label), None
+            )
     return None
 
 
@@ -545,6 +581,14 @@ class RestaurantAgent(Agent):
                     return item
         return None
 
+    def _cart_line_has_spice(self, name: str) -> bool:
+        """True if this dish is already in the order with a spice level set."""
+        return any(
+            line.name.lower() == (name or "").lower()
+            and _SPICE_NOTE_RE.search(line.note or "")
+            for line in self.cart.items
+        )
+
     def _not_in_cart(self, item_query: str) -> str:
         status = format_order_status(self.cart, include_price=False)
         return (
@@ -559,7 +603,7 @@ class RestaurantAgent(Agent):
         self,
         item_query: Annotated[str, "The dish the customer named, in their words (English or Punjabi)"],
         quantity: Annotated[int, "How many — exactly what the customer said; 1 if they gave no number"] = 1,
-        spice_level: Annotated[str, "Mild, Medium, Spicy, or Extra Spicy — ONLY if the customer already stated one; leave empty otherwise (never ask for spice at add time)"] = "",
+        spice_level: Annotated[str, "Mild, Medium, Spicy, or Extra Spicy — required for any dish that takes a spice level; ask the customer if they haven't said ('no preference' = Medium)"] = "",
         note: Annotated[str, "Required modifier choices and special instructions, e.g. 'butter naan, no onions'"] = "",
     ) -> str:
         """Add one menu item to the order. Works at ANY point in the call — a
@@ -577,11 +621,12 @@ class RestaurantAgent(Agent):
             return refusal
         assert item is not None
 
-        # No per-dish spice interrogation: a spice level stated at add time
-        # passes through; otherwise the item is added spice-unset and the
-        # final additional-requests step fills Medium deterministically.
+        # PR 094 — per-dish spice at add time, same rule the Store enforces:
+        # a dish with a Spice Level group does not enter the cart until the
+        # customer has named a level.
+        takes_spice = menu_provider.item_has_spice_level(item["name"])
         spice: str | None = None
-        if spice_level and menu_provider.item_has_spice_level(item["name"]):
+        if spice_level and takes_spice:
             spice = _canonical_spice(spice_level)
             if spice is None:
                 result = (
@@ -596,13 +641,40 @@ class RestaurantAgent(Agent):
             for g in menu_provider.required_modifier_groups(item.get("clover_item_id") or "")
             if g != SPICE_GROUP
         ]
-        if required and not (note or "").strip():
-            groups = ", ".join(required)
-            result = (
-                f"NEEDS INFO — {item['name']} requires a choice for: {groups}. "
-                "Ask the customer, then re-call add_item with their choice in "
-                "note. Do NOT add without it."
-            )
+        missing_groups = required if not (note or "").strip() else []
+        # "One more of those" keeps the level the customer already chose — the
+        # line merges by name, so asking again would be asking twice. spice
+        # stays None so the merge leaves the existing note (and anything else
+        # in it) untouched.
+        needs_spice = (
+            takes_spice and spice is None and not self._cart_line_has_spice(item["name"])
+        )
+        if needs_spice or missing_groups:
+            # One refusal covers everything still missing, so a dish that needs
+            # both a spice level and another choice costs one question, not two.
+            parts: list[str] = []
+            if needs_spice:
+                parts.append(
+                    f"NEEDS SPICE — {item['name']} comes Mild, Medium, Spicy or "
+                    "Extra Spicy. Ask the customer which they want ('no "
+                    "preference' = Medium), then re-call add_item with "
+                    "spice_level. If other dishes in this turn also need one, "
+                    "ask about them in the SAME question, then re-call add_item "
+                    "once per dish."
+                )
+            if missing_groups:
+                groups = ", ".join(missing_groups)
+                lead = "Also needs" if needs_spice else f"NEEDS INFO — {item['name']} needs"
+                parts.append(
+                    f"{lead} a choice for: {groups}. Ask the customer, then "
+                    "re-call add_item with their choice in note."
+                )
+            result = _REFUSAL_PREFIX + " ".join(parts)
+            # Deliberately NOT armed with pending_add_refusals: "sure, two
+            # Butter Chicken — how spicy?" reads as an add claim, but the dish
+            # is real and lands a turn later, and PR 081's strict correction
+            # ("I don't have that on our menu") would be flat wrong here. The ⛔
+            # prefix still tells the LLM the cart did not change.
             self._record_tool("add_item", {"item_query": item_query}, result)
             return result
 
@@ -717,7 +789,11 @@ class RestaurantAgent(Agent):
     def _apply_default_spice(self) -> list[str]:
         """'No preference = Medium': fill Medium on every spiced dish whose
         note still has no spice word. Deterministic, code-side — never an LLM
-        guess. Returns the voice labels of the lines it filled."""
+        guess. Returns the voice labels of the lines it filled.
+
+        Since PR 094 add_item refuses a spiced dish with no level, this is the
+        safety net for the paths that bypass that gate — web-RPC adds
+        (channels/web_sync.py) above all — not the normal voice route."""
         defaulted: list[str] = []
         for line in self.cart.items:
             if not menu_provider.item_has_spice_level(line.name):
@@ -734,14 +810,14 @@ class RestaurantAgent(Agent):
     @function_tool
     async def record_additional_requests(
         self,
-        response: Annotated[str, "The customer's answer to the final additional-requests question (spice preferences, allergies, special instructions), e.g. 'no', 'peanut allergy', 'make everything mild'"],
+        response: Annotated[str, "The customer's answer to the final additional-requests question (allergies, special instructions), e.g. 'no', 'peanut allergy', 'extra napkins please'"],
     ) -> str:
         """Record the customer's answer to the ONE final additional-requests
-        question (spice preferences + allergies + special instructions), asked
-        once when they are done adding items. Must be called (even for 'no')
-        before the order can be read back or placed. If the customer named a
-        spice level for specific dishes, call set_item_spice for each FIRST,
-        then call this."""
+        question (allergies + special instructions), asked once when they are
+        done adding items. Spice is NOT part of this question — it is already
+        settled per dish at add time. Must be called (even for 'no') before the
+        order can be read back or placed. If the customer changes a spice level
+        here anyway, call set_item_spice for each dish FIRST, then call this."""
         blockers = additional_requests_blockers(self.cart)
         if blockers:
             result = "Cannot record additional requests yet:\n- " + "\n- ".join(blockers)
@@ -760,13 +836,14 @@ class RestaurantAgent(Agent):
             lines.append(
                 "SPICE DEFAULTED: "
                 + "; ".join(defaulted)
-                + " set to medium (no preference stated — use set_item_spice "
-                "if the customer actually named a level)."
+                + " set to medium (added without a level — use set_item_spice "
+                "if the customer actually named one)."
             )
         lines.append(format_cart_facts(self.cart))
         lines.append(
             "GUIDE: acknowledge warmly in the customer's language, in your "
-            "own words — do NOT re-ask about spice or allergies — then keep "
+            "own words — do NOT re-ask about allergies, and never re-ask "
+            "spice (it was settled per dish at add time) — then keep "
             "the order moving (pickup or delivery next if not set yet)."
         )
         result = "\n".join(lines)

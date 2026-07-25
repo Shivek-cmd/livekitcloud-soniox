@@ -7,8 +7,8 @@
     "That's all.",
     "Nope, no allergies, nothing else.",
     "Navdeep.",
-    "Six four seven five five five...",
-    "Sorry — six four seven five five five one two one two.",
+    "Six four seven three zero four...",
+    "Sorry — six four seven three zero four one two one two.",
     "Yes, that's right.",
     "Yes."
   ],
@@ -32,7 +32,7 @@
     ],
     "order_type": "delivery",
     "customer_name": "Navdeep",
-    "customer_phone": "6475551212",
+    "customer_phone": "6473041212",
     "additional_requests_recorded": true,
     "min_readbacks": 1
   }
