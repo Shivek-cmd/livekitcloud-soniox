@@ -53,6 +53,15 @@ class _FakeTenant:
 
 def run(coro):
     return asyncio.run(coro)
+# PR 095 — record_additional_requests refuses unless the question was actually
+# spoken to the customer, so the tests say it before recording an answer.
+_WRAPUP_QUESTION = "Any allergies or special instructions for the kitchen?"
+
+
+def _record_wrapup(agent, response: str = "no") -> str:
+    agent.note_agent_speech(_WRAPUP_QUESTION)
+    return run(agent.record_additional_requests(response))
+
 
 
 @pytest.fixture()
@@ -75,7 +84,7 @@ _SPOKEN_CONTACT = (
 
 def _make_ready(agent):
     run(agent.add_item("garlic naan", quantity=2))
-    run(agent.record_additional_requests("no"))
+    _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
     run(agent.set_customer_contact(phone="7804441234"))

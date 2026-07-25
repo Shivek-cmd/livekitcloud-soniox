@@ -28,6 +28,11 @@ SPICE_LEVELS = ("Mild", "Medium", "Spicy", "Extra Spicy")
 class OrderSessionState:
     preferred_language: CustomerLanguage = CustomerLanguage.ENGLISH
     additional_requests_recorded: bool = False
+    # PR 095 — set by note_agent_speech the moment allergies/special
+    # instructions are actually raised out loud. record_additional_requests
+    # refuses until then, so the placement blocker cannot be cleared by a
+    # silent tool call the customer never heard.
+    additional_requests_asked: bool = False
     allergy_note: str = ""
     readback_revision: int | None = None  # cart.revision at last get_order_readback()
     readback_confirmed: bool = False
