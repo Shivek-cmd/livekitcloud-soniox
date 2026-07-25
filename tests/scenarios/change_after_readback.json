@@ -7,7 +7,7 @@
     "No allergies, nothing else.",
     "Pickup.",
     "Jasleen.",
-    "Four one six five five five two two three three.",
+    "Four one six three zero four two two three three.",
     "Actually, add a garlic naan too.",
     "Yes, that's all correct now.",
     "Yes, perfect."
@@ -20,7 +20,7 @@
     ],
     "order_type": "pickup",
     "customer_name": "Jasleen",
-    "customer_phone": "4165552233",
+    "customer_phone": "4163042233",
     "additional_requests_recorded": true,
     "min_readbacks": 2
   }

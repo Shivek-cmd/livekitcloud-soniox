@@ -1,0 +1,214 @@
+{
+  "name": "punjabi_order",
+  "channel": "phone",
+  "model": "gemini-3.5-flash",
+  "passed": true,
+  "turns": [
+    {
+      "user": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ ਜੀ, ਦੋ ਬਟਰ ਚਿਕਨ ਲਗਾ ਦਿਓ।",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "butter chicken",
+            "quantity": 2
+          },
+          "result": "⛔ NOTHING WAS ADDED — CART UNCHANGED. NEEDS SPICE — Butter Chicken comes Mild, Medium, Spicy or Extra Spicy. Ask the customer which they want ('no preference' = Medium), then re-call add_item with spice_level. If other dishes in this turn also need one, ask about them in the SAME question, then re-call add_item once per dish."
+        }
+      ],
+      "assistant": "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ਜੀ! ਦੋ Butter Chicken ਬਿਲਕੁਲ ਲਿਖ ਲੈਂਦੀ ਹਾਂ। ਤੁਸੀਂ spice ਕਿੰਨਾ ਪਸੰਦ ਕਰੋਗੇ ਜੀ — mild, medium, spicy, ਜਾਂ extra spicy?"
+    },
+    {
+      "user": "ਮੀਡੀਅਮ ਠੀਕ ਹੈ ਜੀ।",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "quantity": 2,
+            "spice_level": "Medium",
+            "item_query": "butter chicken"
+          },
+          "result": "ADDED: 2 x Butter Chicken, note: medium.\nORDER NOW: 2 x Butter Chicken [medium]. total=$39.98\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"two\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ, ਦੋ Butter Chicken, medium ਲਿਖ ਲਏ ਹਨ। ਹੋਰ ਕੁਝ ਚਾਹੀਦਾ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "ਬੱਸ ਜੀ, ਹੋਰ ਕੁਝ ਨਹੀਂ।",
+      "tool_calls": [
+        {
+          "name": "record_additional_requests",
+          "args": {
+            "response": "no"
+          },
+          "result": "ADDITIONAL REQUESTS RECORDED: none.\nORDER NOW: 2 x Butter Chicken [medium]. total=$39.98\nGUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about allergies, and never re-ask spice (it was settled per dish at add time) — then keep the order moving (pickup or delivery next if not set yet)."
+        }
+      ],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ। ਇਹ ਆਰਡਰ ਤੁਸੀਂ pickup ਕਰਨਾ ਹੈ ਜਾਂ delivery ਕਰਵਾਉਣੀ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "ਕੋਈ ਐਲਰਜੀ ਨਹੀਂ ਜੀ।",
+      "tool_calls": [],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ, ਬਹੁਤ ਵਧੀਆ। ਇਹ ਆਰਡਰ ਤੁਸੀਂ pickup ਕਰਨਾ ਹੈ ਜਾਂ delivery ਕਰਵਾਉਣੀ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "Pickup ਜੀ।",
+      "tool_calls": [
+        {
+          "name": "set_order_type",
+          "args": {
+            "order_type": "pickup"
+          },
+          "result": "Set to pickup. Continue the flow."
+        }
+      ],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ, pickup ਕਰ ਦਿੱਤਾ ਹੈ। ਮੈਂ ਤੁਹਾਡਾ ਨਾਮ ਜਾਣ ਸਕਦੀ ਹਾਂ ਜੀ?"
+    },
+    {
+      "user": "ਮੇਰਾ ਨਾਮ Gurpreet ਹੈ।",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "name": "Gurpreet"
+          },
+          "result": "NAME SAVED: \"Gurpreet\".\nGUIDE: confirm the name briefly in the customer's language. Then ask for their phone number."
+        }
+      ],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ Gurpreet, ਤੇ ਤੁਹਾਡਾ ਫ਼ੋਨ ਨੰਬਰ ਕੀ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "Six four seven three zero four three four five six.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "phone": "6473043456"
+          },
+          "result": "PHONE SAVED: six, four, seven, three, zero, four, three, four, five, six.\nGUIDE: the number is already saved — do NOT ask the customer to repeat or re-say it. Call get_contact_readback next and read the name and number back for confirmation."
+        },
+        {
+          "name": "get_contact_readback",
+          "args": {},
+          "result": "CONTACT FACTS — read BOTH of these back to the customer, then ask if they are correct:\n- name: Gurpreet (say it in English/Roman script, then spell it letter by letter: G-U-R-P-R-E-E-T)\n- phone: six, four, seven, three, zero, four, three, four, five, six (say every digit as a separate English word, one at a time)\nGUIDE: phrase the ask warmly in your own words in the customer's language, but the name letters and the phone digits themselves must be spoken exactly as above. If the customer corrects either one, call set_customer_contact with the fix and read it back again. Only when they say both are right, call confirm_contact."
+        }
+      ],
+      "assistant": "ਠੀਕ ਹੈ ਜੀ, ਮੈਂ ਤੁਹਾਡੀ contact details confirm ਕਰ ਲਵਾਂ। ਨਾਮ ਹੈ Gurpreet, spelled G-U-R-P-R-E-E-T, ਅਤੇ ਫ਼ੋਨ ਨੰਬਰ ਹੈ six, four, seven, three, zero, four, three, four, five, six. ਕੀ ਇਹ ਬਿਲਕੁਲ ਠੀਕ ਹੈ ਜੀ?"
+    },
+    {
+      "user": "Yes.",
+      "tool_calls": [
+        {
+          "name": "confirm_contact",
+          "args": {},
+          "result": "Name and phone confirmed. Continue with the order read-back (get_order_readback)."
+        },
+        {
+          "name": "get_order_readback",
+          "args": {},
+          "result": "READBACK FACTS — read ALL of these to the customer in their language, then ask if everything is correct:\n- 2 x Butter Chicken [medium]\n- order type: pickup (say \"pickup\" in English)\n- name: Gurpreet\nGUIDE: phrase this warmly in your own words in the customer's language — but every item, its quantity (as a word, never a digit), and the order type must actually be spoken. Your spoken readback is checked — anything missing forces a re-read. End by asking if everything is correct."
+        }
+      ],
+      "assistant": "ਬਹੁਤ ਵਧੀਆ ਜੀ। ਮੈਂ ਤੁਹਾਡਾ ਆਰਡਰ confirm ਕਰ ਲਵਾਂ: ਤੁਹਾਡੇ ਕੋਲ two Butter Chicken, medium ਹਨ, ਅਤੇ ਇਹ pickup ਲਈ ਹੈ Gurpreet ਦੇ ਨਾਮ 'ਤੇ। ਕੀ ਸਭ ਕੁਝ ਬਿਲਕੁਲ ਠੀਕ ਹੈ ਜੀ?",
+      "injected": true
+    },
+    {
+      "user": "ਹਾਂ ਜੀ, ਬਿਲਕੁਲ ਠੀਕ ਹੈ।",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "Order placed! INTERNAL total $39.98. Tell customer: \"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!\" Do NOT mention price or dollars."
+        }
+      ],
+      "assistant": "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "placed",
+    "items": [
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 2,
+        "unit_price": 19.99,
+        "line_total": 39.98,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": "pickup",
+    "delivery_address": null,
+    "customer": {
+      "name": "Gurpreet",
+      "phone": "6473043456"
+    },
+    "subtotal": 39.98,
+    "delivery_charge": 0,
+    "total": 39.98,
+    "eta": "20-25 min",
+    "order_id": "KCSK8P0R1D2KY"
+  },
+  "assertions": [
+    {
+      "check": "gates: placed order had a confirmed, current readback",
+      "ok": true,
+      "detail": "readback_confirmed=True readback_revision=2 cart.revision=2"
+    },
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=True"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 2",
+      "ok": true,
+      "detail": "got qty=2"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    },
+    {
+      "check": "order_type",
+      "ok": true,
+      "detail": "got 'pickup'"
+    },
+    {
+      "check": "customer_name",
+      "ok": true,
+      "detail": "got 'Gurpreet'"
+    },
+    {
+      "check": "customer_phone",
+      "ok": true,
+      "detail": "got '6473043456'"
+    },
+    {
+      "check": "additional_requests_recorded",
+      "ok": true,
+      "detail": "got True"
+    },
+    {
+      "check": "readbacks: at least 1 successful",
+      "ok": true,
+      "detail": "got 1"
+    }
+  ],
+  "llm_latency": {
+    "calls": 19,
+    "mean_s": 6.381,
+    "p95_s": 9.744,
+    "max_s": 19.939
+  }
+}

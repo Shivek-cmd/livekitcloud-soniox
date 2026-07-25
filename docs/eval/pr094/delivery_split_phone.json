@@ -1,0 +1,283 @@
+{
+  "name": "delivery_split_phone",
+  "channel": "phone",
+  "model": "gemini-3.5-flash",
+  "passed": false,
+  "turns": [
+    {
+      "user": "Hello, one dal makhani and two butter naan please.",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "dal makhani",
+            "quantity": 1
+          },
+          "result": "⛔ NOTHING WAS ADDED — CART UNCHANGED. NEEDS SPICE — Dal Makhani comes Mild, Medium, Spicy or Extra Spicy. Ask the customer which they want ('no preference' = Medium), then re-call add_item with spice_level. If other dishes in this turn also need one, ask about them in the SAME question, then re-call add_item once per dish."
+        },
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "butter naan",
+            "quantity": 2
+          },
+          "result": "ADDED: 2 x ਬਟਰ ਨਾਨ (Butter Naan).\nORDER NOW: 2 x ਬਟਰ ਨਾਨ (Butter Naan). total=$7.98\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"two\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "Sure thing! I've got two Butter Naan down for you. How would you like the spice level for your Dal Makhani — mild, medium, spicy, or extra spicy?"
+    },
+    {
+      "user": "Make the dal spicy.",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "spice_level": "Spicy",
+            "item_query": "dal makhani",
+            "quantity": 1
+          },
+          "result": "ADDED: 1 x ਦਾਲ ਮੱਖਣੀ (Dal Makhani), note: spicy.\nORDER NOW: 2 x ਬਟਰ ਨਾਨ (Butter Naan); 1 x ਦਾਲ ਮੱਖਣੀ (Dal Makhani) [spicy]. total=$23.97\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"one\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "You got it — one Dal Makhani, spicy. What else can I get started for you today?"
+    },
+    {
+      "user": "That's all.",
+      "tool_calls": [
+        {
+          "name": "record_additional_requests",
+          "args": {
+            "response": "no"
+          },
+          "result": "ADDITIONAL REQUESTS RECORDED: none.\nORDER NOW: 2 x ਬਟਰ ਨਾਨ (Butter Naan); 1 x ਦਾਲ ਮੱਖਣੀ (Dal Makhani) [spicy]. total=$23.97\nGUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about allergies, and never re-ask spice (it was settled per dish at add time) — then keep the order moving (pickup or delivery next if not set yet)."
+        }
+      ],
+      "assistant": "Perfect. Will this order be for pickup or delivery today?"
+    },
+    {
+      "user": "Delivery please.",
+      "tool_calls": [
+        {
+          "name": "set_order_type",
+          "args": {
+            "order_type": "delivery"
+          },
+          "result": "Set to delivery. INTERNAL: delivery charge applies — do NOT mention price unless the customer asked. Ask for the delivery address."
+        }
+      ],
+      "assistant": "Awesome, delivery it is. Could you please give me your delivery address?",
+      "injected": true
+    },
+    {
+      "user": "It's 12 Main Street, Brampton.",
+      "tool_calls": [
+        {
+          "name": "set_delivery_address",
+          "args": {
+            "address": "12 Main Street, Brampton"
+          },
+          "result": "Delivery address saved: 12 Main Street, Brampton."
+        }
+      ],
+      "assistant": "Got that down. And can I get your name for the order, please?",
+      "injected": true
+    },
+    {
+      "user": "Nope, no allergies, nothing else.",
+      "tool_calls": [],
+      "assistant": "I've got your address saved as 12 Main Street, Brampton. Could I just get your name for the order, please?"
+    },
+    {
+      "user": "It's 12 Main Street, Brampton.",
+      "tool_calls": [],
+      "assistant": "I have the address saved as 12 Main Street, Brampton. Could you please tell me your name so I can put it on the order?",
+      "injected": true
+    },
+    {
+      "user": "Navdeep.",
+      "tool_calls": [],
+      "assistant": "",
+      "error": "LLM call failed after retries: completion had no message (finish_reason=content_filter: PROHIBITED_CONTENT)"
+    },
+    {
+      "user": "Six four seven three zero four...",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "name": "Navdeep",
+            "phone": "647304"
+          },
+          "result": "NAME SAVED: \"Navdeep\".\nPHONE PARTIAL: have 6 of 10 (647304).\nGUIDE: confirm the name briefly in the customer's language. ask only for the REMAINING digits — do not restart, and do not re-send digits already captured."
+        }
+      ],
+      "assistant": "Thanks, Navdeep! I've got the first six digits of your phone number as six, four, seven, three, zero, four. What are the last four digits?"
+    },
+    {
+      "user": "Yes.",
+      "tool_calls": [],
+      "assistant": "Could you please give me the last four digits of your phone number to complete it?",
+      "injected": true
+    },
+    {
+      "user": "Sorry — six four seven three zero four one two one two.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "phone": "6473041212",
+            "name": "Navdeep"
+          },
+          "result": "NAME SAVED: \"Navdeep\".\nPHONE SAVED: six, four, seven, three, zero, four, one, two, one, two.\nGUIDE: confirm the name briefly in the customer's language. the number is already saved — do NOT ask the customer to repeat or re-say it. Call get_contact_readback next and read the name and number back for confirmation."
+        },
+        {
+          "name": "get_contact_readback",
+          "args": {},
+          "result": "CONTACT FACTS — read BOTH of these back to the customer, then ask if they are correct:\n- name: Navdeep (say it in English/Roman script, then spell it letter by letter: N-A-V-D-E-E-P)\n- phone: six, four, seven, three, zero, four, one, two, one, two (say every digit as a separate English word, one at a time)\nGUIDE: phrase the ask warmly in your own words in the customer's language, but the name letters and the phone digits themselves must be spoken exactly as above. If the customer corrects either one, call set_customer_contact with the fix and read it back again. Only when they say both are right, call confirm_contact."
+        }
+      ],
+      "assistant": "Perfect, Navdeep. Let me read that back to make sure I have it exactly right. \n\nThe name is Navdeep, spelled N-A-V-D-E-E-P, and the phone number is six, four, seven, three, zero, four, one, two, one, two. Is that all correct?"
+    },
+    {
+      "user": "Yes.",
+      "tool_calls": [
+        {
+          "name": "confirm_contact",
+          "args": {},
+          "result": "Name and phone confirmed. Continue with the order read-back (get_order_readback)."
+        },
+        {
+          "name": "get_order_readback",
+          "args": {},
+          "result": "READBACK FACTS — read ALL of these to the customer in their language, then ask if everything is correct:\n- 2 x ਬਟਰ ਨਾਨ (Butter Naan)\n- 1 x ਦਾਲ ਮੱਖਣੀ (Dal Makhani) [spicy]\n- order type: delivery (say \"delivery\" in English)\n- name: Navdeep\nGUIDE: phrase this warmly in your own words in the customer's language — but every item, its quantity (as a word, never a digit), and the order type must actually be spoken. Your spoken readback is checked — anything missing forces a re-read. End by asking if everything is correct."
+        }
+      ],
+      "assistant": "Alright, I have your order ready to go. \n\nThat is two Butter Naan and one Dal Makhani, spicy, for delivery to Navdeep. Is everything correct?",
+      "injected": true
+    },
+    {
+      "user": "Delivery please.",
+      "tool_calls": [],
+      "assistant": "Yes, I have it set for delivery. Is the rest of the order with the two Butter Naan and one Dal Makhani, spicy, all correct?",
+      "injected": true
+    },
+    {
+      "user": "Yes, that's right.",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "Order placed! INTERNAL total $28.97. Tell customer: \"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 30-40 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!\" Do NOT mention price or dollars."
+        }
+      ],
+      "assistant": "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 30-40 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!"
+    },
+    {
+      "user": "Yes.",
+      "tool_calls": [],
+      "assistant": ""
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "placed",
+    "items": [
+      {
+        "id": "8BQQ63MMZDSMG",
+        "name": "Butter Naan",
+        "voice_line": "ਬਟਰ ਨਾਨ",
+        "qty": 2,
+        "unit_price": 3.99,
+        "line_total": 7.98,
+        "note": "",
+        "modifiers": []
+      },
+      {
+        "id": "NXGWYTWSNNHCG",
+        "name": "Dal Makhani",
+        "voice_line": "ਦਾਲ ਮੱਖਣੀ",
+        "qty": 1,
+        "unit_price": 15.99,
+        "line_total": 15.99,
+        "note": "spicy",
+        "modifiers": [
+          "spicy"
+        ]
+      }
+    ],
+    "order_type": "delivery",
+    "delivery_address": "12 Main Street, Brampton",
+    "customer": {
+      "name": "Navdeep",
+      "phone": "6473041212"
+    },
+    "subtotal": 23.97,
+    "delivery_charge": 5,
+    "total": 28.97,
+    "eta": "30-40 min",
+    "order_id": "S175ZP65NQA8G"
+  },
+  "assertions": [
+    {
+      "check": "gates: placed order had a confirmed, current readback",
+      "ok": true,
+      "detail": "readback_confirmed=True readback_revision=3 cart.revision=3"
+    },
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=True"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Naan', 'Dal Makhani']"
+    },
+    {
+      "check": "items: Dal Makhani qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "items: Dal Makhani note contains 'spicy'",
+      "ok": true,
+      "detail": "got note='spicy'"
+    },
+    {
+      "check": "items: Butter Naan qty == 2",
+      "ok": true,
+      "detail": "got qty=2"
+    },
+    {
+      "check": "order_type",
+      "ok": true,
+      "detail": "got 'delivery'"
+    },
+    {
+      "check": "customer_name",
+      "ok": true,
+      "detail": "got 'Navdeep'"
+    },
+    {
+      "check": "customer_phone",
+      "ok": true,
+      "detail": "got '6473041212'"
+    },
+    {
+      "check": "additional_requests_recorded",
+      "ok": true,
+      "detail": "got True"
+    },
+    {
+      "check": "readbacks: at least 1 successful",
+      "ok": true,
+      "detail": "got 1"
+    }
+  ],
+  "llm_latency": {
+    "calls": 25,
+    "mean_s": 6.904,
+    "p95_s": 9.086,
+    "max_s": 9.79
+  }
+}

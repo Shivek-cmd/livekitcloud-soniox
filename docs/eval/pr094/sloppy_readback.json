@@ -1,0 +1,264 @@
+{
+  "name": "sloppy_readback",
+  "channel": "phone",
+  "model": "gemini-3.5-flash",
+  "passed": true,
+  "turns": [
+    {
+      "user": "Hi, can I get two butter chicken and one garlic naan please?",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "item_query": "butter chicken",
+            "quantity": 2
+          },
+          "result": "⛔ NOTHING WAS ADDED — CART UNCHANGED. NEEDS SPICE — Butter Chicken comes Mild, Medium, Spicy or Extra Spicy. Ask the customer which they want ('no preference' = Medium), then re-call add_item with spice_level. If other dishes in this turn also need one, ask about them in the SAME question, then re-call add_item once per dish."
+        },
+        {
+          "name": "add_item",
+          "args": {
+            "quantity": 1,
+            "item_query": "garlic naan"
+          },
+          "result": "ADDED: 1 x ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan).\nORDER NOW: 1 x ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan). total=$4.99\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"one\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "Sure thing! I've got one Garlic Naan down for you. How would you like the spice level for your two Butter Chicken — mild, medium, spicy, or extra spicy?"
+    },
+    {
+      "user": "Medium spice please.",
+      "tool_calls": [
+        {
+          "name": "add_item",
+          "args": {
+            "spice_level": "Medium",
+            "quantity": 2,
+            "item_query": "butter chicken"
+          },
+          "result": "ADDED: 2 x Butter Chicken, note: medium.\nORDER NOW: 1 x ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan); 2 x Butter Chicken [medium]. total=$44.97\nGUIDE: confirm the add in the customer's language — warm and in your own words, never reading these lines aloud — using the exact dish name and quantity above (quantity spoken as \"two\", never a digit), then keep the order moving."
+        }
+      ],
+      "assistant": "You got it — two Butter Chicken, medium. What else can I get started for you today?"
+    },
+    {
+      "user": "That's everything, thanks.",
+      "tool_calls": [
+        {
+          "name": "record_additional_requests",
+          "args": {
+            "response": "no"
+          },
+          "result": "ADDITIONAL REQUESTS RECORDED: none.\nORDER NOW: 1 x ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan); 2 x Butter Chicken [medium]. total=$44.97\nGUIDE: acknowledge warmly in the customer's language, in your own words — do NOT re-ask about allergies, and never re-ask spice (it was settled per dish at add time) — then keep the order moving (pickup or delivery next if not set yet)."
+        }
+      ],
+      "assistant": "Perfect. Will this order be for pickup or delivery today?"
+    },
+    {
+      "user": "No allergies, nothing else.",
+      "tool_calls": [],
+      "assistant": "Awesome, thank you. And will you be picking this up, or would you like it delivered?"
+    },
+    {
+      "user": "Pickup please.",
+      "tool_calls": [
+        {
+          "name": "set_order_type",
+          "args": {
+            "order_type": "pickup"
+          },
+          "result": "Set to pickup. Continue the flow."
+        }
+      ],
+      "assistant": "Great, pickup it is. Can I get your name for the order, please?"
+    },
+    {
+      "user": "My name is Harpreet.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "name": "Harpreet"
+          },
+          "result": "NAME SAVED: \"Harpreet\".\nGUIDE: confirm the name briefly in the customer's language. Then ask for their phone number."
+        }
+      ],
+      "assistant": "Got it, Harpreet. And what is a good phone number to reach you at?"
+    },
+    {
+      "user": "Six four seven three zero four one two one two.",
+      "tool_calls": [
+        {
+          "name": "set_customer_contact",
+          "args": {
+            "phone": "6473041212"
+          },
+          "result": "PHONE SAVED: six, four, seven, three, zero, four, one, two, one, two.\nGUIDE: the number is already saved — do NOT ask the customer to repeat or re-say it. Call get_contact_readback next and read the name and number back for confirmation."
+        },
+        {
+          "name": "get_contact_readback",
+          "args": {},
+          "result": "CONTACT FACTS — read BOTH of these back to the customer, then ask if they are correct:\n- name: Harpreet (say it in English/Roman script, then spell it letter by letter: H-A-R-P-R-E-E-T)\n- phone: six, four, seven, three, zero, four, one, two, one, two (say every digit as a separate English word, one at a time)\nGUIDE: phrase the ask warmly in your own words in the customer's language, but the name letters and the phone digits themselves must be spoken exactly as above. If the customer corrects either one, call set_customer_contact with the fix and read it back again. Only when they say both are right, call confirm_contact."
+        }
+      ],
+      "assistant": "Alright, let me just make sure I have your contact details correct. I have your name down as Harpreet, spelled H-A-R-P-R-E-E-T, and your phone number is six, four, seven, three, zero, four, one, two, one, two. Is that all correct?"
+    },
+    {
+      "user": "Yes.",
+      "tool_calls": [
+        {
+          "name": "confirm_contact",
+          "args": {},
+          "result": "Name and phone confirmed. Continue with the order read-back (get_order_readback)."
+        },
+        {
+          "name": "get_order_readback",
+          "args": {},
+          "result": "READBACK FACTS — read ALL of these to the customer in their language, then ask if everything is correct:\n- 1 x ਗਾਰਲਿਕ ਨਾਨ (Garlic Naan)\n- 2 x Butter Chicken [medium]\n- order type: pickup (say \"pickup\" in English)\n- name: Harpreet\nGUIDE: phrase this warmly in your own words in the customer's language — but every item, its quantity (as a word, never a digit), and the order type must actually be spoken. Your spoken readback is checked — anything missing forces a re-read. End by asking if everything is correct."
+        }
+      ],
+      "assistant": "Perfect. Let me read your order back to you: I have one Garlic Naan and two Butter Chicken, medium, for pickup under the name Harpreet. Is everything correct?",
+      "injected": true
+    },
+    {
+      "user": "Yes, that's correct.",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "READBACK INCOMPLETE — the customer has not heard the full order:\n- you never said 'ਗਾਰਲਿਕ ਨਾਨ'\nRead ALL the READBACK FACTS again in the customer's language, then ask again if everything is correct."
+        }
+      ],
+      "assistant": "Ah, my apologies! Let me read that back to you properly: I have one ਗਾਰਲਿਕ ਨਾਨ and two Butter Chicken, medium, for pickup under the name Harpreet. Is everything correct?"
+    },
+    {
+      "user": "Yes, everything is correct.",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "READBACK INCOMPLETE — the customer has not heard the full order:\n- you never said 'ਗਾਰਲਿਕ ਨਾਨ'\nRead ALL the READBACK FACTS again in the customer's language, then ask again if everything is correct."
+        }
+      ],
+      "assistant": "My mistake, let me get that exactly right for you. I have one ਗਾਰਲਿਕ ਨਾਨ and two Butter Chicken, medium, for pickup under the name Harpreet. Is that all correct?"
+    },
+    {
+      "user": "Yes, that's all right.",
+      "tool_calls": [
+        {
+          "name": "confirm_readback",
+          "args": {},
+          "result": "Order placed! INTERNAL total $44.97. Tell customer: \"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!\" Do NOT mention price or dollars."
+        }
+      ],
+      "assistant": "ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! 20-25 ਮਿੰਟ ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!"
+    }
+  ],
+  "final_cart": {
+    "v": 1,
+    "status": "placed",
+    "items": [
+      {
+        "id": "T61J8SX6W8JF2",
+        "name": "Garlic Naan",
+        "voice_line": "ਗਾਰਲਿਕ ਨਾਨ",
+        "qty": 1,
+        "unit_price": 4.99,
+        "line_total": 4.99,
+        "note": "",
+        "modifiers": []
+      },
+      {
+        "id": "DB4GJPSG6EZ0R",
+        "name": "Butter Chicken",
+        "voice_line": "Butter Chicken",
+        "qty": 2,
+        "unit_price": 19.99,
+        "line_total": 39.98,
+        "note": "medium",
+        "modifiers": [
+          "medium"
+        ]
+      }
+    ],
+    "order_type": "pickup",
+    "delivery_address": null,
+    "customer": {
+      "name": "Harpreet",
+      "phone": "6473041212"
+    },
+    "subtotal": 44.97,
+    "delivery_charge": 0,
+    "total": 44.97,
+    "eta": "20-25 min",
+    "order_id": "W41TWG3WBRSW2"
+  },
+  "assertions": [
+    {
+      "check": "gates: placed order had a confirmed, current readback",
+      "ok": true,
+      "detail": "readback_confirmed=True readback_revision=3 cart.revision=3"
+    },
+    {
+      "check": "placed",
+      "ok": true,
+      "detail": "cart.placed=True"
+    },
+    {
+      "check": "items: exact set of dishes",
+      "ok": true,
+      "detail": "cart=['Butter Chicken', 'Garlic Naan']"
+    },
+    {
+      "check": "items: Butter Chicken qty == 2",
+      "ok": true,
+      "detail": "got qty=2"
+    },
+    {
+      "check": "items: Butter Chicken note contains 'medium'",
+      "ok": true,
+      "detail": "got note='medium'"
+    },
+    {
+      "check": "items: Garlic Naan qty == 1",
+      "ok": true,
+      "detail": "got qty=1"
+    },
+    {
+      "check": "order_type",
+      "ok": true,
+      "detail": "got 'pickup'"
+    },
+    {
+      "check": "customer_name",
+      "ok": true,
+      "detail": "got 'Harpreet'"
+    },
+    {
+      "check": "customer_phone",
+      "ok": true,
+      "detail": "got '6473041212'"
+    },
+    {
+      "check": "additional_requests_recorded",
+      "ok": true,
+      "detail": "got True"
+    },
+    {
+      "check": "readbacks: at least 1 successful",
+      "ok": true,
+      "detail": "got 1"
+    },
+    {
+      "check": "tool confirm_readback result contains 'READBACK INCOMPLETE' at least 1x",
+      "ok": true,
+      "detail": "got 2"
+    }
+  ],
+  "llm_latency": {
+    "calls": 23,
+    "mean_s": 6.059,
+    "p95_s": 8.797,
+    "max_s": 14.67
+  }
+}

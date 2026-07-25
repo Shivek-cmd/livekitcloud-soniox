@@ -3,11 +3,12 @@
   "channel": "phone",
   "turns": [
     "Hi, one butter chicken and one garlic naan please.",
+    "Oh, no preference really — whatever's normal.",
     "That's everything.",
     "No, nothing — all good.",
     "Pickup.",
     "My name is Karan.",
-    "Four one six five five five one two three four.",
+    "Four one six three zero four one two three four.",
     "Yes, that's right."
   ],
   "expect": {
@@ -18,7 +19,7 @@
     ],
     "order_type": "pickup",
     "customer_name": "Karan",
-    "customer_phone": "4165551234",
+    "customer_phone": "4163041234",
     "additional_requests_recorded": true,
     "min_readbacks": 1
   }

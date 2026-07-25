@@ -8,13 +8,15 @@
   ],
   "turns": [
     "Hi, can I get two butter chicken and one garlic naan please?",
+    "Medium spice please.",
     "That's everything, thanks.",
-    "Medium spice is fine, and no allergies.",
+    "No allergies, nothing else.",
     "Pickup please.",
     "My name is Harpreet.",
-    "Six four seven five five five one two one two.",
+    "Six four seven three zero four one two one two.",
     "Yes, that's correct.",
-    "Yes, everything is correct."
+    "Yes, everything is correct.",
+    "Yes, that's all right."
   ],
   "expect": {
     "placed": true,
@@ -24,7 +26,7 @@
     ],
     "order_type": "pickup",
     "customer_name": "Harpreet",
-    "customer_phone": "6475551212",
+    "customer_phone": "6473041212",
     "additional_requests_recorded": true,
     "min_readbacks": 1,
     "tool_result_contains": [

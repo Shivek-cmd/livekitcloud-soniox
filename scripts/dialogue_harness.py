@@ -40,7 +40,7 @@ Scenario files live in tests/scenarios/*.json:
         "items": [{"name": "Butter Chicken", "qty": 2, "note_contains": "medium"}],
         "order_type": "pickup",
         "customer_name": "Harpreet",
-        "customer_phone": "6475551212",
+        "customer_phone": "6473041212",
         "additional_requests_recorded": true,
         "min_readbacks": 1,
         "transcript_any": ["..."],        # ≥1 substring must appear in agent speech
