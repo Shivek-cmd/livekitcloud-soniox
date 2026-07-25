@@ -213,6 +213,24 @@ def test_spice_and_required_group_asked_in_one_refusal(agent, monkeypatch):
     assert agent.cart.items[0].note == "mild, butter chicken curry"
 
 
+def test_multi_dish_spice_question_names_each_dish(agent, monkeypatch):
+    # One question for several dishes, but each dish named in it — a lumped
+    # "how spicy for both?" makes one level land on dishes the customer may
+    # have wanted set differently. Levels are then mapped per dish.
+    monkeypatch.setattr(menu_provider, "item_has_spice_level", lambda name: True)
+    refusal = run(agent.add_item("butter chicken"))
+    assert "NEEDS SPICE" in refusal
+    assert "NAME EACH DISH" in refusal
+    assert "once per dish" in refusal
+    assert agent.cart.is_empty
+
+    run(agent.add_item("butter chicken", spice_level="Spicy"))
+    run(agent.add_item("garlic naan", spice_level="Mild"))
+    notes = {i.name: i.note for i in agent.cart.items}
+    assert notes["Butter Chicken"] == "spicy"
+    assert notes["Garlic Naan"] == "mild"
+
+
 @pytest.mark.parametrize(
     "spoken,expected",
     [

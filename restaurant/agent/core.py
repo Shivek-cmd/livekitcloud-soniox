@@ -668,8 +668,14 @@ class RestaurantAgent(Agent):
                     "Extra Spicy. Ask the customer which they want ('no "
                     "preference' = Medium), then re-call add_item with "
                     "spice_level. If other dishes in this turn also need one, "
-                    "ask about them in the SAME question, then re-call add_item "
-                    "once per dish."
+                    "ask about them in the SAME question but NAME EACH DISH in "
+                    "it, so the customer can give a different level per dish "
+                    "(e.g. 'how spicy for the Chicken Biryani, and for the "
+                    "Chicken Tikka Masala?'). They may answer for all of them "
+                    "in one breath — map each level to the dish it was said "
+                    "for, and re-call add_item once per dish with THAT dish's "
+                    "level. Only a level stated for all of them (or one level "
+                    "with no dish named) goes on every dish."
                 )
             if missing_groups:
                 groups = ", ".join(missing_groups)
