@@ -1,0 +1,160 @@
+[
+  {
+    "name": "pickup updates CRM only",
+    "expected_route": "crm_only",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P5-PICKUP-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P5 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P5-ORDER-1",
+        "uber_delivery_id": "TEST-P5-DELIVERY-1",
+        "delivery_status": "pickup",
+        "previous_delivery_status": "pending",
+        "tracking_url": "https://example.test/tracking/TEST-P5-DELIVERY-1"
+      },
+      "meta": {"customer_milestone": null}
+    }
+  },
+  {
+    "name": "pickup complete sends on-the-way SMS",
+    "expected_route": "on_the_way",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P5-PICKUP-COMPLETE-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P5 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P5-ORDER-1",
+        "uber_delivery_id": "TEST-P5-DELIVERY-1",
+        "delivery_status": "pickup_complete",
+        "previous_delivery_status": "pickup",
+        "tracking_url": "https://example.test/tracking/TEST-P5-DELIVERY-1"
+      },
+      "meta": {"customer_milestone": "on_the_way"}
+    }
+  },
+  {
+    "name": "direct dropoff uses on-the-way fallback",
+    "expected_route": "on_the_way",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P5-DROPOFF-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P5 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P5-ORDER-2",
+        "uber_delivery_id": "TEST-P5-DELIVERY-2",
+        "delivery_status": "dropoff",
+        "previous_delivery_status": "pickup",
+        "tracking_url": "https://example.test/tracking/TEST-P5-DELIVERY-2"
+      },
+      "meta": {"customer_milestone": "on_the_way"}
+    }
+  },
+  {
+    "name": "delivered completes opportunity and confirms customer",
+    "expected_route": "delivered",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P5-DELIVERED-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P5 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P5-ORDER-1",
+        "uber_delivery_id": "TEST-P5-DELIVERY-1",
+        "delivery_status": "delivered",
+        "previous_delivery_status": "dropoff",
+        "tracking_url": "https://example.test/tracking/TEST-P5-DELIVERY-1"
+      },
+      "meta": {"customer_milestone": "delivered"}
+    }
+  },
+  {
+    "name": "canceled alerts staff without customer promise",
+    "expected_route": "staff_alert",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P5-CANCELED-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P5 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P5-ORDER-3",
+        "uber_delivery_id": "TEST-P5-DELIVERY-3",
+        "delivery_status": "canceled",
+        "previous_delivery_status": "pickup",
+        "cancellation_reason": "courier_canceled"
+      },
+      "meta": {"customer_milestone": "staff_alert"}
+    }
+  },
+  {
+    "name": "failed alerts staff without customer promise",
+    "expected_route": "staff_alert",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P6-FAILED-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P6 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P6-ORDER-FAILED-1",
+        "uber_delivery_id": "TEST-P6-DELIVERY-FAILED-1",
+        "delivery_status": "failed",
+        "previous_delivery_status": "pickup",
+        "undeliverable_reason": "courier_unavailable"
+      },
+      "meta": {"customer_milestone": "staff_alert"}
+    }
+  },
+  {
+    "name": "returned alerts staff without customer promise",
+    "expected_route": "staff_alert",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P6-RETURNED-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P6 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P6-ORDER-RETURNED-1",
+        "uber_delivery_id": "TEST-P6-DELIVERY-RETURNED-1",
+        "delivery_status": "returned",
+        "previous_delivery_status": "canceled",
+        "undeliverable_action": "return_to_pickup"
+      },
+      "meta": {"customer_milestone": "staff_alert"}
+    }
+  },
+  {
+    "name": "unknown delivery status dead letters",
+    "expected_route": "dead_letter",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.status_changed",
+      "event_id": "delivery.status:TEST-P5-UNKNOWN-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {"name": "P5 Test", "phone_e164": "+15555550123"},
+      "order": {
+        "clover_order_id": "TEST-P5-ORDER-4",
+        "uber_delivery_id": "TEST-P5-DELIVERY-4",
+        "delivery_status": "mystery"
+      },
+      "meta": {"customer_milestone": null}
+    }
+  }
+]

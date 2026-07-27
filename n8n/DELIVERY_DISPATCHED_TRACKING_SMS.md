@@ -1,4 +1,8 @@
-# n8n — delivery.dispatched → tracking SMS (PR 093)
+# n8n — delivery.dispatched → tracking SMS
+
+> Implemented in the PR 097 P4 router. See
+> [`P4_ROUTER_SETUP.md`](P4_ROUTER_SETUP.md) for import, credentials, durable
+> deduplication, and sandbox verification.
 
 Sierra POSTs `event: "delivery.dispatched"` to the same webhook URL as
 `order.placed` / `order.paid` when Uber Direct creates a courier delivery
@@ -20,7 +24,7 @@ for a Store order.
 }
 ```
 
-## n8n branch (manual)
+## Implemented n8n branch
 
 1. IF `event` equals `delivery.dispatched`
 2. Send SMS (GHL) with tracking link, e.g.

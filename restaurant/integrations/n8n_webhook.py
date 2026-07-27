@@ -85,6 +85,8 @@ def build_order_placed_envelope(
     eta: str | None = None,
     event_id: str | None = None,
     language: str | None = None,
+    delivery_fulfillment_status: str | None = None,
+    delivery_dispatch_reason: str | None = None,
 ) -> dict[str, Any]:
     """Normalized payload matching n8n G0 / plan §6."""
     phone_raw = (customer_phone or "").strip()
@@ -114,10 +116,17 @@ def build_order_placed_envelope(
             "address": address,
             "allergy_note": allergy_note,
             "eta": eta,
+            "delivery_fulfillment_status": delivery_fulfillment_status,
+            "delivery_dispatch_reason": delivery_dispatch_reason,
         },
         "meta": {
             "source": "sierra",
             "language": getattr(language, "value", language) if language is not None else None,
+            "sms_hint": (
+                "Kitchen accepted the order, but no courier is confirmed yet."
+                if delivery_fulfillment_status == "dispatch_required"
+                else None
+            ),
         },
     }
 
@@ -206,6 +215,8 @@ async def notify_order_placed(
     session_id: str | None = None,
     eta: str | None = None,
     language: str | None = None,
+    delivery_fulfillment_status: str | None = None,
+    delivery_dispatch_reason: str | None = None,
 ) -> bool:
     """POST order.placed to n8n. Returns True on 2xx. Never raises."""
     import asyncio
@@ -232,6 +243,8 @@ async def notify_order_placed(
         session_id=session_id,
         eta=eta,
         language=language,
+        delivery_fulfillment_status=delivery_fulfillment_status,
+        delivery_dispatch_reason=delivery_dispatch_reason,
     )
     timeout = n8n_timeout_seconds()
     secret = n8n_webhook_secret()
@@ -458,6 +471,284 @@ async def notify_delivery_dispatched(
     except Exception:
         logger.exception(
             "N8N_DELIVERY_DISPATCHED failed event_id=%s — continuing",
+            envelope.get("event_id"),
+        )
+        return False
+
+
+def build_delivery_status_changed_envelope(
+    *,
+    uber_event_id: str,
+    event_time_ms: int,
+    delivery_id: str,
+    delivery_status: str,
+    previous_status: str | None = None,
+    customer_milestone: str | None = None,
+    channel: str = "web_store",
+    customer_name: str | None = None,
+    customer_phone: str | None = None,
+    clover_order_id: str | None = None,
+    order_type: str | None = "delivery",
+    tracking_url: str | None = None,
+    total: float | None = None,
+    session_id: str | None = None,
+    cancellation_reason: str | None = None,
+    undeliverable_reason: str | None = None,
+    undeliverable_action: str | None = None,
+    webhook_shape: str | None = None,
+) -> dict[str, Any]:
+    """Stable Sierra envelope for one accepted Uber lifecycle transition."""
+    phone_raw = (customer_phone or "").strip()
+    uber_eid = (uber_event_id or "").strip()
+    occurred_at = datetime.fromtimestamp(
+        int(event_time_ms) / 1000,
+        tz=timezone.utc,
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    status = (delivery_status or "").strip().lower()
+    return {
+        "schema_version": 1,
+        "event": "delivery.status_changed",
+        "event_id": f"delivery.status:{uber_eid}",
+        "occurred_at": occurred_at,
+        "tenant_id": _TENANT_ID,
+        "channel": channel or "web_store",
+        "session_id": session_id,
+        "customer": {
+            "name": (customer_name or "").strip() or None,
+            "phone_e164": phone_to_e164(phone_raw) or None,
+            "phone_raw": phone_raw or None,
+        },
+        "order": {
+            "clover_order_id": clover_order_id,
+            "order_type": order_type or "delivery",
+            "status": status,
+            "total": total,
+            "uber_delivery_id": delivery_id,
+            "uber_event_id": uber_eid,
+            "uber_event_time_ms": int(event_time_ms),
+            "delivery_status": status,
+            "previous_delivery_status": previous_status,
+            "tracking_url": tracking_url,
+            "cancellation_reason": cancellation_reason,
+            "undeliverable_reason": undeliverable_reason,
+            "undeliverable_action": undeliverable_action,
+        },
+        "meta": {
+            "source": "uber_direct",
+            "webhook_shape": webhook_shape,
+            "customer_milestone": customer_milestone,
+            "staff_alert_required": customer_milestone == "staff_alert",
+        },
+    }
+
+
+async def notify_delivery_status_changed(
+    *,
+    uber_event_id: str,
+    event_time_ms: int,
+    delivery_id: str,
+    delivery_status: str,
+    previous_status: str | None = None,
+    customer_milestone: str | None = None,
+    channel: str = "web_store",
+    customer_name: str | None = None,
+    customer_phone: str | None = None,
+    clover_order_id: str | None = None,
+    order_type: str | None = "delivery",
+    tracking_url: str | None = None,
+    total: float | None = None,
+    session_id: str | None = None,
+    cancellation_reason: str | None = None,
+    undeliverable_reason: str | None = None,
+    undeliverable_action: str | None = None,
+    webhook_shape: str | None = None,
+) -> bool:
+    """Relay an accepted Uber status to n8n. Fail-open for callers."""
+    import asyncio
+
+    if not n8n_sync_enabled():
+        return False
+    url = n8n_webhook_url()
+    if not url:
+        logger.warning(
+            "N8N_SYNC_ENABLED but N8N_WEBHOOK_ORDERS_URL is empty — "
+            "skip delivery status"
+        )
+        return False
+    if not (uber_event_id and delivery_id and delivery_status):
+        logger.warning("N8N_DELIVERY_STATUS skip — incomplete lifecycle identity")
+        return False
+
+    envelope = build_delivery_status_changed_envelope(
+        uber_event_id=uber_event_id,
+        event_time_ms=event_time_ms,
+        delivery_id=delivery_id,
+        delivery_status=delivery_status,
+        previous_status=previous_status,
+        customer_milestone=customer_milestone,
+        channel=channel,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        clover_order_id=clover_order_id,
+        order_type=order_type,
+        tracking_url=tracking_url,
+        total=total,
+        session_id=session_id,
+        cancellation_reason=cancellation_reason,
+        undeliverable_reason=undeliverable_reason,
+        undeliverable_action=undeliverable_action,
+        webhook_shape=webhook_shape,
+    )
+    try:
+        status = await asyncio.to_thread(
+            _post_json_sync,
+            url,
+            envelope,
+            secret=n8n_webhook_secret(),
+            timeout=n8n_timeout_seconds(),
+        )
+        if 200 <= status < 300:
+            logger.info(
+                "N8N_DELIVERY_STATUS ok status=%s event_id=%s delivery=%s",
+                status,
+                envelope.get("event_id"),
+                delivery_id,
+            )
+            return True
+        logger.warning(
+            "N8N_DELIVERY_STATUS unexpected status=%s event_id=%s",
+            status,
+            envelope.get("event_id"),
+        )
+        return False
+    except Exception:
+        logger.exception(
+            "N8N_DELIVERY_STATUS failed event_id=%s — pending retry",
+            envelope.get("event_id"),
+        )
+        return False
+
+
+def build_delivery_dispatch_required_envelope(
+    *,
+    channel: str,
+    customer_name: str | None,
+    customer_phone: str | None,
+    clover_order_id: str | None,
+    order_key: str,
+    reason: str,
+    uncertain_outcome: bool = False,
+    attempts: int = 0,
+    total: float | None = None,
+    address: str | None = None,
+    session_id: str | None = None,
+    event_id: str | None = None,
+) -> dict[str, Any]:
+    """Restaurant escalation after kitchen place but no confirmed courier."""
+    phone_raw = (customer_phone or "").strip()
+    stable_order = (clover_order_id or order_key or session_id or "").strip()
+    eid = event_id or (
+        f"delivery.dispatch_required:{stable_order}" if stable_order else str(uuid4())
+    )
+    return {
+        "schema_version": 1,
+        "event": "delivery.dispatch_required",
+        "event_id": eid,
+        "occurred_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "tenant_id": _TENANT_ID,
+        "channel": channel or "web_store",
+        "session_id": session_id,
+        "customer": {
+            "name": (customer_name or "").strip() or None,
+            "phone_e164": phone_to_e164(phone_raw) or None,
+            "phone_raw": phone_raw or None,
+        },
+        "order": {
+            "clover_order_id": clover_order_id,
+            "order_key": order_key,
+            "order_type": "delivery",
+            "status": "dispatch_required",
+            "total": total,
+            "delivery_address": address,
+            "dispatch_reason": reason,
+            "dispatch_attempts": int(attempts),
+            "uncertain_outcome": bool(uncertain_outcome),
+        },
+        "meta": {
+            "source": "sierra",
+            "staff_action": (
+                "Check Uber Direct before creating any courier manually. "
+                "The prior Create Delivery outcome may be uncertain."
+                if uncertain_outcome
+                else "Arrange or retry courier fulfillment for this kitchen order."
+            ),
+        },
+    }
+
+
+async def notify_delivery_dispatch_required(
+    *,
+    channel: str,
+    customer_name: str | None,
+    customer_phone: str | None,
+    clover_order_id: str | None,
+    order_key: str,
+    reason: str,
+    uncertain_outcome: bool = False,
+    attempts: int = 0,
+    total: float | None = None,
+    address: str | None = None,
+    session_id: str | None = None,
+) -> bool:
+    """POST a staff escalation event. Fail-open and never raises."""
+    import asyncio
+
+    if not n8n_sync_enabled():
+        return False
+    url = n8n_webhook_url()
+    if not url:
+        logger.warning(
+            "N8N_SYNC_ENABLED but N8N_WEBHOOK_ORDERS_URL is empty — "
+            "skip dispatch-required alert"
+        )
+        return False
+    envelope = build_delivery_dispatch_required_envelope(
+        channel=channel,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        clover_order_id=clover_order_id,
+        order_key=order_key,
+        reason=reason,
+        uncertain_outcome=uncertain_outcome,
+        attempts=attempts,
+        total=total,
+        address=address,
+        session_id=session_id,
+    )
+    try:
+        status = await asyncio.to_thread(
+            _post_json_sync,
+            url,
+            envelope,
+            secret=n8n_webhook_secret(),
+            timeout=n8n_timeout_seconds(),
+        )
+        if 200 <= status < 300:
+            logger.info(
+                "N8N_DELIVERY_DISPATCH_REQUIRED ok status=%s event_id=%s",
+                status,
+                envelope.get("event_id"),
+            )
+            return True
+        logger.warning(
+            "N8N_DELIVERY_DISPATCH_REQUIRED unexpected status=%s event_id=%s",
+            status,
+            envelope.get("event_id"),
+        )
+        return False
+    except Exception:
+        logger.exception(
+            "N8N_DELIVERY_DISPATCH_REQUIRED failed event_id=%s — continuing",
             envelope.get("event_id"),
         )
         return False

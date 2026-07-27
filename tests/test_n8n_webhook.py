@@ -257,3 +257,117 @@ def test_notify_order_paid_skips_without_receipt(monkeypatch):
         )
     )
     assert ok is False
+
+
+def test_delivery_status_envelope_is_stable_and_carries_milestone():
+    env = n8n.build_delivery_status_changed_envelope(
+        uber_event_id="uber-evt-1",
+        event_time_ms=1_785_175_200_000,
+        delivery_id="del-1",
+        delivery_status="pickup_complete",
+        previous_status="pickup",
+        customer_milestone="on_the_way",
+        customer_name="Alex",
+        customer_phone="5875551234",
+        clover_order_id="ORDER-1",
+        tracking_url="https://tracking.example/del-1",
+        session_id="session-1",
+        webhook_shape="event.delivery_status",
+    )
+    assert env["event"] == "delivery.status_changed"
+    assert env["event_id"] == "delivery.status:uber-evt-1"
+    assert env["customer"]["phone_e164"] == "+15875551234"
+    assert env["order"]["delivery_status"] == "pickup_complete"
+    assert env["order"]["previous_delivery_status"] == "pickup"
+    assert env["meta"]["customer_milestone"] == "on_the_way"
+    assert env["meta"]["staff_alert_required"] is False
+
+
+def test_notify_delivery_status_posts_without_requiring_customer_phone(
+    monkeypatch,
+):
+    monkeypatch.setenv("N8N_SYNC_ENABLED", "1")
+    monkeypatch.setenv("N8N_WEBHOOK_ORDERS_URL", "https://n8n.example/hook")
+    captured = {}
+
+    class _Resp:
+        status = 202
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def _urlopen(req, timeout=None):
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _Resp()
+
+    monkeypatch.setattr(n8n.urllib.request, "urlopen", _urlopen)
+    ok = run(
+        n8n.notify_delivery_status_changed(
+            uber_event_id="uber-evt-failed",
+            event_time_ms=1_785_175_200_000,
+            delivery_id="del-failed",
+            delivery_status="failed",
+            previous_status="pickup",
+            customer_milestone="staff_alert",
+            clover_order_id="ORDER-FAILED",
+        )
+    )
+    assert ok is True
+    assert captured["body"]["event_id"] == "delivery.status:uber-evt-failed"
+    assert captured["body"]["meta"]["staff_alert_required"] is True
+
+
+def test_dispatch_required_envelope_is_stable_and_staff_focused():
+    env = n8n.build_delivery_dispatch_required_envelope(
+        channel="web_store",
+        customer_name="Alex",
+        customer_phone="5875551234",
+        clover_order_id="ORDER-9",
+        order_key="ORDER-9",
+        reason="uber_create_outcome_unknown",
+        uncertain_outcome=True,
+        attempts=1,
+        address="123 Main St, Edmonton, AB T5J 0N3, CA",
+        session_id="session-9",
+    )
+    assert env["event"] == "delivery.dispatch_required"
+    assert env["event_id"] == "delivery.dispatch_required:ORDER-9"
+    assert env["order"]["status"] == "dispatch_required"
+    assert env["order"]["uncertain_outcome"] is True
+    assert "Check Uber Direct" in env["meta"]["staff_action"]
+
+
+def test_notify_dispatch_required_posts_without_customer_phone(monkeypatch):
+    monkeypatch.setenv("N8N_SYNC_ENABLED", "1")
+    monkeypatch.setenv("N8N_WEBHOOK_ORDERS_URL", "https://n8n.example/hook")
+    captured = {}
+
+    class _Resp:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def _urlopen(req, timeout=None):
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _Resp()
+
+    monkeypatch.setattr(n8n.urllib.request, "urlopen", _urlopen)
+    ok = run(
+        n8n.notify_delivery_dispatch_required(
+            channel="web_store",
+            customer_name="Alex",
+            customer_phone=None,
+            clover_order_id="ORDER-10",
+            order_key="ORDER-10",
+            reason="uber_create_rejected:400",
+        )
+    )
+    assert ok is True
+    assert captured["body"]["event"] == "delivery.dispatch_required"

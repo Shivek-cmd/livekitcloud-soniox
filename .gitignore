@@ -21,3 +21,5 @@ data/store_uber_quotes.json
 data/store_uber_quotes.json.tmp
 data/store_uber_deliveries.json
 data/store_uber_deliveries.json.tmp
+data/store_checkout_idempotency.json
+data/store_checkout_idempotency.json.tmp

@@ -1,0 +1,116 @@
+[
+  {
+    "name": "order placed",
+    "expected_route": "order.placed",
+    "expected_side_effect": "placed_opportunity",
+    "payload": {
+      "schema_version": 1,
+      "event": "order.placed",
+      "event_id": "order.placed:TEST-P4-ORDER-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "session_id": "test-p4-session-1",
+      "customer": {
+        "name": "P4 Test",
+        "phone_e164": "+15555550123"
+      },
+      "order": {
+        "clover_order_id": "TEST-P4-ORDER-1",
+        "order_type": "pickup",
+        "status": "placed",
+        "items": [
+          {
+            "name": "Sweet Lassi",
+            "qty": 1,
+            "price": 5
+          }
+        ],
+        "total": 5
+      }
+    }
+  },
+  {
+    "name": "order paid",
+    "expected_route": "order.paid",
+    "expected_side_effect": "receipt_sms",
+    "payload": {
+      "schema_version": 1,
+      "event": "order.paid",
+      "event_id": "order.paid:TEST-P4-PAY-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {
+        "name": "P4 Test",
+        "phone_e164": "+15555550123"
+      },
+      "order": {
+        "clover_order_id": "TEST-P4-ORDER-1",
+        "payment_id": "TEST-P4-PAY-1",
+        "receipt_url": "https://example.test/receipt/TEST-P4-PAY-1",
+        "status": "paid"
+      }
+    }
+  },
+  {
+    "name": "delivery dispatched",
+    "expected_route": "delivery.dispatched",
+    "expected_side_effect": "tracking_sms",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.dispatched",
+      "event_id": "delivery.dispatched:TEST-P4-DELIVERY-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {
+        "name": "P4 Test",
+        "phone_e164": "+15555550123"
+      },
+      "order": {
+        "clover_order_id": "TEST-P4-ORDER-1",
+        "uber_delivery_id": "TEST-P4-DELIVERY-1",
+        "tracking_url": "https://example.test/tracking/TEST-P4-DELIVERY-1"
+      }
+    }
+  },
+  {
+    "name": "dispatch required",
+    "expected_route": "delivery.dispatch_required",
+    "expected_side_effect": "staff_dispatch_alert",
+    "payload": {
+      "schema_version": 1,
+      "event": "delivery.dispatch_required",
+      "event_id": "delivery.dispatch_required:TEST-P4-ORDER-2",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {
+        "name": "P4 Test",
+        "phone_e164": "+15555550123"
+      },
+      "order": {
+        "clover_order_id": "TEST-P4-ORDER-2",
+        "delivery_address": "100 Main St, Edmonton, AB T5J 0N3, CA",
+        "dispatch_reason": "uber_create_rejected:400",
+        "dispatch_uncertain": false
+      }
+    }
+  },
+  {
+    "name": "unknown event",
+    "expected_route": "dead_letter",
+    "expected_side_effect": "none",
+    "payload": {
+      "schema_version": 1,
+      "event": "test.unknown",
+      "event_id": "test.unknown:TEST-P4-1",
+      "tenant_id": "bizbull",
+      "channel": "web_store",
+      "customer": {
+        "name": "P4 Test",
+        "phone_e164": "+15555550123"
+      },
+      "order": {
+        "clover_order_id": "TEST-P4-ORDER-3"
+      }
+    }
+  }
+]

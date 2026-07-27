@@ -52,6 +52,12 @@ export function StoreTab() {
   const [note, setNote] = useState('')
   const [paymentPreference, setPaymentPreference] =
     useState<StorePaymentPreference>('later')
+  const [checkoutKey, setCheckoutKey] = useState(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID()
+    }
+    return `store_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string[] | null>(null)
   const [summary, setSummary] = useState<StoreCheckoutSummary | null>(null)
@@ -401,8 +407,23 @@ export function StoreTab() {
           orderType === 'delivery'
             ? composeDeliveryAddressLine(deliveryAddr)
             : null,
+        delivery_dropoff:
+          orderType === 'delivery'
+            ? {
+                street: deliveryAddr.street,
+                unit: deliveryAddr.unit || null,
+                city: deliveryAddr.city,
+                state: deliveryAddr.state,
+                postal: deliveryAddr.postal,
+                country: deliveryAddr.country || 'CA',
+                phone: phone.trim() || null,
+                name: name.trim() || null,
+                notes: deliveryAddr.notes || null,
+              }
+            : null,
         note: checkoutNote(),
         payment_preference: paymentPreference,
+        checkout_key: checkoutKey,
         uber_quote_id: orderType === 'delivery' ? uberQuoteId : null,
         place: false,
       })
@@ -448,8 +469,23 @@ export function StoreTab() {
           orderType === 'delivery'
             ? composeDeliveryAddressLine(deliveryAddr)
             : null,
+        delivery_dropoff:
+          orderType === 'delivery'
+            ? {
+                street: deliveryAddr.street,
+                unit: deliveryAddr.unit || null,
+                city: deliveryAddr.city,
+                state: deliveryAddr.state,
+                postal: deliveryAddr.postal,
+                country: deliveryAddr.country || 'CA',
+                phone: phone.trim() || null,
+                name: name.trim() || null,
+                notes: deliveryAddr.notes || null,
+              }
+            : null,
         note: checkoutNote(),
         payment_preference: paymentPreference,
+        checkout_key: checkoutKey,
         uber_quote_id: orderType === 'delivery' ? uberQuoteId : null,
         place: true,
       })
@@ -498,6 +534,11 @@ export function StoreTab() {
     setUberQuoteFee(null)
     setUberQuoteMinutes(null)
     setQuoteHint(null)
+    setCheckoutKey(
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `store_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    )
   }
 
   const categories = menu?.categories ?? []
@@ -1429,11 +1470,18 @@ export function StoreTab() {
                 </div>
                 <h3 className="store-success-title">Order placed!</h3>
                 <p className="store-success-sub">
-                  {(summary.payment_preference ?? paymentPreference) === 'now'
-                    ? 'Payment received. The kitchen has your order.'
-                    : summary.order_type === 'delivery'
-                      ? 'We got it — pay when it arrives.'
-                      : 'We got it — pay when you pick up.'}
+                  {summary.order_type === 'delivery' &&
+                  summary.uber_dispatch_required
+                    ? 'The kitchen has your order. The restaurant is arranging delivery; no courier is confirmed yet.'
+                    : summary.order_type === 'delivery' &&
+                        summary.uber_tracking_url
+                      ? 'The kitchen has your order and your courier is arranged.'
+                      : (summary.payment_preference ?? paymentPreference) ===
+                          'now'
+                        ? 'Payment received. The kitchen has your order.'
+                        : summary.order_type === 'delivery'
+                          ? 'We got it — pay when it arrives.'
+                          : 'We got it — pay when you pick up.'}
                 </p>
                 {summary.order_id && (
                   <div className="store-success-id">

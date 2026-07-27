@@ -10,6 +10,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from restaurant.uber_direct.address import address_fingerprint
+from restaurant.uber_direct.config import StructuredAddress
+
 logger = logging.getLogger("uber-direct-quote-store")
 
 _lock = threading.Lock()
@@ -71,6 +74,7 @@ def record_quote(
     dropoff_line: str | None = None,
     duration_minutes: int | None = None,
     dropoff: dict[str, Any] | None = None,
+    dropoff_address: StructuredAddress | None = None,
 ) -> None:
     qid = (quote_id or "").strip()
     if not qid:
@@ -86,6 +90,9 @@ def record_quote(
             "expires_at": expires_at,
             "dropoff_line": dropoff_line,
             "dropoff": dropoff if isinstance(dropoff, dict) else None,
+            "address_fingerprint": (
+                address_fingerprint(dropoff_address) if dropoff_address else None
+            ),
             "duration_minutes": duration_minutes,
             "recorded_at": _now().strftime("%Y-%m-%dT%H:%M:%SZ"),
         }

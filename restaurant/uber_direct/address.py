@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+from typing import Any
 
 from restaurant.uber_direct.config import StructuredAddress
 
@@ -12,6 +14,10 @@ _POSTAL_CA_RE = re.compile(
     r"^[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\s?\d[ABCEGHJ-NPRSTV-Z]\d$",
     re.IGNORECASE,
 )
+
+
+def _clean_text(value: str | None) -> str:
+    return re.sub(r"\s+", " ", value or "").strip()
 
 
 def _normalize_ca_postal(postal: str) -> str | None:
@@ -40,12 +46,12 @@ def validate_structured_address(
     require_ca_postal: bool = True,
 ) -> tuple[StructuredAddress | None, list[str]]:
     blockers: list[str] = []
-    street_c = (street or "").strip()
-    city_c = (city or "").strip()
-    state_c = (state or "").strip().upper()
+    street_c = _clean_text(street)
+    city_c = _clean_text(city)
+    state_c = _clean_text(state).upper()
     postal_c = (postal or "").strip().upper()
-    country_c = (country or "CA").strip().upper() or "CA"
-    unit_c = (unit or "").strip() or None
+    country_c = _clean_text(country or "CA").upper() or "CA"
+    unit_c = _clean_text(unit) or None
     is_ca = country_c in ("CA", "CAN", "CANADA")
 
     if len(street_c) < 3:
@@ -76,12 +82,66 @@ def validate_structured_address(
             unit=unit_c,
             lat=lat,
             lng=lng,
-            phone=(phone or "").strip() or None,
-            name=(name or "").strip() or None,
-            notes=(notes or "").strip() or None,
+            phone=_clean_text(phone) or None,
+            name=_clean_text(name) or None,
+            notes=_clean_text(notes) or None,
         ),
         [],
     )
+
+
+def structured_address_to_dict(addr: StructuredAddress) -> dict[str, Any]:
+    """JSON-safe normalized Store/Uber address."""
+    return {
+        "street": addr.street,
+        "unit": addr.unit,
+        "city": addr.city,
+        "state": addr.state,
+        "postal": addr.postal,
+        "country": addr.country,
+        "lat": addr.lat,
+        "lng": addr.lng,
+        "phone": addr.phone,
+        "name": addr.name,
+        "notes": addr.notes,
+    }
+
+
+def canonical_address_payload(addr: StructuredAddress) -> dict[str, Any]:
+    """Address identity used to bind a quote to checkout.
+
+    Contact name/phone and delivery notes are deliberately excluded: they do not
+    change the priced route. Text comparison is case/whitespace insensitive.
+    Coordinates are included when supplied because they can affect Uber routing.
+    """
+
+    def identity_text(value: str | None) -> str:
+        return _clean_text(value).casefold()
+
+    def coordinate(value: float | None) -> float | None:
+        return round(float(value), 6) if value is not None else None
+
+    return {
+        "street": identity_text(addr.street),
+        "unit": identity_text(addr.unit),
+        "city": identity_text(addr.city),
+        "state": identity_text(addr.state),
+        "postal": re.sub(r"\s+", "", addr.postal or "").upper(),
+        "country": (addr.country or "CA").strip().upper(),
+        "lat": coordinate(addr.lat),
+        "lng": coordinate(addr.lng),
+    }
+
+
+def address_fingerprint(addr: StructuredAddress) -> str:
+    """Stable SHA-256 binding for a normalized quote destination."""
+    raw = json.dumps(
+        canonical_address_payload(addr),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def to_uber_address_json(addr: StructuredAddress) -> str:

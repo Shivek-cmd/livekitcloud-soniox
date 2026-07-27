@@ -1,0 +1,2 @@
+event_id,event,status,received_at,completed_at,last_error
+__SCHEMA_SEED__,schema.seed,completed,2026-01-01T00:00:00.000Z,2026-01-01T00:00:00.000Z,Delete this schema seed row after import

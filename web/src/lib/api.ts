@@ -97,15 +97,33 @@ export interface StoreCheckoutItemPayload {
 
 export type StorePaymentPreference = 'later' | 'now'
 
+export interface StoreDeliveryDropoffPayload {
+  street: string
+  city: string
+  state: string
+  postal: string
+  country: string
+  unit?: string | null
+  lat?: number | null
+  lng?: number | null
+  phone?: string | null
+  name?: string | null
+  notes?: string | null
+}
+
 export interface StoreCheckoutRequest {
   items: StoreCheckoutItemPayload[]
   order_type: 'pickup' | 'delivery'
   customer: { name: string; phone: string }
   /** One-line address (composed from structured Store fields for Clover/n8n). */
   delivery_address?: string | null
+  /** Server validates and binds this destination to the Uber quote. */
+  delivery_dropoff?: StoreDeliveryDropoffPayload | null
   note?: string | null
   /** later = pay at pickup/door (default); now = online pay (Hosted Checkout in P2+) */
   payment_preference?: StorePaymentPreference
+  /** Stable for review + Place retries; rotate only for a new order. */
+  checkout_key?: string | null
   /** Uber Direct quote id from POST /store/delivery-quote (PR 093) */
   uber_quote_id?: string | null
   place?: boolean
@@ -126,8 +144,10 @@ export interface StoreCheckoutSummary {
   order_type: 'pickup' | 'delivery'
   customer: { name: string; phone: string }
   delivery_address: string | null
+  delivery_dropoff?: StoreDeliveryDropoffPayload | null
   note: string | null
   payment_preference?: StorePaymentPreference
+  checkout_key?: string | null
   /** Set in P2+ when pay-now Hosted Checkout is created */
   checkout_url?: string | null
   checkout_session_id?: string | null
@@ -146,6 +166,11 @@ export interface StoreCheckoutSummary {
   uber_delivery_id?: string | null
   uber_tracking_url?: string | null
   uber_delivery_status?: string | null
+  uber_dispatch_state?: 'creating' | 'dispatched' | 'dispatch_required' | null
+  uber_dispatch_required?: boolean
+  uber_dispatch_reason?: string | null
+  uber_dispatch_attempts?: number
+  uber_dispatch_uncertain?: boolean
 }
 
 export interface StoreCheckoutResponse {
