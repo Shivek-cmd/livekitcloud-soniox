@@ -27,6 +27,11 @@ def uber_direct_env() -> str:
     return raw if raw in ("sandbox", "production") else "sandbox"
 
 
+def webhook_secret() -> str:
+    """Signing key for the configured Uber Direct webhook endpoint."""
+    return (os.getenv("UBER_DIRECT_WEBHOOK_SECRET") or "").strip()
+
+
 def fee_policy() -> str:
     """v1 locked to pass-through (A). Later: per-tenant A/B/C/D."""
     return (os.getenv("UBER_DIRECT_FEE_POLICY") or "pass_through").strip().lower()

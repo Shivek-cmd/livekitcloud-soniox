@@ -6,7 +6,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from restaurant.uber_direct.address import validate_structured_address
+from restaurant.uber_direct.address import (
+    address_fingerprint,
+    validate_structured_address,
+)
 from restaurant.uber_direct.client import UberDirectError, create_delivery_quote
 from restaurant.uber_direct.config import (
     StructuredAddress,
@@ -177,6 +180,7 @@ def request_store_delivery_quote(payload: dict[str, Any]) -> QuoteResult:
                 "name": addr.name,
                 "notes": addr.notes,
             },
+            dropoff_address=addr,
         )
     except Exception:
         logger.exception("Failed to persist Uber quote %s", quote.quote_id)
@@ -210,6 +214,9 @@ def dispatch_store_delivery(summary: dict[str, Any]) -> dict[str, Any]:
         "tracking_url": None,
         "status": None,
         "error": None,
+        "dispatch_state": None,
+        "attempts": 0,
+        "reused": False,
     }
     if not store_uber_direct_enabled():
         out["error"] = "disabled"
@@ -218,47 +225,145 @@ def dispatch_store_delivery(summary: dict[str, Any]) -> dict[str, Any]:
         out["error"] = "not_delivery"
         return out
 
-    quote_id = (summary.get("uber_quote_id") or "").strip()
-    if not quote_id:
-        out["error"] = "missing_quote"
+    order_key = str(summary.get("order_id") or summary.get("session_id") or "").strip()
+    if not order_key:
+        out["error"] = "missing_order_key"
         return out
+    quote_id = (summary.get("uber_quote_id") or "").strip()
+    from restaurant.uber_direct.delivery_store import (
+        claim_order_dispatch,
+        mark_dispatch_required,
+        mark_dispatch_success,
+    )
+
+    def require_dispatch(reason: str, *, uncertain: bool = False) -> dict[str, Any]:
+        record = mark_dispatch_required(
+            order_key=order_key,
+            reason=reason,
+            uncertain_outcome=uncertain,
+        )
+        attempts = int((record or {}).get("attempts") or 0)
+        summary["uber_dispatch_state"] = "dispatch_required"
+        summary["uber_dispatch_required"] = True
+        summary["uber_dispatch_reason"] = reason
+        summary["uber_dispatch_attempts"] = attempts
+        summary["uber_dispatch_uncertain"] = bool(uncertain)
+        out.update(
+            {
+                "error": reason,
+                "dispatch_state": "dispatch_required",
+                "attempts": attempts,
+            }
+        )
+        return out
+
+    if not quote_id:
+        return require_dispatch("missing_quote")
 
     from restaurant.uber_direct.quote_store import get_valid_quote
 
     rec = get_valid_quote(quote_id)
     if rec is None:
-        out["error"] = "quote_expired_or_missing"
         logger.warning("Uber dispatch skipped — quote invalid id=%s", quote_id)
-        return out
+        return require_dispatch("quote_expired_or_missing")
 
     pickup = pickup_from_env()
     if pickup is None:
-        out["error"] = "pickup_not_configured"
-        return out
+        return require_dispatch("pickup_not_configured")
 
-    drop_raw = rec.get("dropoff") if isinstance(rec.get("dropoff"), dict) else {}
-    customer = summary.get("customer") if isinstance(summary.get("customer"), dict) else {}
-    dropoff = StructuredAddress(
+    # Dispatch from the checkout summary, never from an older quote payload.
+    drop_raw = (
+        summary.get("delivery_dropoff")
+        if isinstance(summary.get("delivery_dropoff"), dict)
+        else {}
+    )
+    customer = (
+        summary.get("customer")
+        if isinstance(summary.get("customer"), dict)
+        else {}
+    )
+    dropoff, dropoff_blockers = validate_structured_address(
         street=str(drop_raw.get("street") or ""),
         city=str(drop_raw.get("city") or ""),
         state=str(drop_raw.get("state") or ""),
         postal=str(drop_raw.get("postal") or ""),
         country=str(drop_raw.get("country") or "CA"),
-        unit=(str(drop_raw["unit"]) if drop_raw.get("unit") else None),
+        unit=str(drop_raw.get("unit") or "") or None,
         lat=_opt_float(drop_raw.get("lat")),
         lng=_opt_float(drop_raw.get("lng")),
-        phone=(
-            str(drop_raw.get("phone") or customer.get("phone") or "").strip() or None
-        ),
-        name=(
-            str(drop_raw.get("name") or customer.get("name") or "Customer").strip()
-            or "Customer"
-        ),
-        notes=(str(drop_raw["notes"]) if drop_raw.get("notes") else None),
+        phone=str(customer.get("phone") or drop_raw.get("phone") or "") or None,
+        name=str(customer.get("name") or drop_raw.get("name") or "Customer"),
+        notes=str(drop_raw.get("notes") or "") or None,
     )
-    if not dropoff.street or not dropoff.city:
-        out["error"] = "dropoff_incomplete"
+    if dropoff is None or dropoff_blockers:
+        return require_dispatch("dropoff_incomplete")
+    if rec.get("address_fingerprint") != address_fingerprint(dropoff):
+        logger.warning(
+            "Uber dispatch skipped — checkout address does not match quote id=%s",
+            quote_id,
+        )
+        return require_dispatch("quote_address_mismatch")
+
+    claim = claim_order_dispatch(
+        order_key=order_key,
+        quote_id=quote_id,
+        checkout_key=str(summary.get("checkout_key") or "") or None,
+        session_id=str(summary.get("session_id") or "") or None,
+    )
+    action = claim.get("action")
+    if action == "dispatched":
+        attempts = int(claim.get("attempts") or 1)
+        summary["uber_delivery_id"] = claim.get("delivery_id")
+        summary["uber_tracking_url"] = claim.get("tracking_url")
+        summary["uber_delivery_status"] = claim.get("status")
+        summary["uber_dispatch_state"] = "dispatched"
+        summary["uber_dispatch_required"] = False
+        summary["uber_dispatch_attempts"] = attempts
+        out.update(
+            {
+                "ok": True,
+                "delivery_id": claim.get("delivery_id"),
+                "tracking_url": claim.get("tracking_url"),
+                "status": claim.get("status"),
+                "dispatch_state": "dispatched",
+                "attempts": attempts,
+                "reused": True,
+            }
+        )
         return out
+    if action == "dispatch_required":
+        reason = str(claim.get("reason") or "dispatch_required")
+        attempts = int(claim.get("attempts") or 0)
+        summary["uber_dispatch_state"] = "dispatch_required"
+        summary["uber_dispatch_required"] = True
+        summary["uber_dispatch_reason"] = reason
+        summary["uber_dispatch_attempts"] = attempts
+        summary["uber_dispatch_uncertain"] = bool(claim.get("uncertain_outcome"))
+        out.update(
+            {
+                "error": reason,
+                "dispatch_state": "dispatch_required",
+                "attempts": attempts,
+                "reused": True,
+            }
+        )
+        return out
+    if action == "in_progress":
+        attempts = int(claim.get("attempts") or 1)
+        summary["uber_dispatch_state"] = "creating"
+        summary["uber_dispatch_required"] = False
+        summary["uber_dispatch_attempts"] = attempts
+        out.update(
+            {
+                "error": "dispatch_in_progress",
+                "dispatch_state": "creating",
+                "attempts": attempts,
+                "reused": True,
+            }
+        )
+        return out
+    if action != "claimed":
+        return require_dispatch("dispatch_claim_failed")
 
     from datetime import datetime, timedelta, timezone
 
@@ -300,18 +405,42 @@ def dispatch_store_delivery(summary: dict[str, Any]) -> dict[str, Any]:
         )
     except UberDirectError as e:
         logger.warning("Uber create delivery failed: %s", e)
-        out["error"] = str(e)
         summary["uber_dispatch_error"] = str(e)
-        return out
+        uncertain = e.status is None or e.status in (408, 429) or e.status >= 500
+        reason = (
+            "uber_create_outcome_unknown"
+            if uncertain
+            else f"uber_create_rejected:{e.status or 'unknown'}"
+        )
+        return require_dispatch(reason, uncertain=uncertain)
     except Exception as e:
         logger.exception("Uber create delivery unexpected error")
-        out["error"] = str(e)
         summary["uber_dispatch_error"] = str(e)
-        return out
+        return require_dispatch("uber_create_outcome_unknown", uncertain=True)
 
+    persisted = mark_dispatch_success(
+        order_key=order_key,
+        delivery_id=created.delivery_id,
+        status=created.status,
+        tracking_url=created.tracking_url,
+        notification_context={
+            "channel": "web_store",
+            "customer_name": str(customer.get("name") or "").strip() or None,
+            "customer_phone": str(customer.get("phone") or "").strip() or None,
+            "clover_order_id": str(summary.get("order_id") or order_key).strip(),
+            "order_type": str(summary.get("order_type") or "delivery").strip(),
+            "total": summary.get("total"),
+            "session_id": str(summary.get("session_id") or "").strip() or None,
+        },
+        raw=created.raw,
+    )
     summary["uber_delivery_id"] = created.delivery_id
     summary["uber_tracking_url"] = created.tracking_url
     summary["uber_delivery_status"] = created.status
+    summary["uber_dispatch_state"] = "dispatched"
+    summary["uber_dispatch_required"] = False
+    summary["uber_dispatch_reason"] = None
+    summary["uber_dispatch_attempts"] = int((persisted or {}).get("attempts") or 1)
     out.update(
         {
             "ok": True,
@@ -319,6 +448,8 @@ def dispatch_store_delivery(summary: dict[str, Any]) -> dict[str, Any]:
             "tracking_url": created.tracking_url,
             "status": created.status,
             "error": None,
+            "dispatch_state": "dispatched",
+            "attempts": summary["uber_dispatch_attempts"],
         }
     )
     logger.info(

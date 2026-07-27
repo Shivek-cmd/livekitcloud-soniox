@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -19,7 +20,13 @@ from restaurant.integrations.n8n_webhook import phone_to_e164
 from restaurant.menu import DELIVERY_CHARGE
 from restaurant import menu_provider
 from restaurant.orders import CartItem, OrderCart
+from restaurant.uber_direct.address import (
+    address_fingerprint,
+    structured_address_to_dict,
+    validate_structured_address,
+)
 from restaurant.uber_direct.config import (
+    StructuredAddress,
     fallback_delivery_charge,
     store_uber_direct_enabled,
 )
@@ -40,6 +47,7 @@ _PAYMENT_PREFERENCE_ALIASES = {
     "pay_now": PAYMENT_PREFERENCE_NOW,
     "pay-now": PAYMENT_PREFERENCE_NOW,
 }
+_CHECKOUT_KEY_RE = re.compile(r"^[A-Za-z0-9_-]{16,128}$")
 
 
 def parse_payment_preference(payload: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -97,6 +105,30 @@ def _item_requires_spice(clover_item_id: str) -> bool:
     return menu_provider.item_has_spice_by_id(clover_item_id)
 
 
+def _validated_delivery_dropoff(
+    payload: dict[str, Any],
+    *,
+    customer_name: str,
+    customer_phone: str,
+) -> tuple[StructuredAddress | None, list[str]]:
+    raw = payload.get("delivery_dropoff")
+    if not isinstance(raw, dict):
+        return None, ["Structured delivery address is required."]
+    return validate_structured_address(
+        street=str(raw.get("street") or ""),
+        city=str(raw.get("city") or ""),
+        state=str(raw.get("state") or ""),
+        postal=str(raw.get("postal") or ""),
+        country=str(raw.get("country") or "CA"),
+        unit=str(raw.get("unit") or "") or None,
+        lat=raw.get("lat"),
+        lng=raw.get("lng"),
+        phone=customer_phone,
+        name=customer_name,
+        notes=str(raw.get("notes") or "") or None,
+    )
+
+
 def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
     """Validate + reprice a Store checkout request. Never places an order."""
     blockers: list[str] = []
@@ -129,14 +161,32 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
         blockers.append("Enter a valid phone number.")
 
     delivery_address = (payload.get("delivery_address") or "").strip()
-    if order_type == "delivery" and len(delivery_address) < 5:
-        blockers.append("Delivery address is required.")
+    delivery_dropoff: StructuredAddress | None = None
+    if order_type == "delivery":
+        if isinstance(payload.get("delivery_dropoff"), dict):
+            delivery_dropoff, address_blockers = _validated_delivery_dropoff(
+                payload,
+                customer_name=name,
+                customer_phone=phone,
+            )
+            blockers.extend(address_blockers)
+            if delivery_dropoff is not None:
+                # This server-owned line is the only address sent to Clover/n8n.
+                delivery_address = delivery_dropoff.line()
+        elif store_uber_direct_enabled():
+            blockers.append("Structured delivery address is required.")
+        elif len(delivery_address) < 5:
+            # Transitional compatibility while Uber Direct remains disabled.
+            blockers.append("Delivery address is required.")
 
     note = (payload.get("note") or "").strip()
 
     payment_preference, pay_blocker = parse_payment_preference(payload)
     if pay_blocker:
         blockers.append(pay_blocker)
+    checkout_key = str(payload.get("checkout_key") or "").strip() or None
+    if checkout_key and not _CHECKOUT_KEY_RE.fullmatch(checkout_key):
+        blockers.append("Checkout key is invalid. Start a new checkout.")
 
     priced_lines: list[dict[str, Any]] = []
     if isinstance(raw_items, list):
@@ -208,11 +258,35 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
         else:
             raw_qid = (payload.get("uber_quote_id") or "").strip()
             rec = get_valid_quote(raw_qid) if raw_qid else None
-            if rec is not None:
+            if not raw_qid:
+                blockers.append(
+                    "Get a fresh Uber delivery quote before placing this order."
+                )
+            elif rec is None:
+                blockers.append(
+                    "The Uber delivery quote expired or is unavailable. "
+                    "Get a fresh quote."
+                )
+            elif delivery_dropoff is None:
+                blockers.append("Structured delivery address is required.")
+            elif not rec.get("address_fingerprint"):
+                blockers.append(
+                    "The Uber delivery quote cannot be verified. Get a fresh quote."
+                )
+            elif rec.get("address_fingerprint") != address_fingerprint(
+                delivery_dropoff
+            ):
+                blockers.append(
+                    "The delivery address changed after the Uber quote. "
+                    "Get a fresh quote for this address."
+                )
+            else:
                 delivery_charge = float(rec.get("fee") or delivery_charge)
                 uber_quote_id = rec.get("quote_id") or raw_qid
                 uber_quote_applied = True
-            # Fail-open: missing/expired quote → flat fallback (already set)
+
+    if blockers:
+        return StoreCheckoutResult(ok=False, status="invalid", blockers=blockers)
 
     total = round(subtotal + delivery_charge, 2)
 
@@ -221,8 +295,14 @@ def validate_store_checkout(payload: dict[str, Any]) -> StoreCheckoutResult:
         "order_type": order_type,
         "customer": {"name": name, "phone": phone},
         "delivery_address": delivery_address if order_type == "delivery" else None,
+        "delivery_dropoff": (
+            structured_address_to_dict(delivery_dropoff)
+            if order_type == "delivery" and delivery_dropoff is not None
+            else None
+        ),
         "note": note or None,
         "payment_preference": payment_preference or PAYMENT_PREFERENCE_LATER,
+        "checkout_key": checkout_key,
         # P2 will set checkout_url when preference is "now".
         "checkout_url": None,
         "checkout_session_id": None,
@@ -335,9 +415,68 @@ async def _notify_order_placed(summary: dict[str, Any], *, session_id: str) -> N
             clover_submitted=bool(summary.get("clover_submitted")),
             session_id=session_id,
             eta=summary.get("eta"),
+            delivery_fulfillment_status=summary.get("uber_dispatch_state"),
+            delivery_dispatch_reason=summary.get("uber_dispatch_reason"),
         )
     except Exception:
         logger.exception("n8n store order.placed notify raised — ignored")
+
+
+async def _notify_delivery_dispatch_outcome(
+    summary: dict[str, Any],
+    dispatched: dict[str, Any],
+    *,
+    session_id: str,
+) -> None:
+    """Emit one tracking or staff-escalation event for a fresh dispatch result."""
+    if dispatched.get("reused"):
+        return
+    try:
+        if dispatched.get("ok") and summary.get("uber_tracking_url"):
+            from restaurant.integrations.n8n_webhook import (
+                notify_delivery_dispatched,
+            )
+
+            await notify_delivery_dispatched(
+                channel=STORE_CHANNEL,
+                customer_name=summary["customer"]["name"],
+                customer_phone=summary["customer"]["phone"],
+                order_type=summary.get("order_type"),
+                clover_order_id=summary.get("order_id")
+                if summary.get("clover_submitted")
+                else None,
+                delivery_id=summary.get("uber_delivery_id"),
+                tracking_url=summary.get("uber_tracking_url"),
+                total=summary.get("total"),
+                session_id=session_id,
+            )
+        elif dispatched.get("dispatch_state") == "dispatch_required":
+            from restaurant.integrations.n8n_webhook import (
+                notify_delivery_dispatch_required,
+            )
+
+            order_key = str(
+                summary.get("order_id") or summary.get("session_id") or session_id
+            )
+            await notify_delivery_dispatch_required(
+                channel=STORE_CHANNEL,
+                customer_name=summary["customer"]["name"],
+                customer_phone=summary["customer"]["phone"],
+                clover_order_id=summary.get("order_id")
+                if summary.get("clover_submitted")
+                else None,
+                order_key=order_key,
+                reason=str(
+                    summary.get("uber_dispatch_reason") or "dispatch_required"
+                ),
+                uncertain_outcome=bool(summary.get("uber_dispatch_uncertain")),
+                attempts=int(summary.get("uber_dispatch_attempts") or 0),
+                total=summary.get("total"),
+                address=summary.get("delivery_address"),
+                session_id=session_id,
+            )
+    except Exception:
+        logger.exception("Uber dispatch outcome n8n notify raised — ignored")
 
 
 async def _start_pay_now_checkout(
@@ -445,7 +584,81 @@ async def _start_pay_now_checkout(
     return StoreCheckoutResult(ok=True, status="awaiting_payment", summary=out)
 
 
+def _checkout_result_from_dict(raw: dict[str, Any]) -> StoreCheckoutResult:
+    return StoreCheckoutResult(
+        ok=bool(raw.get("ok")),
+        status=str(raw.get("status") or "invalid"),
+        blockers=list(raw.get("blockers") or []),
+        summary=raw.get("summary") if isinstance(raw.get("summary"), dict) else None,
+    )
+
+
 async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
+    """Idempotent Store Place entrypoint.
+
+    Legacy callers without ``checkout_key`` retain the old behavior. The Store
+    UI always supplies a stable key for review and all Place retries.
+    """
+    validated = validate_store_checkout(payload)
+    if not validated.ok or not validated.summary:
+        return validated
+    checkout_key = str(validated.summary.get("checkout_key") or "").strip()
+    if not checkout_key:
+        return await _place_store_order_once(payload)
+
+    from restaurant.store_checkout_store import (
+        checkout_request_fingerprint,
+        claim_checkout,
+        complete_checkout,
+    )
+
+    fingerprint = checkout_request_fingerprint(validated.summary)
+    claim = claim_checkout(
+        checkout_key=checkout_key,
+        request_fingerprint=fingerprint,
+    )
+    action = claim.get("action")
+    if action == "replay" and isinstance(claim.get("result"), dict):
+        logger.info("STORE_CHECKOUT_REPLAY key=%s", checkout_key)
+        return _checkout_result_from_dict(claim["result"])
+    if action == "conflict":
+        return StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=[
+                "This checkout key was already used for different order details. "
+                "Start a new checkout."
+            ],
+            summary=validated.summary,
+        )
+    if action == "in_progress":
+        return StoreCheckoutResult(
+            ok=False,
+            status="processing",
+            blockers=[
+                "This order is already being processed. Please wait and check again."
+            ],
+            summary=validated.summary,
+        )
+
+    try:
+        result = await _place_store_order_once(payload)
+    except Exception:
+        logger.exception("STORE_CHECKOUT unexpected failure key=%s", checkout_key)
+        result = StoreCheckoutResult(
+            ok=False,
+            status="invalid",
+            blockers=[
+                "The order outcome needs review. Please contact the restaurant "
+                "before trying again."
+            ],
+            summary=validated.summary,
+        )
+    complete_checkout(checkout_key=checkout_key, result=result.to_dict())
+    return result
+
+
+async def _place_store_order_once(payload: dict[str, Any]) -> StoreCheckoutResult:
     """Validate, then pay-later place OR pay-now Hosted Checkout (kitchen after pay)."""
     validated = validate_store_checkout(payload)
     if not validated.ok or not validated.summary:
@@ -476,36 +689,21 @@ async def place_store_order(payload: dict[str, Any]) -> StoreCheckoutResult:
     )
     summary["session_id"] = session_id
 
-    await _notify_order_placed(summary, session_id=session_id)
-
-    # Uber Direct courier (fail-open) — after kitchen + confirm SMS.
+    # Uber Direct courier is separate from kitchen acceptance.
     try:
         from restaurant.uber_direct.service import dispatch_store_delivery
 
         dispatched = await asyncio.to_thread(dispatch_store_delivery, summary)
-        if dispatched.get("ok") and summary.get("uber_tracking_url"):
-            try:
-                from restaurant.integrations.n8n_webhook import (
-                    notify_delivery_dispatched,
-                )
-
-                await notify_delivery_dispatched(
-                    channel=STORE_CHANNEL,
-                    customer_name=summary["customer"]["name"],
-                    customer_phone=summary["customer"]["phone"],
-                    order_type=summary.get("order_type"),
-                    clover_order_id=summary.get("order_id")
-                    if summary.get("clover_submitted")
-                    else None,
-                    delivery_id=summary.get("uber_delivery_id"),
-                    tracking_url=summary.get("uber_tracking_url"),
-                    total=summary.get("total"),
-                    session_id=session_id,
-                )
-            except Exception:
-                logger.exception("delivery.dispatched n8n notify raised — ignored")
+        await _notify_delivery_dispatch_outcome(
+            summary,
+            dispatched,
+            session_id=session_id,
+        )
     except Exception:
         logger.exception("Uber dispatch raised — order still placed")
+
+    # Confirmation sees whether courier dispatch succeeded or needs staff action.
+    await _notify_order_placed(summary, session_id=session_id)
 
     logger.info(
         "STORE_ORDER_PLACED order_id=%s clover=%s total=%s pay=later tracking=%s",
@@ -571,46 +769,25 @@ async def fulfill_store_order_after_payment(
         order_id=clover_order_id,
         place_summary=placed_summary,
     )
-    await _notify_order_placed(placed_summary, session_id=session_id)
 
     try:
         from restaurant.uber_direct.service import dispatch_store_delivery
 
         dispatched = await asyncio.to_thread(dispatch_store_delivery, placed_summary)
-        if placed_summary.get("uber_tracking_url"):
-            try:
-                from restaurant.store_pay_now_store import mark_kitchen_placed
-
-                mark_kitchen_placed(
-                    checkout_session_id=sid,
-                    order_id=clover_order_id,
-                    place_summary=placed_summary,
-                )
-            except Exception:
-                logger.exception("pay-now record update after Uber dispatch failed")
-        if dispatched.get("ok") and placed_summary.get("uber_tracking_url"):
-            try:
-                from restaurant.integrations.n8n_webhook import (
-                    notify_delivery_dispatched,
-                )
-
-                await notify_delivery_dispatched(
-                    channel=STORE_CHANNEL,
-                    customer_name=placed_summary["customer"]["name"],
-                    customer_phone=placed_summary["customer"]["phone"],
-                    order_type=placed_summary.get("order_type"),
-                    clover_order_id=clover_order_id
-                    if placed_summary.get("clover_submitted")
-                    else None,
-                    delivery_id=placed_summary.get("uber_delivery_id"),
-                    tracking_url=placed_summary.get("uber_tracking_url"),
-                    total=placed_summary.get("total"),
-                    session_id=session_id,
-                )
-            except Exception:
-                logger.exception("delivery.dispatched n8n notify raised — ignored")
+        mark_kitchen_placed(
+            checkout_session_id=sid,
+            order_id=clover_order_id,
+            place_summary=placed_summary,
+        )
+        await _notify_delivery_dispatch_outcome(
+            placed_summary,
+            dispatched,
+            session_id=session_id,
+        )
     except Exception:
         logger.exception("Uber dispatch raised on pay-now fulfill — order still placed")
+
+    await _notify_order_placed(placed_summary, session_id=session_id)
 
     logger.info(
         "STORE_PAY_FULFILL placed order_id=%s checkout_session=%s tracking=%s",

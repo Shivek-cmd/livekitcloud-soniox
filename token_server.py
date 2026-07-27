@@ -1,3 +1,6 @@
+import asyncio
+import json
+import logging
 import os
 import uuid
 
@@ -12,7 +15,11 @@ from restaurant.clover.hco_webhook import (
     parse_hco_webhook_payload,
     verify_clover_signature,
 )
-from restaurant.integrations.n8n_webhook import notify_order_paid
+from restaurant.integrations.n8n_webhook import (
+    n8n_sync_enabled,
+    notify_delivery_status_changed,
+    notify_order_paid,
+)
 from restaurant.store_checkout import (
     STORE_CHANNEL,
     place_store_order,
@@ -33,10 +40,21 @@ from restaurant.uber_direct import (
     request_store_delivery_quote,
     store_uber_direct_enabled,
 )
-from restaurant.uber_direct.delivery_store import get_delivery, record_delivery_status
-from restaurant.uber_direct.webhook import parse_uber_delivery_webhook
+from restaurant.uber_direct.client import fetch_delivery_resource
+from restaurant.uber_direct.config import webhook_secret
+from restaurant.uber_direct.delivery_store import (
+    apply_delivery_webhook_event,
+    get_delivery,
+    mark_delivery_event_notification,
+)
+from restaurant.uber_direct.webhook import (
+    enrich_parsed_delivery,
+    parse_uber_delivery_webhook,
+    verify_uber_webhook_signature,
+)
 
 load_dotenv()
+logger = logging.getLogger("token-server")
 
 LIVEKIT_API_KEY = os.environ["LIVEKIT_API_KEY"]
 LIVEKIT_API_SECRET = os.environ["LIVEKIT_API_SECRET"]
@@ -63,17 +81,6 @@ class StoreCheckoutItem(BaseModel):
     modifiers: list[str] = Field(default_factory=list)
 
 
-class StoreCheckoutRequest(BaseModel):
-    items: list[StoreCheckoutItem] = Field(default_factory=list)
-    order_type: str = ""
-    customer: StoreCheckoutCustomer = Field(default_factory=StoreCheckoutCustomer)
-    delivery_address: str | None = None
-    note: str | None = None
-    payment_preference: str | None = None  # later | now (PR 090)
-    uber_quote_id: str | None = None  # PR 093 — Uber Direct quote
-    place: bool = False
-
-
 class StoreDeliveryDropoff(BaseModel):
     street: str = ""
     city: str = ""
@@ -86,6 +93,19 @@ class StoreDeliveryDropoff(BaseModel):
     phone: str | None = None
     name: str | None = None
     notes: str | None = None
+
+
+class StoreCheckoutRequest(BaseModel):
+    items: list[StoreCheckoutItem] = Field(default_factory=list)
+    order_type: str = ""
+    customer: StoreCheckoutCustomer = Field(default_factory=StoreCheckoutCustomer)
+    delivery_address: str | None = None
+    delivery_dropoff: StoreDeliveryDropoff | None = None
+    note: str | None = None
+    payment_preference: str | None = None  # later | now (PR 090)
+    checkout_key: str | None = None  # PR 097 P2 — client Place idempotency
+    uber_quote_id: str | None = None  # PR 093 — Uber Direct quote
+    place: bool = False
 
 
 class StoreDeliveryQuoteRequest(BaseModel):
@@ -154,30 +174,137 @@ async def store_delivery_quote(body: StoreDeliveryQuoteRequest, request: Request
 
 @app.post("/store/uber-direct-webhook")
 async def store_uber_direct_webhook(request: Request):
-    """Uber Direct delivery status webhook (PR 093 P5). Fail-open ACK."""
+    """Authenticate and apply an Uber delivery status event exactly once."""
     if not allow_hco_webhook(_client_key(request)):
         raise HTTPException(status_code=429, detail="Too many webhook requests")
 
     raw = await request.body()
-    try:
-        import json
+    secret = webhook_secret()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Uber webhook signing key is not configured",
+        )
+    if not verify_uber_webhook_signature(
+        raw,
+        secret=secret,
+        uber_signature=request.headers.get("x-uber-signature"),
+        postmates_signature=request.headers.get("x-postmates-signature"),
+    ):
+        raise HTTPException(status_code=401, detail="Invalid Uber signature")
 
+    try:
         payload = json.loads(raw.decode("utf-8") or "{}")
-    except Exception:
+    except (UnicodeDecodeError, json.JSONDecodeError):
         raise HTTPException(status_code=400, detail="Invalid JSON") from None
 
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="Expected JSON object")
 
     parsed = parse_uber_delivery_webhook(payload)
-    if parsed.get("delivery_id"):
-        record_delivery_status(
-            delivery_id=parsed["delivery_id"],
-            status=parsed.get("status"),
-            tracking_url=parsed.get("tracking_url"),
-            raw=payload,
+    if not parsed.get("valid"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported or malformed Uber webhook: {parsed.get('error')}",
         )
-    return {"ok": True, "handled": bool(parsed.get("delivery_id")), **parsed}
+
+    # Legacy DAPI status events intentionally carry a resource pointer rather
+    # than the full delivery. Reconcile optional tracking/cancellation fields
+    # only through the documented Uber API host/path; status application does
+    # not depend on this best-effort read.
+    if parsed.get("shape") == "dapi.status_changed" and parsed.get(
+        "resource_href"
+    ):
+        try:
+            resource = await asyncio.to_thread(
+                fetch_delivery_resource,
+                resource_href=parsed["resource_href"],
+            )
+            parsed = enrich_parsed_delivery(parsed, resource)
+        except Exception as exc:
+            logger.warning(
+                "UBER_WEBHOOK reconciliation failed event_id=%s err=%s",
+                parsed.get("event_id"),
+                exc,
+            )
+
+    result = apply_delivery_webhook_event(
+        event_id=parsed["event_id"],
+        event_time_ms=parsed["event_time_ms"],
+        delivery_id=parsed["delivery_id"],
+        status=parsed["status"],
+        shape=parsed["shape"],
+        tracking_url=parsed.get("tracking_url"),
+        external_id=parsed.get("external_id"),
+        cancellation_reason=parsed.get("cancellation_reason"),
+        undeliverable_reason=parsed.get("undeliverable_reason"),
+        undeliverable_action=parsed.get("undeliverable_action"),
+        resource_href=parsed.get("resource_href"),
+        related_deliveries=parsed.get("related_deliveries"),
+        raw=payload,
+    )
+    event_record = result.get("event") or {}
+    n8n_notified = bool(event_record.get("n8n_notified_at"))
+    should_relay = (
+        result.get("action") in {"applied", "duplicate"}
+        and bool(event_record.get("accepted"))
+        and not n8n_notified
+        and n8n_sync_enabled()
+    )
+    if should_relay:
+        delivery = result.get("delivery") or get_delivery(parsed["delivery_id"]) or {}
+        context = delivery.get("notification_context") or {}
+        try:
+            n8n_notified = await notify_delivery_status_changed(
+                uber_event_id=parsed["event_id"],
+                event_time_ms=parsed["event_time_ms"],
+                delivery_id=parsed["delivery_id"],
+                delivery_status=parsed["status"],
+                previous_status=event_record.get("previous_status"),
+                customer_milestone=event_record.get("customer_milestone"),
+                channel=context.get("channel") or "web_store",
+                customer_name=context.get("customer_name"),
+                customer_phone=context.get("customer_phone"),
+                clover_order_id=(
+                    context.get("clover_order_id")
+                    or delivery.get("order_key")
+                    or parsed.get("external_id")
+                ),
+                order_type=context.get("order_type") or "delivery",
+                tracking_url=delivery.get("tracking_url")
+                or parsed.get("tracking_url"),
+                total=context.get("total"),
+                session_id=context.get("session_id"),
+                cancellation_reason=delivery.get("cancellation_reason"),
+                undeliverable_reason=delivery.get("undeliverable_reason"),
+                undeliverable_action=delivery.get("undeliverable_action"),
+                webhook_shape=parsed.get("shape"),
+            )
+        except Exception:
+            logger.exception(
+                "UBER_WEBHOOK n8n relay raised event_id=%s",
+                parsed["event_id"],
+            )
+            n8n_notified = False
+        notification_record = mark_delivery_event_notification(
+            event_id=parsed["event_id"],
+            notified=n8n_notified,
+            error=None if n8n_notified else "n8n_delivery_status_notify_failed",
+        )
+        if not n8n_notified or notification_record is None:
+            raise HTTPException(
+                status_code=502,
+                detail="Delivery status saved; downstream notification pending retry",
+            )
+    return {
+        "ok": True,
+        "handled": result.get("action") == "applied",
+        "action": result.get("action"),
+        "delivery_id": parsed["delivery_id"],
+        "status": parsed["status"],
+        "event_id": parsed["event_id"],
+        "n8n_notified": n8n_notified,
+    }
 
 
 @app.get("/store/delivery-status")

@@ -7,10 +7,12 @@ import json
 import pytest
 
 from restaurant.uber_direct.address import (
+    address_fingerprint,
     to_uber_address_json,
     validate_structured_address,
 )
 from restaurant.uber_direct.client import (
+    CreatedDelivery,
     UberDirectError,
     clear_token_cache,
     create_delivery_quote,
@@ -22,7 +24,10 @@ from restaurant.uber_direct.config import (
     public_store_flags,
     store_uber_direct_enabled,
 )
-from restaurant.uber_direct.service import request_store_delivery_quote
+from restaurant.uber_direct.service import (
+    dispatch_store_delivery,
+    request_store_delivery_quote,
+)
 
 
 CREDS = UberDirectCredentials(
@@ -88,6 +93,40 @@ def test_to_uber_address_json_shape():
     assert parsed["zip_code"] == "T8B 1C9"
     assert parsed["country"] == "CA"
     assert "99 Wye Rd #31" in parsed["street_address"]
+
+
+def test_address_fingerprint_ignores_harmless_formatting():
+    left, left_blockers = validate_structured_address(
+        street="100 Main St",
+        city="Edmonton",
+        state="AB",
+        postal="T5J 0N3",
+        country="CA",
+        unit="Unit 2",
+    )
+    right, right_blockers = validate_structured_address(
+        street="  100   MAIN st ",
+        city="edmonton",
+        state="ab",
+        postal="t5j0n3",
+        country="canada",
+        unit="unit 2",
+    )
+    assert left_blockers == right_blockers == []
+    assert left is not None and right is not None
+    assert address_fingerprint(left) == address_fingerprint(right)
+
+
+def test_address_fingerprint_changes_with_destination():
+    assert address_fingerprint(_dropoff()) != address_fingerprint(
+        StructuredAddress(
+            street="101 Main St",
+            city="Edmonton",
+            state="AB",
+            postal="T5J 0N3",
+            country="CA",
+        )
+    )
 
 
 def test_kill_switch_off_returns_fallback(monkeypatch):
@@ -285,3 +324,145 @@ def test_public_store_flags(monkeypatch):
     assert flags["uber_direct_enabled"] is True
     assert flags["uber_direct_prep_minutes"] == 25
     assert store_uber_direct_enabled() is True
+
+
+def test_dispatch_uses_checked_out_dropoff_not_quote_copy(monkeypatch, tmp_path):
+    monkeypatch.setenv("STORE_UBER_DIRECT_ENABLED", "1")
+    monkeypatch.setenv("UBER_DIRECT_QUOTE_STORE_PATH", str(tmp_path / "quotes.json"))
+    monkeypatch.setenv(
+        "UBER_DIRECT_DELIVERY_STORE_PATH", str(tmp_path / "deliveries.json")
+    )
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_STREET", "99 Wye Rd #31")
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_CITY", "Sherwood Park")
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_STATE", "AB")
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_POSTAL", "T8B 1C9")
+    from restaurant.uber_direct.quote_store import record_quote
+
+    checkout_dropoff = _dropoff()
+    record_quote(
+        quote_id="dqt_bound",
+        fee_cents=725,
+        currency="CAD",
+        expires_at="2099-01-01T00:00:00Z",
+        # Simulate stale/tampered informational quote data. Dispatch must ignore it.
+        dropoff={
+            "street": "999 Wrong Ave",
+            "city": "Edmonton",
+            "state": "AB",
+            "postal": "T5J 0N3",
+            "country": "CA",
+        },
+        dropoff_address=checkout_dropoff,
+    )
+
+    seen = {"calls": 0}
+
+    def fake_create_delivery(**kwargs):
+        seen["calls"] += 1
+        seen["dropoff"] = kwargs["dropoff"]
+        return CreatedDelivery(
+            delivery_id="del_bound",
+            tracking_url="https://tracking.example/del_bound",
+            status="pending",
+            fee_cents=725,
+            raw={},
+        )
+
+    monkeypatch.setattr(
+        "restaurant.uber_direct.client.create_delivery",
+        fake_create_delivery,
+    )
+    summary = {
+        "order_type": "delivery",
+        "uber_quote_id": "dqt_bound",
+        "delivery_dropoff": {
+            "street": checkout_dropoff.street,
+            "city": checkout_dropoff.city,
+            "state": checkout_dropoff.state,
+            "postal": checkout_dropoff.postal,
+            "country": checkout_dropoff.country,
+        },
+        "customer": {"name": "Alex", "phone": "+15875551234"},
+        "items": [{"name": "Sweet Lassi", "qty": 1, "unit_price": 5.0}],
+        "order_id": "ORDER-1",
+    }
+    result = dispatch_store_delivery(summary)
+    assert result["ok"] is True
+    assert seen["dropoff"].street == "100 Main St"
+    assert seen["dropoff"].phone == "+15875551234"
+    from restaurant.uber_direct.delivery_store import get_delivery
+
+    delivery = get_delivery("del_bound")
+    assert delivery is not None
+    assert delivery["notification_context"] == {
+        "channel": "web_store",
+        "customer_name": "Alex",
+        "customer_phone": "+15875551234",
+        "clover_order_id": "ORDER-1",
+        "order_type": "delivery",
+        "total": None,
+        "session_id": None,
+    }
+    replay = dispatch_store_delivery(summary)
+    assert replay["ok"] is True
+    assert replay["reused"] is True
+    assert seen["calls"] == 1
+
+
+def test_dispatch_unknown_outcome_requires_staff_and_is_not_retried(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("STORE_UBER_DIRECT_ENABLED", "1")
+    monkeypatch.setenv("UBER_DIRECT_QUOTE_STORE_PATH", str(tmp_path / "quotes.json"))
+    monkeypatch.setenv(
+        "UBER_DIRECT_DELIVERY_STORE_PATH", str(tmp_path / "deliveries.json")
+    )
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_STREET", "99 Wye Rd #31")
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_CITY", "Sherwood Park")
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_STATE", "AB")
+    monkeypatch.setenv("UBER_DIRECT_PICKUP_POSTAL", "T8B 1C9")
+    from restaurant.uber_direct.delivery_store import get_order_dispatch
+    from restaurant.uber_direct.quote_store import record_quote
+
+    checkout_dropoff = _dropoff()
+    record_quote(
+        quote_id="dqt_unknown",
+        fee_cents=725,
+        currency="CAD",
+        expires_at="2099-01-01T00:00:00Z",
+        dropoff_address=checkout_dropoff,
+    )
+    calls = {"n": 0}
+
+    def timeout(**_kwargs):
+        calls["n"] += 1
+        raise UberDirectError("network timeout")
+
+    monkeypatch.setattr("restaurant.uber_direct.client.create_delivery", timeout)
+    summary = {
+        "order_type": "delivery",
+        "uber_quote_id": "dqt_unknown",
+        "delivery_dropoff": {
+            "street": checkout_dropoff.street,
+            "city": checkout_dropoff.city,
+            "state": checkout_dropoff.state,
+            "postal": checkout_dropoff.postal,
+            "country": checkout_dropoff.country,
+        },
+        "customer": {"name": "Alex", "phone": "+15875551234"},
+        "items": [{"name": "Sweet Lassi", "qty": 1, "unit_price": 5.0}],
+        "order_id": "ORDER-UNKNOWN",
+        "session_id": "web-store-unknown",
+        "checkout_key": "checkout_unknown_12345",
+    }
+    first = dispatch_store_delivery(summary)
+    second = dispatch_store_delivery(summary)
+    assert first["dispatch_state"] == "dispatch_required"
+    assert first["error"] == "uber_create_outcome_unknown"
+    assert summary["uber_dispatch_uncertain"] is True
+    assert second["reused"] is True
+    assert calls["n"] == 1
+    record = get_order_dispatch("ORDER-UNKNOWN")
+    assert record is not None
+    assert record["state"] == "dispatch_required"
+    assert record["attempts"] == 1

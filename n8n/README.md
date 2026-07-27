@@ -1,4 +1,4 @@
-# Bizbull · Voice Order → GHL
+# Bizbull · Sierra Events → GHL Router
 
 Importable n8n workflow. **No secrets in this folder.**
 
@@ -6,39 +6,37 @@ Importable n8n workflow. **No secrets in this folder.**
 
 | Status | Detail |
 |--------|--------|
-| Phase 0 / G1 / G2b | ✅ Live — contact + Voice Orders opp + confirm SMS (Opportunity Created) |
-| Store pay-now receipt | 🔶 PR 090 P4 — Sierra emits `order.paid`; n8n/GHL branch TBD — see [`ORDER_PAID_RECEIPT_SMS.md`](ORDER_PAID_RECEIPT_SMS.md) |
-| Next | **G3** abandoned / **G4** completed |
+| Existing `order.placed` | Contact + Voice Orders opp + confirm SMS (Opportunity Created) |
+| PR 097 P4 | Authenticated router, durable claims, receipt/tracking/staff-alert branches |
+| Setup | [`P4_ROUTER_SETUP.md`](P4_ROUTER_SETUP.md) |
+| Next | PR 097 P5 delivery lifecycle updates |
 
 ---
 
 ## What this workflow does
 
-1. `POST` webhook `sierra-ghl-sync` (path kept so existing URL still works)
-2. Normalizes the order payload
-3. Upserts GHL contact with **custom fields**
-4. **Removes** `order-placed`, then **re-adds** tags (labeling; SMS is **not** tag-triggered)
-5. Searches open **Abandoned** opps for same contact + `session_id`; **moves to Placed** or **creates** new Placed opp (`Voice Orders` pipeline — plan §7.2)
-6. GHL workflow (**Opportunity Created** / Voice Orders) sends confirm SMS
-7. Responds `200` (fail-open)
+1. Authenticates `POST /webhook/sierra-ghl-sync` using Header Auth.
+2. Validates `schema_version`, `event`, and stable `event_id`.
+3. Claims the event in the `sierra_event_claims` Data Table.
+4. Routes only `order.placed` into the existing contact/tag/opportunity path.
+5. Routes `order.paid` to receipt SMS only.
+6. Routes `delivery.dispatched` to tracking SMS only.
+7. Routes `delivery.dispatch_required` to the private staff-alert number only.
+8. Records unknown or invalid branch events as dead letters with no GHL write.
+9. Marks success/failure durably so duplicate events do not repeat side effects.
 
 Tags: `voice-order`, `order-placed`, plus `pickup` or `delivery`.  
 Contact source: `Voice Agent`.
 
 ---
 
-## Re-import (G2b)
+## Import / update
 
-1. In n8n, **deactivate** the old workflow (or delete it)
+1. Export a dated backup and **deactivate** the old workflow.
 2. **Import from File** → `n8n/sierra-ghl-connection-stub.json`
-3. Attach **GHL Private Integration** on **all** GHL HTTP nodes:
-   - `05 · GHL · Upsert Contact + Fields`
-   - `06 · GHL · Re-arm SMS (remove order-placed)`
-   - `07 · GHL · Apply Order Tags`
-   - `09 · GHL · Search Abandoned Opp`
-   - `11a · GHL · Move Opp → Placed`
-   - `11b · GHL · Create Opp Placed`
-4. **Save** → **Active** ON
+3. Complete every step in [`P4_ROUTER_SETUP.md`](P4_ROUTER_SETUP.md).
+4. Run duplicate, unknown-event, receipt, tracking, and staff-alert sandbox tests.
+5. **Save** → **Active** ON only after all checks pass.
 5. Production URL:
 
 `https://n8n.bizbull.ai/webhook/sierra-ghl-sync`

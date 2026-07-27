@@ -1,9 +1,9 @@
 {
-  "name": "Bizbull · Voice Order → GHL Sync",
+  "name": "Bizbull · Sierra Events → GHL Router",
   "nodes": [
     {
       "parameters": {
-        "content": "## Bizbull · Voice Order → GHL\n**G0–G2b · Production sync**\n\n**Purpose**\nReceive placed-order events → upsert GHL contact → re-arm tags (confirm SMS) → create/move **Voice Orders** opportunity to **Placed**.\n\n**Prod URL**\n`POST /webhook/sierra-ghl-sync`\n\n**Auth**\nHeader Auth on all GHL HTTP nodes:\n`Authorization: Bearer <PIT>`\n\n**Docs**\n`docs/plan/13-ghl-n8n-order-sync.md` §7.1 / §7.2 / §8",
+        "content": "## Bizbull · Sierra Events → GHL\n**PR 097 · P4 event router**\n\n**Purpose**\nAuthenticate Sierra → durable event claim → isolated order, receipt, tracking, staff-alert, or dead-letter path.\n\n**Prod URL**\n`POST /webhook/sierra-ghl-sync`\n\n**Auth**\nWebhook: Header Auth `X-Webhook-Secret`\nGHL nodes: `Authorization: Bearer <PIT>`\n\n**Setup**\n`n8n/P4_ROUTER_SETUP.md`",
         "height": 440,
         "width": 380,
         "color": 5
@@ -16,7 +16,7 @@
     },
     {
       "parameters": {
-        "content": "## 1 · INGEST\nReceive HTTPS POST.\nPath `sierra-ghl-sync` kept for stable URL.\nAlways respond via **Respond** node.",
+        "content": "## 1 · INGEST\nAuthenticated HTTPS POST.\nPath `sierra-ghl-sync` stays stable.\nMalformed events stop before GHL.",
         "height": 200,
         "width": 300,
         "color": 4
@@ -68,7 +68,7 @@
     },
     {
       "parameters": {
-        "content": "## 5 · OUT\nJSON summary for caller/logs.\nAlways **200** so Sierra never blocks on CRM.",
+        "content": "## 5 · OUT\n200 completed/duplicate\n202 dead letter\n400 malformed\n502 retryable side-effect failure\n\nSierra remains application-level fail-open.",
         "height": 180,
         "width": 260,
         "color": 6
@@ -96,6 +96,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "sierra-ghl-sync",
+        "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}
       },
@@ -106,7 +107,7 @@
       "position": [40, 40],
       "webhookId": "sierra-ghl-sync",
       "notesInFlow": true,
-      "notes": "Entry: POST order.placed (and future events). Production: /webhook/sierra-ghl-sync"
+      "notes": "Entry: authenticated Sierra events. Attach Header Auth credential with name X-Webhook-Secret and the same value as Sierra N8N_WEBHOOK_SECRET."
     },
     {
       "parameters": {
@@ -538,6 +539,18 @@
               "name": "event",
               "value": "={{ $('03 · Normalize Order Payload').item.json.event }}",
               "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "event_id",
+              "value": "={{ $('03 · Normalize Order Payload').item.json.event_id }}",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "side_effect_ok",
+              "value": true,
+              "type": "boolean"
             }
           ]
         },
@@ -553,7 +566,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const norm = $('03 · Normalize Order Payload').first().json;\nconst upsert = $('05 · GHL · Upsert Contact + Fields').first().json;\nconst resolve = $('10 · Resolve Opp Action').first().json;\nconst oppResp = $input.first().json;\nconst status = upsert.statusCode ?? upsert.status ?? null;\nconst ok =\n  status === undefined ||\n  status === null ||\n  (Number(status) >= 200 && Number(status) < 300);\n\nconst opp =\n  oppResp.opportunity ||\n  oppResp.data?.opportunity ||\n  oppResp;\nconst oppId = opp?.id || resolve.matchOpportunityId || null;\nconst oppHttp = oppResp.statusCode ?? oppResp.status ?? null;\n\nreturn {\n  json: {\n    ok: true,\n    event: norm.event,\n    event_id: norm.event_id,\n    phone: norm.phone,\n    tags: norm.tagsToAdd,\n    order_summary: norm.order_summary,\n    ghl_http_status: status,\n    ghl_ok: ok,\n    ghl_contact_id: upsert.contact?.id || null,\n    sms_rearm: 'removed order-placed then re-added',\n    opp_action: resolve.moveExisting ? 'moved_abandoned_to_placed' : resolve.createNew ? 'created_placed' : 'skipped',\n    opp_id: oppId,\n    opp_http_status: oppHttp,\n  },\n};"
+        "jsCode": "const norm = $('03 · Normalize Order Payload').first().json;\nconst upsert = $('05 · GHL · Upsert Contact + Fields').first().json;\nconst resolve = $('10 · Resolve Opp Action').first().json;\nconst oppResp = $input.first().json;\nconst status = upsert.statusCode ?? upsert.status ?? null;\nconst contactId = upsert.contact?.id || upsert.body?.contact?.id || null;\n\nconst opp =\n  oppResp.opportunity ||\n  oppResp.body?.opportunity ||\n  oppResp.data?.opportunity ||\n  oppResp;\nconst oppId = opp?.id || resolve.matchOpportunityId || null;\nconst oppHttp = oppResp.statusCode ?? oppResp.status ?? null;\nconst sideEffectOk = Boolean(contactId && oppId);\n\nreturn {\n  json: {\n    ok: sideEffectOk,\n    side_effect_ok: sideEffectOk,\n    event: norm.event,\n    event_id: norm.event_id,\n    phone: norm.phone,\n    tags: norm.tagsToAdd,\n    order_summary: norm.order_summary,\n    ghl_http_status: status,\n    ghl_ok: Boolean(contactId),\n    ghl_contact_id: contactId,\n    sms_rearm: 'removed order-placed then re-added',\n    opp_action: resolve.moveExisting ? 'moved_abandoned_to_placed' : resolve.createNew ? 'created_placed' : 'skipped',\n    opp_id: oppId,\n    opp_http_status: oppHttp,\n    error: sideEffectOk ? null : 'order_placed_ghl_side_effect_failed',\n  },\n};"
       },
       "id": "a1000000-0000-4000-8000-000000000007",
       "name": "12 · Build Success Response",
@@ -566,7 +579,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ $json }}",
+        "responseBody": "={{ $('P4 · Prepare Result').item.json }}",
         "options": {
           "responseCode": 200
         }
@@ -577,7 +590,1342 @@
       "typeVersion": 1.1,
       "position": [3260, 40],
       "notesInFlow": true,
-      "notes": "Always 200 — CRM must never block the voice path."
+      "notes": "Successful or intentionally skipped event. Sierra remains fail-open."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const webhook = $('01 · Receive Order Webhook').item.json;\nconst body = webhook.body ?? webhook;\nconst customer = body.customer || {};\nconst order = body.order || {};\nconst meta = body.meta || {};\nconst event = String(body.event || '').trim();\nconst eventId = String(body.event_id || '').trim();\nconst schemaVersion = Number(body.schema_version || 0);\nconst phone = String(customer.phone_e164 || customer.phone || '').trim();\nconst name = String(customer.name || 'Guest').trim() || 'Guest';\nconst firstName = name.split(/\\s+/)[0] || 'Guest';\nconst lastName = name.split(/\\s+/).slice(1).join(' ') || 'Customer';\nconst locationId = 'uc3GK4buCjDTCkedqWyy';\nconst cloverOrderId = String(order.clover_order_id || '').trim();\nconst receiptUrl = String(order.receipt_url || '').trim();\nconst trackingUrl = String(order.tracking_url || '').trim();\nconst uberDeliveryId = String(order.uber_delivery_id || '').trim();\nconst deliveryStatus = String(order.delivery_status || order.status || '').trim().toLowerCase();\nconst previousDeliveryStatus = String(meta.previous_status || '').trim().toLowerCase();\nconst customerMilestone = String(meta.customer_milestone || '').trim().toLowerCase();\nconst staffPhone = String($vars.BIZBULL_STAFF_ALERT_PHONE || '').trim();\nconst knownDeliveryStatuses = ['pending', 'pickup', 'shopping_completed', 'pickup_complete', 'dropoff', 'delivered', 'canceled', 'failed', 'returned'];\nconst errors = [];\nif (schemaVersion !== 1) errors.push('unsupported_schema_version');\nif (!event) errors.push('missing_event');\nif (!eventId) errors.push('missing_event_id');\n\nlet customerMessage = null;\nif (event === 'order.paid') customerMessage = `Bizbull: Thanks — your online payment is confirmed. Order ${cloverOrderId || 'confirmed'}. Receipt: ${receiptUrl}`;\nif (event === 'delivery.dispatched') customerMessage = `Bizbull: your courier has been arranged. Track your delivery: ${trackingUrl}`;\n\nconst customerUpsertBody = { locationId, phone, firstName, lastName, source: 'Sierra Store Events' };\nconst staffUpsertBody = { locationId, phone: staffPhone, firstName: 'Bizbull', lastName: 'Delivery Alert', source: 'Sierra Operations' };\nconst staffMessage = [\n  'URGENT: Bizbull delivery needs manual dispatch.',\n  `Order: ${cloverOrderId || 'unknown'}`,\n  `Customer: ${name}${phone ? ` ${phone}` : ''}`,\n  order.delivery_address ? `Address: ${order.delivery_address}` : null,\n  order.dispatch_reason ? `Reason: ${order.dispatch_reason}` : null,\n  order.dispatch_uncertain ? 'Uber outcome may be uncertain — verify before creating another courier.' : null,\n].filter(Boolean).join('\\n');\n\nconst statusCustomerMessage = customerMilestone === 'on_the_way'\n  ? `Bizbull: your order is on the way. Track your delivery: ${trackingUrl}`\n  : customerMilestone === 'delivered'\n    ? 'Bizbull: your delivery is complete. Thank you for ordering from Bizbull!'\n    : null;\nconst statusStaffMessage = [\n  'URGENT: Bizbull delivery status requires attention.',\n  `Order: ${cloverOrderId || 'unknown'}`,\n  `Uber status: ${deliveryStatus || 'unknown'}`,\n  `Customer: ${name}${phone ? ` ${phone}` : ''}`,\n  order.cancellation_reason || order.undeliverable_reason || order.failure_reason\n    ? `Reason: ${order.cancellation_reason || order.undeliverable_reason || order.failure_reason}`\n    : null,\n  trackingUrl ? `Tracking: ${trackingUrl}` : null,\n].filter(Boolean).join('\\n');\nconst statusCustomerUpsertBody = {\n  locationId,\n  phone,\n  firstName,\n  lastName,\n  source: 'Sierra Delivery Events',\n  customFields: [{ id: 'Q59Rb7F84BNHvrL1gzOJ', field_value: `delivery.${deliveryStatus}` }],\n};\nconst statusStaffUpsertBody = { locationId, phone: staffPhone, firstName: 'Bizbull', lastName: 'Delivery Alert', source: 'Sierra Operations' };\nconst statusEventValid = event === 'delivery.status_changed'\n  && knownDeliveryStatuses.includes(deliveryStatus)\n  && Boolean(cloverOrderId)\n  && Boolean(uberDeliveryId)\n  && phone.length >= 7\n  && (!['on_the_way', 'delivered', 'staff_alert'].includes(customerMilestone) || Boolean(statusCustomerMessage || customerMilestone === 'staff_alert'))\n  && (customerMilestone !== 'on_the_way' || Boolean(trackingUrl))\n  && (customerMilestone !== 'staff_alert' || staffPhone.length >= 7);\n\nreturn {\n  json: {\n    body,\n    schema_version: schemaVersion,\n    event,\n    event_id: eventId,\n    valid_envelope: errors.length === 0,\n    validation_errors: errors,\n    locationId,\n    phone,\n    name,\n    clover_order_id: cloverOrderId || null,\n    receipt_url: receiptUrl || null,\n    tracking_url: trackingUrl || null,\n    uber_delivery_id: uberDeliveryId || null,\n    delivery_status: deliveryStatus || null,\n    previous_delivery_status: previousDeliveryStatus || null,\n    customer_milestone: customerMilestone || null,\n    has_phone: phone.length >= 7,\n    paid_valid: phone.length >= 7 && Boolean(receiptUrl),\n    dispatched_valid: phone.length >= 7 && Boolean(trackingUrl),\n    status_event_valid: statusEventValid,\n    staff_alert_configured: staffPhone.length >= 7,\n    customer_message: customerMessage,\n    staff_message: staffMessage,\n    status_customer_message: statusCustomerMessage,\n    status_staff_message: statusStaffMessage,\n    customer_upsert_body: customerUpsertBody,\n    staff_upsert_body: staffUpsertBody,\n    status_customer_upsert_body: statusCustomerUpsertBody,\n    status_staff_upsert_body: statusStaffUpsertBody,\n    received_at: new Date().toISOString(),\n  },\n};"
+      },
+      "id": "p4000000-0000-4000-8000-000000000001",
+      "name": "P4 · Normalize Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, -520],
+      "notesInFlow": true,
+      "notes": "Validates the shared envelope and prepares isolated branch payloads. Staff phone comes from private n8n variable BIZBULL_STAFF_ALERT_PHONE."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-valid-envelope",
+              "leftValue": "={{ $json.valid_envelope }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000002",
+      "name": "P4 · Gate · Valid Envelope?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [520, -520],
+      "notesInFlow": true,
+      "notes": "Malformed signed events stop before deduplication or GHL."
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SIERRA_EVENTS_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "sierra_event_claims"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $('P4 · Normalize Envelope').item.json.event_id }}"
+            }
+          ]
+        },
+        "returnAll": false,
+        "limit": 1
+      },
+      "id": "p4000000-0000-4000-8000-000000000003",
+      "name": "P4 · Data Table · Find Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [760, -600],
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "notes": "Select the private sierra_event_claims Data Table after import."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Normalize Envelope').item.json;\nconst row = $input.item.json || {};\nconst sameEvent = String(row.event_id || '') === norm.event_id;\nconst terminalClaim = ['processing', 'completed', 'dead_letter'].includes(String(row.status || ''));\nreturn {\n  json: {\n    ...norm,\n    duplicate: sameEvent && terminalClaim,\n    prior_status: sameEvent ? row.status || null : null,\n  },\n};"
+      },
+      "id": "p4000000-0000-4000-8000-000000000004",
+      "name": "P4 · Resolve Duplicate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, -600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-duplicate",
+              "leftValue": "={{ $json.duplicate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000005",
+      "name": "P4 · Gate · Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1240, -600]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SIERRA_EVENTS_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "sierra_event_claims"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $('P4 · Resolve Duplicate').item.json.event_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event_id": "={{ $('P4 · Resolve Duplicate').item.json.event_id }}",
+            "event": "={{ $('P4 · Resolve Duplicate').item.json.event }}",
+            "status": "processing",
+            "received_at": "={{ $('P4 · Resolve Duplicate').item.json.received_at }}",
+            "last_error": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "event_id",
+              "displayName": "event_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event",
+              "displayName": "event",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "completed_at",
+              "displayName": "completed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_error",
+              "displayName": "last_error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000006",
+      "name": "P4 · Data Table · Claim Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [1480, -500],
+      "notesInFlow": true,
+      "notes": "Durable processing claim before any GHL side effect."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-order-placed",
+              "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.event }}",
+              "rightValue": "order.placed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000007",
+      "name": "P4 · Route · order.placed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1720, -500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-order-paid",
+              "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.event }}",
+              "rightValue": "order.paid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000008",
+      "name": "P4 · Route · order.paid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1960, -380]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-delivery-dispatched",
+              "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.event }}",
+              "rightValue": "delivery.dispatched",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000009",
+      "name": "P4 · Route · delivery.dispatched?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2200, -260]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-dispatch-required",
+              "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.event }}",
+              "rightValue": "delivery.dispatch_required",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000010",
+      "name": "P4 · Route · dispatch_required?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2440, -140]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-paid-valid",
+              "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.paid_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000011",
+      "name": "P4 · Gate · Valid Paid Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2200, -720]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('P4 · Resolve Duplicate').item.json.customer_upsert_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000012",
+      "name": "P4 · Paid · Upsert Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, -800]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SMS', contactId: $json.contact?.id, message: $('P4 · Resolve Duplicate').item.json.customer_message, status: 'delivered' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000013",
+      "name": "P4 · Paid · Send Receipt SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2680, -800]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst upsert = $('P4 · Paid · Upsert Customer').item.json;\nconst sms = $input.item.json;\nconst contactId = upsert.contact?.id || upsert.body?.contact?.id || null;\nconst messageId = sms.messageId || sms.body?.messageId || null;\nconst ok = Boolean(contactId && messageId);\nreturn { json: { ok, side_effect_ok: ok, event: norm.event, event_id: norm.event_id, action: 'receipt_sms', ghl_contact_id: contactId, message_id: messageId, error: ok ? null : 'receipt_sms_failed' } };"
+      },
+      "id": "p4000000-0000-4000-8000-000000000014",
+      "name": "P4 · Paid · Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2920, -800]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-dispatched-valid",
+              "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.dispatched_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000015",
+      "name": "P4 · Gate · Valid Dispatched Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2440, -560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('P4 · Resolve Duplicate').item.json.customer_upsert_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000016",
+      "name": "P4 · Dispatched · Upsert Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2680, -560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SMS', contactId: $json.contact?.id, message: $('P4 · Resolve Duplicate').item.json.customer_message, status: 'delivered' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000017",
+      "name": "P4 · Dispatched · Send Tracking SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2920, -560]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst upsert = $('P4 · Dispatched · Upsert Customer').item.json;\nconst sms = $input.item.json;\nconst contactId = upsert.contact?.id || upsert.body?.contact?.id || null;\nconst messageId = sms.messageId || sms.body?.messageId || null;\nconst ok = Boolean(contactId && messageId);\nreturn { json: { ok, side_effect_ok: ok, event: norm.event, event_id: norm.event_id, action: 'tracking_sms', ghl_contact_id: contactId, message_id: messageId, error: ok ? null : 'tracking_sms_failed' } };"
+      },
+      "id": "p4000000-0000-4000-8000-000000000018",
+      "name": "P4 · Dispatched · Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3160, -560]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-staff-configured",
+              "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.staff_alert_configured }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000019",
+      "name": "P4 · Gate · Staff Alert Configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2680, -320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('P4 · Resolve Duplicate').item.json.staff_upsert_body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000020",
+      "name": "P4 · Alert · Upsert Staff Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2920, -320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SMS', contactId: $json.contact?.id, message: $('P4 · Resolve Duplicate').item.json.staff_message, status: 'delivered' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000021",
+      "name": "P4 · Alert · Send Staff SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3160, -320]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst upsert = $('P4 · Alert · Upsert Staff Contact').item.json;\nconst sms = $input.item.json;\nconst contactId = upsert.contact?.id || upsert.body?.contact?.id || null;\nconst messageId = sms.messageId || sms.body?.messageId || null;\nconst ok = Boolean(contactId && messageId);\nreturn { json: { ok, side_effect_ok: ok, event: norm.event, event_id: norm.event_id, action: 'staff_dispatch_alert', ghl_contact_id: contactId, message_id: messageId, error: ok ? null : 'staff_dispatch_alert_failed' } };"
+      },
+      "id": "p4000000-0000-4000-8000-000000000022",
+      "name": "P4 · Alert · Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3400, -320]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nlet reason = 'unsupported_event';\nif (norm.event === 'order.paid') reason = 'invalid_paid_event';\nif (norm.event === 'delivery.dispatched') reason = 'invalid_dispatched_event';\nif (norm.event === 'delivery.status_changed') reason = 'invalid_delivery_status_event';\nreturn { json: { ok: true, side_effect_ok: true, dead_letter: true, event: norm.event, event_id: norm.event_id, action: 'dead_letter', error: reason } };"
+      },
+      "id": "p4000000-0000-4000-8000-000000000023",
+      "name": "P4 · Build Dead Letter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2920, -80],
+      "notesInFlow": true,
+      "notes": "Unknown or invalid branch payload. No GHL side effect."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nreturn { json: { ok: false, side_effect_ok: false, event: norm.event, event_id: norm.event_id, action: 'staff_dispatch_alert', error: 'staff_alert_phone_not_configured' } };"
+      },
+      "id": "p4000000-0000-4000-8000-000000000024",
+      "name": "P4 · Build Staff Config Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2920, -200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const input = $input.item.json || {};\nconst norm = $('P4 · Resolve Duplicate').item.json;\nreturn { json: { ...input, event: input.event || norm.event, event_id: input.event_id || norm.event_id, side_effect_ok: input.side_effect_ok === true } };"
+      },
+      "id": "p4000000-0000-4000-8000-000000000025",
+      "name": "P4 · Prepare Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3640, -560]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p4-side-effect-ok",
+              "leftValue": "={{ $json.side_effect_ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000026",
+      "name": "P4 · Gate · Side Effect OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3880, -560]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SIERRA_EVENTS_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "sierra_event_claims"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $('P4 · Prepare Result').item.json.event_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "completed",
+            "completed_at": "={{ $now.toISO() }}",
+            "last_error": ""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "completed_at",
+              "displayName": "completed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_error",
+              "displayName": "last_error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000027",
+      "name": "P4 · Data Table · Complete Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [4120, -640]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SIERRA_EVENTS_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "sierra_event_claims"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $('P4 · Prepare Result').item.json.event_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "failed",
+            "completed_at": "={{ $now.toISO() }}",
+            "last_error": "={{ $('P4 · Prepare Result').item.json.error || 'side_effect_failed' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "completed_at",
+              "displayName": "completed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_error",
+              "displayName": "last_error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000028",
+      "name": "P4 · Data Table · Fail Event",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [4120, -480]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SIERRA_EVENTS_TABLE_ID",
+          "mode": "id",
+          "cachedResultName": "sierra_event_claims"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_id",
+              "keyValue": "={{ $('P4 · Build Dead Letter').item.json.event_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "dead_letter",
+            "completed_at": "={{ $now.toISO() }}",
+            "last_error": "={{ $('P4 · Build Dead Letter').item.json.error }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "completed_at",
+              "displayName": "completed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_error",
+              "displayName": "last_error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "p4000000-0000-4000-8000-000000000029",
+      "name": "P4 · Data Table · Dead Letter",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [3400, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, duplicate: true, event: $json.event, event_id: $json.event_id, prior_status: $json.prior_status } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000030",
+      "name": "P4 · Respond · Duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1480, -720]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, error: 'invalid_envelope', details: $json.validation_errors } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000031",
+      "name": "P4 · Respond · Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [760, -400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, dead_letter: true, event: $('P4 · Build Dead Letter').item.json.event, event_id: $('P4 · Build Dead Letter').item.json.event_id, reason: $('P4 · Build Dead Letter').item.json.error } }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000032",
+      "name": "P4 · Respond · Dead Letter",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3640, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('P4 · Prepare Result').item.json }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "p4000000-0000-4000-8000-000000000033",
+      "name": "P4 · Respond · Side Effect Failed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [4360, -480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"id": "p5-route-status", "leftValue": "={{ $json.event }}", "rightValue": "delivery.status_changed", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p5000000-0000-4000-8000-000000000001",
+      "name": "P5 · Route · delivery.status_changed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2920, 160],
+      "notesInFlow": true,
+      "notes": "P5 lifecycle branch. Unknown events continue to the existing dead-letter path."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [
+            {"id": "p5-valid-status", "leftValue": "={{ $json.status_event_valid }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true", "singleValue": true}},
+            {"id": "p5-valid-milestone", "leftValue": "={{ ['', 'on_the_way', 'delivered', 'staff_alert'].includes($json.customer_milestone || '') }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true", "singleValue": true}}
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p5000000-0000-4000-8000-000000000002",
+      "name": "P5 · Gate · Valid Status Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3160, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Version", "value": "2021-07-28"}, {"name": "Content-Type", "value": "application/json"}, {"name": "Accept", "value": "application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('P4 · Resolve Duplicate').item.json.status_customer_upsert_body) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "p5000000-0000-4000-8000-000000000003",
+      "name": "P5 · Status · Upsert Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3400, 80],
+      "notesInFlow": true,
+      "notes": "Writes delivery.<status> to the existing GHL order-status custom field for every accepted lifecycle event."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"id": "p5-delivered", "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.customer_milestone }}", "rightValue": "delivered", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p5000000-0000-4000-8000-000000000004",
+      "name": "P5 · Gate · Delivered?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3640, 80]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/opportunities/search?location_id={{ $('P4 · Resolve Duplicate').item.json.locationId }}&contact_id={{ $('P5 · Status · Upsert Customer').item.json.contact?.id || $('P5 · Status · Upsert Customer').item.json.body?.contact?.id }}&pipeline_id=wCQVOwUah69xD6KHFrsi&status=open&limit=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Version", "value": "2021-07-28"}, {"name": "Accept", "value": "application/json"}]},
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "p5000000-0000-4000-8000-000000000005",
+      "name": "P5 · Delivered · Search Opportunity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3880, -120],
+      "notesInFlow": true,
+      "notes": "Searches only at delivered. The next node matches the Clover order ID before any stage move."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst search = $input.item.json;\nconst list = search.opportunities || search.body?.opportunities || search.data?.opportunities || [];\nconst orderFieldId = 'mqQZGfXEM7Ixbfcpbeej';\nlet matchOpportunityId = null;\nfor (const opp of Array.isArray(list) ? list : []) {\n  const fields = opp.customFields || opp.customField || [];\n  const hit = fields.find((field) => (field.id === orderFieldId || field.fieldKey === 'opportunity.clover_order_id' || field.key === 'opportunity.clover_order_id') && String(field.fieldValue ?? field.fieldValueString ?? field.field_value ?? field.value ?? '') === String(norm.clover_order_id));\n  if (hit) { matchOpportunityId = opp.id || null; break; }\n}\nreturn { json: { ...norm, matchOpportunityId, searchCount: Array.isArray(list) ? list.length : 0 } };"
+      },
+      "id": "p5000000-0000-4000-8000-000000000006",
+      "name": "P5 · Delivered · Resolve Opportunity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4120, -120]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"id": "p5-opp-found", "leftValue": "={{ Boolean($json.matchOpportunityId) }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true", "singleValue": true}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p5000000-0000-4000-8000-000000000007",
+      "name": "P5 · Gate · Opportunity Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [4360, -120]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{ $json.matchOpportunityId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Version", "value": "2021-07-28"}, {"name": "Content-Type", "value": "application/json"}, {"name": "Accept", "value": "application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pipelineId: 'wCQVOwUah69xD6KHFrsi', pipelineStageId: '35a07d49-4524-48b3-96c7-a89b679618f7', status: 'open' }) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "p5000000-0000-4000-8000-000000000008",
+      "name": "P5 · Delivered · Move Opportunity → Completed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4600, -200],
+      "notesInFlow": true,
+      "notes": "Only the delivered branch moves the matching order opportunity to Completed."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Version", "value": "v3"}, {"name": "Content-Type", "value": "application/json"}, {"name": "Accept", "value": "application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SMS', contactId: $('P5 · Status · Upsert Customer').item.json.contact?.id || $('P5 · Status · Upsert Customer').item.json.body?.contact?.id, message: $('P4 · Resolve Duplicate').item.json.status_customer_message, status: 'delivered' }) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "p5000000-0000-4000-8000-000000000009",
+      "name": "P5 · Delivered · Send Customer SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4840, -200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst upsert = $('P5 · Status · Upsert Customer').item.json;\nconst moved = $('P5 · Delivered · Move Opportunity → Completed').item.json;\nconst sms = $input.item.json;\nconst contactId = upsert.contact?.id || upsert.body?.contact?.id || null;\nconst opportunityId = moved.opportunity?.id || moved.body?.opportunity?.id || null;\nconst messageId = sms.messageId || sms.body?.messageId || null;\nconst ok = Boolean(contactId && opportunityId && messageId);\nreturn { json: { ok, side_effect_ok: ok, event: norm.event, event_id: norm.event_id, action: 'delivery_completed', delivery_status: norm.delivery_status, ghl_contact_id: contactId, opportunity_id: opportunityId, message_id: messageId, error: ok ? null : 'delivery_completed_side_effect_failed' } };"
+      },
+      "id": "p5000000-0000-4000-8000-000000000010",
+      "name": "P5 · Delivered · Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5080, -200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nreturn { json: { ok: false, side_effect_ok: false, event: norm.event, event_id: norm.event_id, action: 'delivery_completed', delivery_status: norm.delivery_status, error: 'delivery_opportunity_not_found' } };"
+      },
+      "id": "p5000000-0000-4000-8000-000000000011",
+      "name": "P5 · Delivered · Build Missing Opportunity Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4600, -40],
+      "notesInFlow": true,
+      "notes": "Fails the durable claim so Sierra can retry; never moves an unmatched opportunity."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"id": "p5-on-way", "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.customer_milestone }}", "rightValue": "on_the_way", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p5000000-0000-4000-8000-000000000012",
+      "name": "P5 · Gate · On The Way?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3880, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Version", "value": "v3"}, {"name": "Content-Type", "value": "application/json"}, {"name": "Accept", "value": "application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SMS', contactId: $('P5 · Status · Upsert Customer').item.json.contact?.id || $('P5 · Status · Upsert Customer').item.json.body?.contact?.id, message: $('P4 · Resolve Duplicate').item.json.status_customer_message, status: 'delivered' }) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "p5000000-0000-4000-8000-000000000013",
+      "name": "P5 · On Way · Send Customer SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4120, 80]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst upsert = $('P5 · Status · Upsert Customer').item.json;\nconst sms = $input.item.json;\nconst contactId = upsert.contact?.id || upsert.body?.contact?.id || null;\nconst messageId = sms.messageId || sms.body?.messageId || null;\nconst ok = Boolean(contactId && messageId);\nreturn { json: { ok, side_effect_ok: ok, event: norm.event, event_id: norm.event_id, action: 'delivery_on_the_way_sms', delivery_status: norm.delivery_status, ghl_contact_id: contactId, message_id: messageId, error: ok ? null : 'delivery_on_the_way_sms_failed' } };"
+      },
+      "id": "p5000000-0000-4000-8000-000000000014",
+      "name": "P5 · On Way · Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4360, 80]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2},
+          "conditions": [{"id": "p5-staff-alert", "leftValue": "={{ $('P4 · Resolve Duplicate').item.json.customer_milestone }}", "rightValue": "staff_alert", "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "p5000000-0000-4000-8000-000000000015",
+      "name": "P5 · Gate · Staff Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [4120, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Version", "value": "2021-07-28"}, {"name": "Content-Type", "value": "application/json"}, {"name": "Accept", "value": "application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('P4 · Resolve Duplicate').item.json.status_staff_upsert_body) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "p5000000-0000-4000-8000-000000000016",
+      "name": "P5 · Issue · Upsert Staff Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4360, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Version", "value": "v3"}, {"name": "Content-Type", "value": "application/json"}, {"name": "Accept", "value": "application/json"}]},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SMS', contactId: $json.contact?.id || $json.body?.contact?.id, message: $('P4 · Resolve Duplicate').item.json.status_staff_message, status: 'delivered' }) }}",
+        "options": {"response": {"response": {"neverError": true}}}
+      },
+      "id": "p5000000-0000-4000-8000-000000000017",
+      "name": "P5 · Issue · Send Staff SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4600, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst customerUpsert = $('P5 · Status · Upsert Customer').item.json;\nconst staffUpsert = $('P5 · Issue · Upsert Staff Contact').item.json;\nconst sms = $input.item.json;\nconst customerId = customerUpsert.contact?.id || customerUpsert.body?.contact?.id || null;\nconst staffId = staffUpsert.contact?.id || staffUpsert.body?.contact?.id || null;\nconst messageId = sms.messageId || sms.body?.messageId || null;\nconst ok = Boolean(customerId && staffId && messageId);\nreturn { json: { ok, side_effect_ok: ok, event: norm.event, event_id: norm.event_id, action: 'delivery_issue_staff_alert', delivery_status: norm.delivery_status, ghl_contact_id: customerId, staff_contact_id: staffId, message_id: messageId, error: ok ? null : 'delivery_issue_staff_alert_failed' } };"
+      },
+      "id": "p5000000-0000-4000-8000-000000000018",
+      "name": "P5 · Issue · Build Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4840, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const norm = $('P4 · Resolve Duplicate').item.json;\nconst upsert = $('P5 · Status · Upsert Customer').item.json;\nconst contactId = upsert.contact?.id || upsert.body?.contact?.id || null;\nconst ok = Boolean(contactId);\nreturn { json: { ok, side_effect_ok: ok, event: norm.event, event_id: norm.event_id, action: 'delivery_status_crm_update', delivery_status: norm.delivery_status, ghl_contact_id: contactId, error: ok ? null : 'delivery_status_crm_update_failed' } };"
+      },
+      "id": "p5000000-0000-4000-8000-000000000019",
+      "name": "P5 · Status · Build CRM Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4360, 360]
     }
   ],
   "connections": {
@@ -585,7 +1933,7 @@
       "main": [
         [
           {
-            "node": "02 · Set GHL Location ID",
+            "node": "P4 · Normalize Envelope",
             "type": "main",
             "index": 0
           }
@@ -742,7 +2090,7 @@
       "main": [
         [
           {
-            "node": "13 · Respond 200 OK",
+            "node": "P4 · Prepare Result",
             "type": "main",
             "index": 0
           }
@@ -753,12 +2101,476 @@
       "main": [
         [
           {
+            "node": "P4 · Prepare Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Normalize Envelope": {
+      "main": [
+        [
+          {
+            "node": "P4 · Gate · Valid Envelope?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Gate · Valid Envelope?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Data Table · Find Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Respond · Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Data Table · Find Event": {
+      "main": [
+        [
+          {
+            "node": "P4 · Resolve Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Resolve Duplicate": {
+      "main": [
+        [
+          {
+            "node": "P4 · Gate · Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Gate · Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Respond · Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Data Table · Claim Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Data Table · Claim Event": {
+      "main": [
+        [
+          {
+            "node": "P4 · Route · order.placed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Route · order.placed?": {
+      "main": [
+        [
+          {
+            "node": "02 · Set GHL Location ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Route · order.paid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Route · order.paid?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Gate · Valid Paid Event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Route · delivery.dispatched?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Gate · Valid Paid Event?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Paid · Upsert Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Build Dead Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Paid · Upsert Customer": {
+      "main": [
+        [
+          {
+            "node": "P4 · Paid · Send Receipt SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Paid · Send Receipt SMS": {
+      "main": [
+        [
+          {
+            "node": "P4 · Paid · Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Paid · Build Result": {
+      "main": [
+        [
+          {
+            "node": "P4 · Prepare Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Route · delivery.dispatched?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Gate · Valid Dispatched Event?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Route · dispatch_required?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Gate · Valid Dispatched Event?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Dispatched · Upsert Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Build Dead Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Dispatched · Upsert Customer": {
+      "main": [
+        [
+          {
+            "node": "P4 · Dispatched · Send Tracking SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Dispatched · Send Tracking SMS": {
+      "main": [
+        [
+          {
+            "node": "P4 · Dispatched · Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Dispatched · Build Result": {
+      "main": [
+        [
+          {
+            "node": "P4 · Prepare Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Route · dispatch_required?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Gate · Staff Alert Configured?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P5 · Route · delivery.status_changed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Gate · Staff Alert Configured?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Alert · Upsert Staff Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Build Staff Config Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Alert · Upsert Staff Contact": {
+      "main": [
+        [
+          {
+            "node": "P4 · Alert · Send Staff SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Alert · Send Staff SMS": {
+      "main": [
+        [
+          {
+            "node": "P4 · Alert · Build Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Alert · Build Result": {
+      "main": [
+        [
+          {
+            "node": "P4 · Prepare Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Build Staff Config Failure": {
+      "main": [
+        [
+          {
+            "node": "P4 · Prepare Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Build Dead Letter": {
+      "main": [
+        [
+          {
+            "node": "P4 · Data Table · Dead Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Data Table · Dead Letter": {
+      "main": [
+        [
+          {
+            "node": "P4 · Respond · Dead Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Prepare Result": {
+      "main": [
+        [
+          {
+            "node": "P4 · Gate · Side Effect OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Gate · Side Effect OK?": {
+      "main": [
+        [
+          {
+            "node": "P4 · Data Table · Complete Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "P4 · Data Table · Fail Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P4 · Data Table · Complete Event": {
+      "main": [
+        [
+          {
             "node": "13 · Respond 200 OK",
             "type": "main",
             "index": 0
           }
         ]
       ]
+    },
+    "P4 · Data Table · Fail Event": {
+      "main": [
+        [
+          {
+            "node": "P4 · Respond · Side Effect Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "P5 · Route · delivery.status_changed?": {
+      "main": [
+        [{"node": "P5 · Gate · Valid Status Event?", "type": "main", "index": 0}],
+        [{"node": "P4 · Build Dead Letter", "type": "main", "index": 0}]
+      ]
+    },
+    "P5 · Gate · Valid Status Event?": {
+      "main": [
+        [{"node": "P5 · Status · Upsert Customer", "type": "main", "index": 0}],
+        [{"node": "P4 · Build Dead Letter", "type": "main", "index": 0}]
+      ]
+    },
+    "P5 · Status · Upsert Customer": {
+      "main": [[{"node": "P5 · Gate · Delivered?", "type": "main", "index": 0}]]
+    },
+    "P5 · Gate · Delivered?": {
+      "main": [
+        [{"node": "P5 · Delivered · Search Opportunity", "type": "main", "index": 0}],
+        [{"node": "P5 · Gate · On The Way?", "type": "main", "index": 0}]
+      ]
+    },
+    "P5 · Delivered · Search Opportunity": {
+      "main": [[{"node": "P5 · Delivered · Resolve Opportunity", "type": "main", "index": 0}]]
+    },
+    "P5 · Delivered · Resolve Opportunity": {
+      "main": [[{"node": "P5 · Gate · Opportunity Found?", "type": "main", "index": 0}]]
+    },
+    "P5 · Gate · Opportunity Found?": {
+      "main": [
+        [{"node": "P5 · Delivered · Move Opportunity → Completed", "type": "main", "index": 0}],
+        [{"node": "P5 · Delivered · Build Missing Opportunity Failure", "type": "main", "index": 0}]
+      ]
+    },
+    "P5 · Delivered · Move Opportunity → Completed": {
+      "main": [[{"node": "P5 · Delivered · Send Customer SMS", "type": "main", "index": 0}]]
+    },
+    "P5 · Delivered · Send Customer SMS": {
+      "main": [[{"node": "P5 · Delivered · Build Result", "type": "main", "index": 0}]]
+    },
+    "P5 · Delivered · Build Result": {
+      "main": [[{"node": "P4 · Prepare Result", "type": "main", "index": 0}]]
+    },
+    "P5 · Delivered · Build Missing Opportunity Failure": {
+      "main": [[{"node": "P4 · Prepare Result", "type": "main", "index": 0}]]
+    },
+    "P5 · Gate · On The Way?": {
+      "main": [
+        [{"node": "P5 · On Way · Send Customer SMS", "type": "main", "index": 0}],
+        [{"node": "P5 · Gate · Staff Alert?", "type": "main", "index": 0}]
+      ]
+    },
+    "P5 · On Way · Send Customer SMS": {
+      "main": [[{"node": "P5 · On Way · Build Result", "type": "main", "index": 0}]]
+    },
+    "P5 · On Way · Build Result": {
+      "main": [[{"node": "P4 · Prepare Result", "type": "main", "index": 0}]]
+    },
+    "P5 · Gate · Staff Alert?": {
+      "main": [
+        [{"node": "P5 · Issue · Upsert Staff Contact", "type": "main", "index": 0}],
+        [{"node": "P5 · Status · Build CRM Result", "type": "main", "index": 0}]
+      ]
+    },
+    "P5 · Issue · Upsert Staff Contact": {
+      "main": [[{"node": "P5 · Issue · Send Staff SMS", "type": "main", "index": 0}]]
+    },
+    "P5 · Issue · Send Staff SMS": {
+      "main": [[{"node": "P5 · Issue · Build Result", "type": "main", "index": 0}]]
+    },
+    "P5 · Issue · Build Result": {
+      "main": [[{"node": "P4 · Prepare Result", "type": "main", "index": 0}]]
+    },
+    "P5 · Status · Build CRM Result": {
+      "main": [[{"node": "P4 · Prepare Result", "type": "main", "index": 0}]]
     }
   },
   "active": false,

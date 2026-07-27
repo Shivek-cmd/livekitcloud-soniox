@@ -314,3 +314,89 @@ def create_delivery(
         fee_cents=int(fee) if fee is not None else None,
         raw=payload,
     )
+
+
+def fetch_delivery(
+    *,
+    delivery_id: str,
+    creds: UberDirectCredentials | None = None,
+) -> dict[str, Any]:
+    """GET a modern Direct delivery by its known Uber delivery ID."""
+    creds = creds or credentials_from_env()
+    if creds is None:
+        raise UberDirectError("Uber Direct credentials are not configured")
+    did = (delivery_id or "").strip()
+    if not did:
+        raise UberDirectError("delivery_id is required")
+    token = fetch_access_token(creds)
+    encoded_id = urllib.parse.quote(did, safe="")
+    url = (
+        f"{API_BASE}/v1/customers/{creds.customer_id}/deliveries/{encoded_id}"
+    )
+    try:
+        payload = _request_json(
+            "GET",
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    except UberDirectError as e:
+        if e.status != 401:
+            raise
+        token = fetch_access_token(creds, force_refresh=True)
+        payload = _request_json(
+            "GET",
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    if not isinstance(payload, dict):
+        raise UberDirectError(
+            "Uber Get Delivery response was not an object",
+            payload=payload,
+        )
+    return payload
+
+
+def fetch_delivery_resource(
+    *,
+    resource_href: str,
+    creds: UberDirectCredentials | None = None,
+) -> dict[str, Any]:
+    """Fetch a legacy DAPI resource URL after strict Uber-host validation."""
+    creds = creds or credentials_from_env()
+    if creds is None:
+        raise UberDirectError("Uber Direct credentials are not configured")
+    parsed = urllib.parse.urlsplit((resource_href or "").strip())
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != "api.uber.com"
+        or not parsed.path.startswith("/v1/eats/deliveries/orders/")
+        or parsed.username
+        or parsed.password
+        or parsed.port not in (None, 443)
+    ):
+        raise UberDirectError("Unsafe Uber resource_href")
+    safe_url = urllib.parse.urlunsplit(
+        ("https", "api.uber.com", parsed.path, parsed.query, "")
+    )
+    token = fetch_access_token(creds)
+    try:
+        payload = _request_json(
+            "GET",
+            safe_url,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    except UberDirectError as e:
+        if e.status != 401:
+            raise
+        token = fetch_access_token(creds, force_refresh=True)
+        payload = _request_json(
+            "GET",
+            safe_url,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    if not isinstance(payload, dict):
+        raise UberDirectError(
+            "Uber Get Delivery resource response was not an object",
+            payload=payload,
+        )
+    return payload

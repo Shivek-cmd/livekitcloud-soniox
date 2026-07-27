@@ -1,4 +1,8 @@
-# n8n · order.paid (Store receipt SMS) — PR 090 P4
+# n8n · order.paid receipt SMS
+
+> Implemented in the PR 097 P4 router. See
+> [`P4_ROUTER_SETUP.md`](P4_ROUTER_SETUP.md) for import, credentials, durable
+> deduplication, and sandbox verification.
 
 Sierra POSTs `order.paid` to the **same** webhook URL as `order.placed`
 (`N8N_WEBHOOK_ORDERS_URL` / `https://n8n.bizbull.ai/webhook/sierra-ghl-sync`).
@@ -35,7 +39,7 @@ pay-now after Clover Hosted Checkout succeeds.
 }
 ```
 
-## What to add in n8n / GHL (manual — you do this)
+## Implemented n8n / GHL behavior
 
 1. In the existing `sierra-ghl-sync` workflow, branch on `event`:
    - `order.placed` → current path (contact + opp + confirm SMS)
