@@ -2,6 +2,7 @@
 (The VERBATIM readback formatter moved to READBACK FACTS in PR 078; the
 log-only speech guard was deleted in PR 079.)"""
 
+from restaurant.agent import replies
 from restaurant.agent.language import CustomerLanguage
 from restaurant.agent.replies import (
     format_order_status,
@@ -87,3 +88,24 @@ def test_reprompt_pool_lines_never_treated_as_caller_speech():
 
     for line in (*_ECHO_RECOVERY_POOL, *_BACKGROUND_REPEAT_POOL):
         assert is_likely_phone_echo(line, [line], intent=None)
+
+
+# ── AMBIGUOUS refusals must not be spoken as denials ─────────────────────────
+# An AMBIGUOUS refusal means the dish IS on the menu and we only failed to pin
+# down which one. Speaking "we don't have it" there denies a real menu item.
+
+
+def test_ambiguous_correction_does_not_deny_the_dish():
+    for lang in ("en", "hi", "pa", None):
+        line = replies.false_add_correction_phrase(
+            "fish", language=lang, ambiguous=True
+        )
+        assert "don't have" not in line
+        assert "नहीं है" not in line
+        assert "ਨਹੀਂ ਹੈ" not in line
+        assert "fish" in line
+
+
+def test_not_found_correction_still_denies():
+    line = replies.false_add_correction_phrase("sushi", language="en")
+    assert "don't have" in line

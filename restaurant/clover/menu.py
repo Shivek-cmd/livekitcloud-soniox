@@ -428,7 +428,8 @@ class MenuCache:
         q = _norm(category_query)
         out = [
             i for i in self._items
-            if q in _norm(i.category_name) or q in _norm(i.category_name).replace("&", "and")
+            if i.available
+            and (q in _norm(i.category_name) or q in _norm(i.category_name).replace("&", "and"))
         ]
         return out[:limit]
 

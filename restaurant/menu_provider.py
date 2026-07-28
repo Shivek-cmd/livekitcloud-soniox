@@ -122,7 +122,7 @@ _AVAIL_QUERY_PREFIX_RE = re.compile(
 _AVAIL_QUERY_SUFFIX_RE = re.compile(
     r"\s*(?:"
     r"available|availability|ਅਵੇਲੇਬਲ|"
-    r"hai gi|haigi|ਹੈਗੀ|ਹੈਗੀ ਹੈ|"
+    r"hai gi|haigi|haiga|hainge|ਹੈਗੀ|ਹੈਗੀ ਹੈ|ਹੈਗਾ|ਹੈਗੇ ਨੇ|ਹੈਗੇ|"
     r"hai\??|hain\??|ਹੈ\??|ਹਨ\??|"
     r"kya hai|ਕੀ ਹੈ"
     r")\s*$",
@@ -198,7 +198,7 @@ _AVAIL_Q_RE = indic_word_re(
     r"hai gi|haigi|haigi hai|"
     r"mil.?ega|mil.?egi|kya hai|kya hain|"
     r"ਕੀ\s*ਹੈ|ਕੀ\s*ਹਨ|ਮਿਲੇਗ|ਚ\s*ਕੀ\s*ਹੈ|"
-    r"ਹੈਗੀ|ਅਵੇਲੇਬਲ"
+    r"ਹੈਗੀ|ਹੈਗਾ|ਹੈਗੇ|ਅਵੇਲੇਬਲ"
 )
 
 _ADD_IMPERATIVE_Q_RE = re.compile(
@@ -237,7 +237,7 @@ def _is_availability_question(text: str) -> bool:
         return False
     if _AVAIL_Q_RE.search(t):
         return True
-    if re.search(r"ਹੈਗੀ|ਅਵੇਲੇਬਲ", t):
+    if re.search(r"ਹੈਗੀ|ਹੈਗਾ|ਹੈਗੇ|ਅਵੇਲੇਬਲ", t):
         return True
     return False
 
@@ -292,15 +292,71 @@ def find_item(name: str) -> dict | None:
     return item
 
 
+def _named_dish_hit(query: str):
+    """The one specific dish this browse query names, or None if it's vague.
+
+    Uses the same confidence matcher as check_item/add_item (which abstains
+    below DEFAULT_MIN_CONF), so browse can never disagree with them about
+    whether a dish exists.
+    """
+    cache = _get_cache()
+    if not cache:
+        return None
+    # Scored against the WHOLE utterance (minus availability phrasing and
+    # stopwords), never against cherry-picked n-grams the way
+    # extract_dish_query does: "ਕੀ ਕੁਝ ਮਿਲ ਜਾਏਗਾ?" has a sub-phrase that
+    # matches Malai Kofta outright, and pinning that would turn a browse into
+    # a dish the caller never named. Requiring the dish to explain the whole
+    # query keeps vague questions vague.
+    candidate = _strip_availability_phrases(query) or (query or "").strip()
+    if not candidate:
+        return None
+    scored = cache.find_item_scored(candidate)
+    if not scored:
+        return None
+    hit, _confidence = scored
+    return hit if hit.available else None
+
+
+def _as_options(hits) -> list[dict]:
+    return [{"name": h.name, "voice_line": h.voice_line} for h in hits]
+
+
+def _pin_named(named, options: list[dict]) -> list[dict]:
+    """Put the dish the caller actually named at the front of the browse list.
+
+    Without this, a query like "gajar halwa" resolves to the Desserts CATEGORY
+    and the dish itself lands 3rd — outside the two options we speak — so the
+    model concludes we don't have it (live-call bug: Student Combo, Veg Lunch
+    Thali, Gajar Halwa all denied while sitting in the menu).
+    """
+    if named is None:
+        return options
+    head = {"name": named.name, "voice_line": named.voice_line, "named": True}
+    return [head] + [o for o in options if o["name"] != named.name]
+
+
 def browse_menu_options(query: str, *, limit: int = 6) -> tuple[str, list[dict]]:
     """Resolve browse query to (topic_label, [{name, voice_line}, ...])."""
-    from restaurant.menu_browse import BrowseKind, resolve_browse_target
+    from restaurant.menu_browse import (
+        BrowseKind,
+        is_bare_browse_term,
+        resolve_browse_target,
+    )
 
     cache = _get_cache()
     if not cache:
         return query, []
 
+    # A query naming one specific dish must never be outranked by its own
+    # category — resolve it first and pin it to the front of every branch below.
     target = resolve_browse_target(query)
+    named = _named_dish_hit(query)
+    if named is not None and is_bare_browse_term(query, target):
+        # "combo"/"thali"/"rice" alone is a browse, not a request for the one
+        # dish whose name happens to contain that word.
+        named = None
+
     hits: list = []
 
     if target is not None:
@@ -316,28 +372,63 @@ def browse_menu_options(query: str, *, limit: int = 6) -> tuple[str, list[dict]]
 
         label = target.label
         if hits:
-            return label, [{"name": h.name, "voice_line": h.voice_line} for h in hits]
+            return label, _pin_named(named, _as_options(hits))
 
     disamb = disambiguation_options(query, limit=limit)
     if len(disamb) >= 2:
-        return query, disamb
+        return query, _pin_named(named, disamb)
 
     search_hits = cache.search(query, limit=limit)
     available = [h for h in search_hits if h.available]
     if available:
-        return query, [{"name": h.name, "voice_line": h.voice_line} for h in available]
+        return query, _pin_named(named, _as_options(available))
 
-    return query, []
+    return query, _pin_named(named, [])
 
 
 def _format_browse_tool_result(query: str, options: list[dict], *, spoken_limit: int = 2) -> str:
     if not options:
-        return f"No menu items found matching '{query}'."
+        # Deliberately NOT an absolute negative: browse only covers categories
+        # and keywords, so a miss here is not evidence the dish is absent. The
+        # prompt tells the model to relay tool results verbatim, so this string
+        # must not hand it a denial. ("No menu items found" is kept as the
+        # prefix — search_menu keys its menu_search_empty analytics event off it.)
+        return (
+            f"No menu items found matching '{query}' by keyword. This is NOT proof "
+            "the dish is unavailable — browse only covers categories and keywords. "
+            "If the customer named a specific dish, call check_menu_item(name) "
+            "before you say anything. Never tell the customer we don't have it "
+            "on the strength of this result alone."
+        )
+
+    if options[0].get("named"):
+        # The caller asked about ONE dish and we have it — answer that first.
+        first = options[0]
+        head = f'{first["name"]} → say "{first["voice_line"]}"'
+        siblings = options[1 : max(spoken_limit, 2)]
+        if not siblings:
+            return (
+                f"YES — '{query}' IS on the menu: {head}. Confirm we have it in "
+                "one sentence, then ask quantity if needed."
+            )
+        sib = " | ".join(f'{o["name"]} → say "{o["voice_line"]}"' for o in siblings)
+        return (
+            f"YES — '{query}' IS on the menu: {head}. Also available: {sib}. "
+            "Say we HAVE it first — never deny it — then you may mention ONE of "
+            "the others in the same casual sentence. Never a numbered list."
+        )
+
     spoken = options[:spoken_limit]
     lines = [f'{o["name"]} → say "{o["voice_line"]}"' for o in spoken]
     joined = " | ".join(lines)
-    extra = len(options) - len(spoken)
-    tail = f" (+{extra} more — INTERNAL, offer if they want more)" if extra > 0 else ""
+    rest = options[len(spoken) :]
+    tail = (
+        " (INTERNAL, also on the menu — offer if they want more: "
+        + ", ".join(o["name"] for o in rest)
+        + ")"
+        if rest
+        else ""
+    )
     if len(spoken) == 1:
         return (
             f"One match for '{query}': {joined}. "
@@ -402,17 +493,23 @@ def required_modifier_groups(clover_item_id: str) -> list[str]:
     return [g.name for g in hit.modifier_groups if g.min_required and g.min_required > 0]
 
 
+_NOT_ON_MENU_GUIDE = (
+    "Do NOT flatly deny it and move on — say you're not finding it, ask them to "
+    "say the dish again, or offer something close from search_menu."
+)
+
+
 def check_item(name: str) -> str:
     resolved = extract_dish_query(name) or name
     cache = _get_cache()
     if cache:
         hit = cache.find_item(resolved)
         if not hit:
-            return f"'{name}' is not on our menu."
+            return f"'{name}' is not on our menu. {_NOT_ON_MENU_GUIDE}"
         return hit.describe()
     item = static_find_item(resolved)
     if not item:
-        return f"'{name}' is not on our menu."
+        return f"'{name}' is not on our menu. {_NOT_ON_MENU_GUIDE}"
     veg = "Vegetarian" if item["veg"] else "Non-vegetarian"
     return (
         f"{item['name']} ({item['punjabi']}) — {veg}\n"

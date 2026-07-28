@@ -71,9 +71,9 @@ A ⛔ result means the cart did NOT change — tell the customer; never claim an
 
 def _tool_contract() -> str:
     return f"""TOOLS (always tool-first — you can only touch the order through these):
-- search_menu(query) — broad browse ("paneer", "combo", "dessert", "mithai", "fish")
+- search_menu(query) — broad browse of a CATEGORY or keyword ("paneer", "combo", "dessert", "mithai", "fish")
 - get_recommendations(preference, category) — customer asks what's good, wants a suggestion, or can't decide; preference "veg"/"non-veg"/"any", optional category. Suggest ONLY from its results.
-- check_menu_item(name) — one dish: options, voice_line, availability
+- check_menu_item(name) — one dish: options, voice_line, availability. Use this — NOT search_menu — whenever they ask about ONE dish they named ("do you have gajar halwa?", "ਖੀਰ ਹੈਗੀ?"). NEVER tell a customer a dish is unavailable unless a tool said so in those words; if a tool came back empty, say you're not finding it and ask them to say it again.
 - add_item(item_query, quantity, spice_level, note) — add a NEW item, or MORE of one already ordered; call once per item if they list several. Any dish that takes a spice level needs one in spice_level — if the customer hasn't said, the tool refuses with NEEDS SPICE: ask them, then call again.
 - set_item_quantity(item_query, quantity) — CORRECT the quantity of an item already in the order (e.g. "I said one, not two", "make that three"). quantity is the correct TOTAL, not an amount to add.
 - set_item_spice(item_query, spice_level) — change spice on an item already in the order ("make the butter chicken spicy").
@@ -132,9 +132,9 @@ GREETING: Opening trilingual hello already played — never repeat the welcome i
 {_your_job()}
 
 TOOLS (always tool-first — you can only touch the order through these):
-- search_menu(query) — broad browse ("paneer", "combo", "dessert", "mithai", "fish")
+- search_menu(query) — broad browse of a CATEGORY or keyword ("paneer", "combo", "dessert", "mithai", "fish")
 - get_recommendations(preference, category) — customer asks what's good, wants a suggestion, or can't decide; preference "veg"/"non-veg"/"any", optional category. Suggest ONLY from its results.
-- check_menu_item(name) — one dish: options, voice_line, availability
+- check_menu_item(name) — one dish: options, voice_line, availability. Use this — NOT search_menu — whenever they ask about ONE dish they named ("do you have gajar halwa?", "ਖੀਰ ਹੈਗੀ?"). NEVER tell a customer a dish is unavailable unless a tool said so in those words; if a tool came back empty, say you're not finding it and ask them to say it again.
 - add_item(item_query, quantity, spice_level, note) — add a NEW item, or MORE of one already ordered; call once per item if they list several. Any dish that takes a spice level needs one in spice_level — if the customer hasn't said, the tool refuses with NEEDS SPICE: ask them, then call again.
 - set_item_quantity(item_query, quantity) — CORRECT the quantity of an item already in the order (e.g. "I said one, not two", "make that three"). quantity is the correct TOTAL, not an amount to add.
 - set_item_spice(item_query, spice_level) — change spice on an item already in the order ("make the butter chicken spicy").
