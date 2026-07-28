@@ -52,7 +52,7 @@ from restaurant.agent.additional_requests_verify import (
 )
 from restaurant.agent.language import update_preferred_language
 from restaurant.agent.persona import PERSONA_REANCHOR_LINE, persona_reanchor_turns
-from restaurant.agent.prompt import build_system_prompt, prompt_style
+from restaurant.agent.prompt import build_system_prompt
 from restaurant.agent.readback_verify import (
     contact_verify_mode,
     readback_verify_mode,
@@ -512,7 +512,7 @@ class RestaurantAgent(Agent):
         # one-line reminder next to the generation point — the system prompt
         # loses gravity as context grows and one robotic turn breeds more.
         n = persona_reanchor_turns()
-        if n > 0 and prompt_style() == "persona" and self.state.real_user_turns % n == 0:
+        if n > 0 and self.state.real_user_turns % n == 0:
             try:
                 turn_ctx.add_message(role="system", content=PERSONA_REANCHOR_LINE)
             except Exception:
