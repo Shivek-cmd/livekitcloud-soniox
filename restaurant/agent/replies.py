@@ -81,11 +81,32 @@ def format_order_status(cart: "OrderCart", *, include_price: bool = True) -> str
     return f"So far you have — {items_str}."
 
 
-def false_add_correction_phrase(query: str, language: str | None = None) -> str:
+def false_add_correction_phrase(
+    query: str, language: str | None = None, *, ambiguous: bool = False
+) -> str:
     """PR 081 strict mode — one warm corrective line after the LLM falsely
     claimed a refused item was added. Punjabi default for pa/mixed/unknown,
-    like order_placed_goodbye."""
+    like order_placed_goodbye.
+
+    When the refusal was AMBIGUOUS the dish IS on the menu and we only failed
+    to pin down which one — denying it would be a lie, so ask instead.
+    """
     lang = str(getattr(language, "value", language) or "").lower()
+    if ambiguous:
+        if lang == "en":
+            return (
+                f"Sorry — I couldn't tell exactly which {query} you meant, so "
+                "nothing's been added yet. Which one would you like?"
+            )
+        if lang == "hi":
+            return (
+                f"माफ़ कीजिए जी — मैं समझ नहीं पाई कि {query} में से कौन सा चाहिए, "
+                "इसलिए अभी कुछ add नहीं हुआ। कौन सा लूँ जी?"
+            )
+        return (
+            f"ਮਾਫ਼ ਕਰਨਾ ਜੀ — ਮੈਂ ਸਮਝ ਨਹੀਂ ਸਕੀ ਕਿ {query} ਵਿੱਚੋਂ ਕਿਹੜਾ ਚਾਹੀਦਾ, "
+            "ਇਸ ਲਈ ਹਾਲੇ ਕੁਝ add ਨਹੀਂ ਹੋਇਆ। ਕਿਹੜਾ ਲਾ ਦਿਆਂ ਜੀ?"
+        )
     if lang == "en":
         return (
             f"Oh — sorry, I actually don't have {query} on our menu, so "

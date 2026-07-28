@@ -25,6 +25,9 @@ class BrowseTarget:
     category_name: str | None = None
     item_names: tuple[str, ...] = ()
     name_contains: str | None = None
+    # The alias that won, so callers can tell a bare category term ("combo")
+    # from a specific dish that merely contains one ("student combo").
+    matched_alias: str = ""
 
 
 # Clover category_name values in menu_cache_bizbull.json
@@ -46,6 +49,9 @@ _CATEGORY_SPECS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
             "ਮਿਠਾਈ",
             "ਡੈਜ਼ਰਟ",
             "ਡੈਸਰਟ",
+            # Soniox transcribes the same word with either vowel.
+            "ਡਿਜ਼ਰਟ",
+            "ਡਿਸਰਟ",
             "मिठाई",
             "मिठा",
             "मिठाई",
@@ -187,6 +193,21 @@ _FAMILY_SPECS: tuple[tuple[str, tuple[str, ...], tuple[str, ...] | None, str | N
         None,
         "chicken",
     ),
+    # Without these, "naan" and "lassi" fall through to their whole CATEGORY
+    # (Breads & Rice / Drinks) and the caller asking for naan gets offered
+    # Saffron Rice.
+    (
+        "naan",
+        ("naan", "nan", "ਨਾਨ", "नान"),
+        None,
+        "naan",
+    ),
+    (
+        "lassi",
+        ("lassi", "ਲੱਸੀ", "ਲਸੀ", "लस्सी"),
+        None,
+        "lassi",
+    ),
 )
 
 
@@ -209,6 +230,22 @@ def _alias_in_query(alias: str, query_norm: str) -> bool:
     return False
 
 
+def is_bare_browse_term(query: str, target: BrowseTarget | None) -> bool:
+    """True when the query is *only* the category/family term ("combo",
+    "thali", "rice") and names no dish beyond it.
+
+    "student combo" and "rice pudding" are NOT bare — they carry a word the
+    alias doesn't cover, so they name a specific dish and must resolve to it
+    rather than degrade into a category listing.
+    """
+    if target is None or not target.matched_alias:
+        return False
+    from restaurant.clover.match import content_tokens
+
+    leftover = set(content_tokens(query)) - set(content_tokens(target.matched_alias))
+    return not leftover
+
+
 def resolve_browse_target(query: str) -> BrowseTarget | None:
     """Map a browse query to a category, dish family, or None."""
     q = normalize(query or "")
@@ -227,6 +264,7 @@ def resolve_browse_target(query: str) -> BrowseTarget | None:
                         kind=BrowseKind.CATEGORY,
                         label=key,
                         category_name=category_name,
+                        matched_alias=alias,
                     )
 
     for key, aliases, item_names, name_contains in _FAMILY_SPECS:
@@ -240,6 +278,7 @@ def resolve_browse_target(query: str) -> BrowseTarget | None:
                         label=key,
                         item_names=tuple(item_names or ()),
                         name_contains=name_contains,
+                        matched_alias=alias,
                     )
 
     return best

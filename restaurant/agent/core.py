@@ -130,6 +130,14 @@ _SPICE_NOTE_RE = re.compile(r"\b(?:extra[ -]spicy|medium|mild|spicy)\b", re.I)
 # never mistake a refusal for a success; the prompt keys off the ⛔ marker.
 _REFUSAL_PREFIX = "⛔ NOTHING WAS ADDED — CART UNCHANGED. "
 
+# Why the add was refused. Only NOT_FOUND/UNAVAILABLE may ever be spoken as
+# "we don't have that" — AMBIGUOUS means the dish IS on the menu and we just
+# need the customer to pick which one.
+_REFUSAL_EMPTY = "empty"
+_REFUSAL_UNAVAILABLE = "unavailable"
+_REFUSAL_AMBIGUOUS = "ambiguous"
+_REFUSAL_NOT_FOUND = "not_found"
+
 _ORDER_COMPLETE_SENTINEL = (
     "ORDER COMPLETE — goodbye already spoken to the customer. "
     "Do NOT generate any assistant speech."
@@ -209,7 +217,8 @@ class RestaurantAgent(Agent):
         self._background_reprompt_done = False
         self._hangup_started = False
         self._goodbye_spoken = False
-        self._false_add_reanchor: str | None = None
+        self._false_add_reanchor: tuple[str, str] | None = None
+        self._refusal_kinds: dict[str, str] = {}
         self.menu_source = menu_provider.menu_source_label()
         logger.info(f"Menu source: {self.menu_source} | phone={is_phone}")
 
@@ -313,8 +322,10 @@ class RestaurantAgent(Agent):
                             "false_add_claim", {"query": hit, "spoken": line}
                         )
                     if mode == "strict":
-                        self._false_add_reanchor = hit
-                        self._schedule_false_add_correction(hit)
+                        kind = self._refusal_kinds.get(hit, _REFUSAL_NOT_FOUND)
+                        self._false_add_reanchor = (hit, kind)
+                        self._schedule_false_add_correction(hit, kind)
+            self._refusal_kinds.clear()
 
     # ── phone reprompts (carried over from the old agent) ───────────────────
 
@@ -351,12 +362,12 @@ class RestaurantAgent(Agent):
             if not greeting_only:
                 self._echo_recovery_scheduled = False
 
-    def _schedule_false_add_correction(self, query: str) -> None:
+    def _schedule_false_add_correction(self, query: str, kind: str) -> None:
         if not self._session:
             return
-        asyncio.create_task(self._false_add_correction(query))
+        asyncio.create_task(self._false_add_correction(query, kind))
 
-    async def _false_add_correction(self, query: str) -> None:
+    async def _false_add_correction(self, query: str, kind: str) -> None:
         """PR 081 strict mode — speak a correction after the LLM claimed a
         refused item was added; the customer must not believe it's on the
         order. Waits out the in-flight false claim first."""
@@ -368,7 +379,9 @@ class RestaurantAgent(Agent):
                 break
             await asyncio.sleep(0.5)
         line = false_add_correction_phrase(
-            query, language=self.state.preferred_language.value
+            query,
+            language=self.state.preferred_language.value,
+            ambiguous=(kind == _REFUSAL_AMBIGUOUS),
         )
         try:
             await self._session.say(line, allow_interruptions=True)
@@ -447,6 +460,7 @@ class RestaurantAgent(Agent):
         self.state.real_user_turns += 1
         # PR 081 — a new user turn stales any unchecked add refusal.
         self.state.pending_add_refusals.clear()
+        self._refusal_kinds.clear()
         self._greeting_echo_pending_reprompt = False
         self._echo_recovery_scheduled = False
         self._background_ignore_streak = 0
@@ -507,15 +521,26 @@ class RestaurantAgent(Agent):
         # PR 081 — after a strict false-add-claim hit, re-anchor the LLM so it
         # stops believing the refused item is in the cart.
         if self._false_add_reanchor:
-            query = self._false_add_reanchor
+            query, kind = self._false_add_reanchor
             self._false_add_reanchor = None
+            if kind == _REFUSAL_AMBIGUOUS:
+                # The dish EXISTS — we only failed to pin down which one. Saying
+                # "not available" here denies a real menu item.
+                tail = (
+                    "Never claim it was added, and do NOT say we don't have it — "
+                    "we could not tell WHICH dish they meant. Ask them which one."
+                )
+            else:
+                tail = (
+                    "Never claim it was added; tell the customer it isn't "
+                    "available and help them pick something else."
+                )
             try:
                 turn_ctx.add_message(
                     role="system",
                     content=(
                         f"RE-ANCHOR: '{query}' was NOT added — the cart is "
-                        "unchanged. Never claim it was added; tell the customer "
-                        "it isn't available and help them pick something else."
+                        f"unchanged. {tail}"
                     ),
                 )
             except Exception:
@@ -526,17 +551,23 @@ class RestaurantAgent(Agent):
 
     # ── resolution choke point ───────────────────────────────────────────────
 
-    def _resolve_menu_item(self, query: str) -> tuple[dict | None, str | None]:
-        """(resolved item, None) or (None, refusal text for the LLM).
+    def _resolve_menu_item(
+        self, query: str
+    ) -> tuple[dict | None, str | None, str | None]:
+        """(resolved item, None, None) or (None, refusal text, refusal kind).
 
         The single path every item mutation goes through — the LLM can never
         write a name/price into the cart; adds use the resolved payload only.
+
+        The refusal KIND matters downstream: AMBIGUOUS means the dish exists
+        and we only need to know which one, so it must never be spoken as
+        "we don't have that" (live-call bug — real dishes got denied).
         """
         raw = (query or "").strip()
         if not raw:
             return None, _REFUSAL_PREFIX + (
                 "Empty item name — ask the customer what they'd like."
-            )
+            ), _REFUSAL_EMPTY
 
         lookup = menu_provider.extract_dish_query(raw) or raw
         item = menu_provider.find_item(lookup)
@@ -545,9 +576,9 @@ class RestaurantAgent(Agent):
             return None, _REFUSAL_PREFIX + (
                 f"'{item['name']}' is not available right now — apologize and "
                 "offer an alternative. Do NOT add it."
-            )
+            ), _REFUSAL_UNAVAILABLE
         if item and float(item.get("match_confidence", 1.0)) >= _ADD_CLARIFY_MIN_CONF:
-            return item, None
+            return item, None, None
 
         options = menu_provider.disambiguation_options(lookup, limit=3)
         if len(options) >= 2:
@@ -556,21 +587,21 @@ class RestaurantAgent(Agent):
                 f"AMBIGUOUS — '{raw}' could mean: {names}. Ask the customer "
                 "which ONE they want — do NOT add anything yet, do NOT pick "
                 "for them, and do NOT add more than one dish."
-            )
+            ), _REFUSAL_AMBIGUOUS
         if len(options) == 1:
             return None, _REFUSAL_PREFIX + (
                 f'AMBIGUOUS — did the customer mean "{options[0]["name"]}"? '
                 "Confirm with a quick yes/no before adding — do NOT add yet."
-            )
+            ), _REFUSAL_AMBIGUOUS
         if item:  # matched but below the clarify gate, with no other options
             return None, _REFUSAL_PREFIX + (
                 f'AMBIGUOUS — did the customer mean "{item["name"]}"? '
                 "Confirm with a quick yes/no before adding — do NOT add yet."
-            )
+            ), _REFUSAL_AMBIGUOUS
         return None, _REFUSAL_PREFIX + (
             f"NOT FOUND — '{raw}' is not on our menu. Never invent a dish; "
             "ask the customer to clarify or call search_menu."
-        )
+        ), _REFUSAL_NOT_FOUND
 
     def _find_cart_line(self, item_query: str) -> CartItem | None:
         q = (item_query or "").strip().lower()
@@ -583,7 +614,7 @@ class RestaurantAgent(Agent):
                 q in item.voice_line.lower() or item.voice_line.lower() in q
             ):
                 return item
-        resolved, _refusal = self._resolve_menu_item(item_query)
+        resolved, _refusal, _kind = self._resolve_menu_item(item_query)
         if resolved:
             for item in self.cart.items:
                 if item.name.lower() == resolved["name"].lower():
@@ -622,10 +653,11 @@ class RestaurantAgent(Agent):
             quantity = 1
         quantity = min(quantity, _MAX_ITEM_QTY)
 
-        item, refusal = self._resolve_menu_item(item_query)
+        item, refusal, kind = self._resolve_menu_item(item_query)
         if refusal:
             # PR 081 — arm the false-add-claim check for the next spoken line.
             self.state.pending_add_refusals.append(item_query)
+            self._refusal_kinds[item_query] = kind or _REFUSAL_NOT_FOUND
             self._record_tool("add_item", {"item_query": item_query}, refusal)
             return refusal
         assert item is not None
@@ -1418,8 +1450,10 @@ class RestaurantAgent(Agent):
         self,
         query: Annotated[str, "Search term e.g. 'paneer', 'combo', 'biryani', 'vegetarian starters'"],
     ) -> str:
-        """Search the menu by keyword or category. Use for 'what X dishes do
-        you have?' questions."""
+        """Browse the menu by category or keyword — 'what X dishes do you
+        have?'. For a question about ONE dish the customer named ('do you have
+        gajar halwa?'), use check_menu_item instead. Never tell the customer a
+        dish is unavailable unless a tool said so."""
         result = menu_provider.search_menu(query)
         self._record_tool("search_menu", {"query": query}, result)
         if self._recorder is not None and "no menu items found" in result.lower():

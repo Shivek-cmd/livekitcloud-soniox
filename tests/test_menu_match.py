@@ -303,3 +303,11 @@ def test_match_index_direct():
     m = idx.best("ਇੱਕ ਮਿਕਸ ਪਕੌੜਾ ਪਲੈਟਰ ਕਰ ਦਿਓ")
     assert m is not None and m.key == "A"
     assert idx.best("ਕਰ ਦਿਓ") is None
+
+
+def test_masculine_availability_words_are_stopwords():
+    # Only the feminine ਹੈਗੀ was listed, so "ਗਾਜਰ ਹਲਵਾ ਹੈਗਾ?" carried ਹੈਗਾ as a
+    # scored content token and diluted the match confidence.
+    assert content_tokens("ਗਾਜਰ ਹਲਵਾ ਹੈਗਾ?") == ["ਗਾਜਰ", "ਹਲਵਾ"]
+    assert content_tokens("ਖੀਰ ਹੈਗੀ?") == ["ਖੀਰ"]
+    assert content_tokens("ਪਲੇਟਰ ਹੈਗੇ ਨੇ?") == ["ਪਲੇਟਰ"]

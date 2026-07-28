@@ -880,7 +880,8 @@ def test_strict_hit_sets_reanchor_and_is_one_shot(agent, monkeypatch):
     agent.bind_recorder(recorder)
     run(agent.add_item("chana masala"))
     agent.note_agent_speech(_FALSE_CLAIM)
-    assert agent._false_add_reanchor == "chana masala"
+    assert agent._false_add_reanchor is not None
+    assert agent._false_add_reanchor[0] == "chana masala"
     assert agent.state.pending_add_refusals == []
     assert any(e[0] == "false_add_claim" for e in recorder.events)
     # One-shot: a later line is no longer checked.
@@ -925,7 +926,7 @@ def test_new_user_turn_disarms_and_injects_reanchor(agent):
         text_content = "Can I get a butter chicken instead?"
 
     run(agent.add_item("chana masala"))
-    agent._false_add_reanchor = "chana masala"
+    agent._false_add_reanchor = ("chana masala", "not_found")
     ctx = _TurnCtx()
     run(agent.on_user_turn_completed(ctx, _Msg()))
     assert agent.state.pending_add_refusals == []
@@ -968,3 +969,42 @@ def test_get_recommendations_empty_records_event(agent, monkeypatch):
     result = run(agent.get_recommendations(preference="veg", category="pizza"))
     assert "No matching items" in result
     assert ("recommendations_empty", {"preference": "veg", "category": "pizza"}) in recorder.events
+
+
+# ── AMBIGUOUS refusals never re-anchor as "unavailable" ──────────────────────
+
+
+def _reanchor_text(agent, reanchor):
+    class _TurnCtx:
+        def __init__(self):
+            self.messages = []
+
+        def add_message(self, *, role, content):
+            self.messages.append((role, content))
+
+    class _Msg:
+        text_content = "the second one"
+
+    agent._false_add_reanchor = reanchor
+    ctx = _TurnCtx()
+    run(agent.on_user_turn_completed(ctx, _Msg()))
+    return next(c for r, c in ctx.messages if r == "system" and "RE-ANCHOR" in c)
+
+
+def test_ambiguous_reanchor_does_not_claim_unavailable(agent):
+    text = _reanchor_text(agent, ("fish", "ambiguous"))
+    assert "isn't available" not in text
+    assert "which one" in text.lower()
+
+
+def test_not_found_reanchor_still_says_unavailable(agent):
+    text = _reanchor_text(agent, ("sushi", "not_found"))
+    assert "isn't available" in text
+
+
+def test_ambiguous_refusal_records_ambiguous_kind(agent, monkeypatch):
+    low = dict(_MENU["garlic naan"], match_confidence=0.6)
+    monkeypatch.setattr(menu_provider, "find_item", lambda name: dict(low))
+    monkeypatch.setattr(menu_provider, "disambiguation_options", lambda name, limit=3: [])
+    run(agent.add_item("garlic non"))
+    assert agent._refusal_kinds["garlic non"] == "ambiguous"
