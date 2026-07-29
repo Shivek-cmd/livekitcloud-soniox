@@ -1032,6 +1032,7 @@ class RestaurantAgent(Agent):
 
         facts: list[str] = []
         guides: list[str] = []
+        saved_change = False
 
         if name and name.strip():
             clean = parse_customer_name(name) or name.strip()
@@ -1070,6 +1071,7 @@ class RestaurantAgent(Agent):
             self.cart.customer_name = clean
             # A new/changed name has not been confirmed by the customer yet.
             invalidate_contact_readback(self.state)
+            saved_change = True
             facts.append(f'NAME SAVED: "{clean}".')
             guides.append(
                 "acknowledge briefly in the customer's language and move on — "
@@ -1097,6 +1099,7 @@ class RestaurantAgent(Agent):
                 self.cart.customer_phone = new_buffer
                 self.state.phone_buffer = ""
                 invalidate_contact_readback(self.state)
+                saved_change = True
                 spoken = format_phone_spoken(new_buffer)
                 facts.append(f"PHONE SAVED: {spoken}.")
                 guides.append(
@@ -1126,6 +1129,20 @@ class RestaurantAgent(Agent):
             return "Nothing to save — pass name and/or phone."
 
         await self._sync_web()
+        if saved_change and self._contact_edit_needs_respeak():
+            # PR 102 — an EDIT after the readback step re-speaks from code. The
+            # LLM was told to call get_contact_readback again and mostly does,
+            # but "mostly" is not a guarantee on the money path: when it didn't,
+            # the corrected number was never spoken and confirm_contact's
+            # give-up valve confirmed details the customer had never heard.
+            self.state.contact_spoken.clear()
+            if await self._speak_contact_readback():
+                guides = [
+                    "the customer has just heard the corrected details read "
+                    "back in your voice — do NOT say the name or the number "
+                    "yourself. Only ask whether they are right now; on yes, "
+                    "call confirm_contact."
+                ]
         result = format_contact_reply(facts, guides)
         self._record_tool(
             "set_customer_contact", {"name": name, "phone": phone}, result
@@ -1152,6 +1169,19 @@ class RestaurantAgent(Agent):
         self._record_tool("get_contact_readback", {}, result)
         return result
 
+    def _contact_edit_needs_respeak(self) -> bool:
+        """True when a just-saved name/phone change is an EDIT to details the
+        customer has already had read back — the case that must re-speak
+        without waiting for the LLM to call get_contact_readback again. Before
+        the first readback this is False, so ordinary collection doesn't
+        double up with the getter the flow calls next."""
+        return (
+            self.state.contact_readback_ever_spoken
+            and not self.state.contact_confirmed
+            and bool(self.cart.customer_name)
+            and bool(self.cart.customer_phone)
+        )
+
     async def _speak_contact_readback(self) -> bool:
         """PR 101 — speak the name-spelling and phone digits from code, so the
         script they are spoken in can't depend on the LLM. Returns False when
@@ -1177,6 +1207,7 @@ class RestaurantAgent(Agent):
         # Feeds the confirm-time verifier exactly like an LLM line would, so the
         # gate is satisfied by speech that is correct by construction.
         self.note_agent_speech(line)
+        self.state.contact_readback_ever_spoken = True
         if self._recorder is not None:
             self._recorder.append_sierra(line)
         return True

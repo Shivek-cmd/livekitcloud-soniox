@@ -549,23 +549,6 @@ class _SayingSession:
         return _SpeechHandle()
 
 
-class _EventRecorder:
-    """Minimal recorder stub — only what the tools touch."""
-
-    def __init__(self):
-        self.session_id = "sess-stub"
-        self.events: list[tuple[str, dict | None]] = []
-
-    def log_tool(self, name, args, result):
-        pass
-
-    def add_event(self, event_type, payload=None):
-        self.events.append((event_type, payload))
-
-    def set_outcome(self, outcome):
-        pass
-
-
 def test_non_roman_name_refused_and_not_saved(agent):
     # PR 092 — the kitchen ticket, the spelled-out contact read-back and the
     # spoken-name check all assume Roman letters.
@@ -752,19 +735,55 @@ def test_contact_readback_is_spoken_by_code_in_english(agent):
     assert agent.state.contact_confirmed
 
 
-def test_contact_correction_respeaks_the_new_details(agent):
+def test_contact_correction_respeaks_without_a_second_getter_call(agent):
+    # PR 102 — the edit itself re-speaks. The LLM was told to call
+    # get_contact_readback again and mostly did, but when it didn't the
+    # corrected number was never spoken and the give-up valve confirmed details
+    # the customer had never heard. Code owns the re-read now.
     session = _SayingSession()
     agent.bind_session(session)
     _ready_for_contact_readback(agent)
     run(agent.get_contact_readback())
 
-    run(agent.set_customer_contact(phone="7804445678"))
-    run(agent.get_contact_readback())
-    assert len(session.said) == 2
+    result = run(agent.set_customer_contact(phone="7804445678"))
+    assert len(session.said) == 2  # no get_contact_readback call in between
     assert "five, six, seven, eight" in session.said[1]
     # The stale first readback can't confirm the corrected number.
     assert "four, four, four, one, two, three, four" not in session.said[1]
+    # ...and the LLM is told the customer already heard it.
+    assert "just heard the corrected details" in result
     assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+
+
+def test_contact_edit_confirms_without_the_give_up_valve(agent):
+    # The live hole this closes: edit, LLM never re-reads, and confirm_contact
+    # used to refuse twice then force the third through — confirming a number
+    # the customer never heard. Now the first attempt passes on merit.
+    recorder = _EventRecorder()
+    agent.bind_recorder(recorder)
+    agent.bind_session(_SayingSession())
+    _ready_for_contact_readback(agent)
+    run(agent.get_contact_readback())
+    run(agent.confirm_contact())
+
+    run(agent.set_customer_contact(phone="7804445678"))
+    assert not agent.state.contact_confirmed  # gate re-armed by the edit
+    agent.note_agent_speech("ਠੀਕ ਹੈ ਜੀ, ਕੀ ਹੁਣ ਸਹੀ ਹੈ?")  # asks, never re-reads
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_verify_refusals == 0
+    assert not [e for e in recorder.events if e[0] == "contact_verify_forced"]
+
+
+def test_contact_collection_does_not_respeak_before_the_first_readback(agent):
+    # Ordinary collection must not double up with the getter the flow calls
+    # next — the edit path only arms after a readback has happened.
+    session = _SayingSession()
+    agent.bind_session(session)
+    _ready_for_contact_readback(agent)
+    assert session.said == []
+    run(agent.get_contact_readback())
+    assert len(session.said) == 1
 
 
 def test_contact_readback_is_uninterruptible(agent):
@@ -1068,10 +1087,15 @@ _FALSE_CLAIM = "Great choice! I've added one Chana Masala for you."
 
 
 class _EventRecorder:
+    """Minimal recorder stub — only what the tools touch."""
+
     def __init__(self):
         self.events = []
 
     def log_tool(self, name, args, result):
+        pass
+
+    def append_sierra(self, text):
         pass
 
     def add_event(self, event_type, payload=None):
