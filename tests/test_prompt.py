@@ -1,8 +1,8 @@
 """Tests for the sectioned persona prompt (PR 077) + drift re-anchor.
 
-Non-negotiables must be present in BOTH prompt styles; the persona style adds
-the approved persona section, the legacy style reproduces the old prompt
-behind PROMPT_STYLE=legacy.
+The persona sections are the only prompt — PR 099 retired the PROMPT_STYLE=legacy
+rollback builder, and a stale PROMPT_STYLE in the environment must not change
+anything.
 """
 
 import asyncio
@@ -13,9 +13,9 @@ from restaurant.agent.persona import (
     persona_reanchor_turns,
     persona_section,
 )
-from restaurant.agent.prompt import build_system_prompt, prompt_style
+from restaurant.agent.prompt import build_system_prompt
 
-# Rules that must survive in the assembled prompt regardless of style.
+# Rules that must survive in the assembled prompt on every channel.
 _NON_NEGOTIABLES = [
     "Punjabi → Gurmukhi. Hindi → Devanagari. Never Roman Indic.",
     "voice_line from tools exactly",
@@ -35,12 +35,11 @@ _NON_NEGOTIABLES = [
 ]
 
 
-def test_non_negotiables_present_in_both_styles():
-    for style in ("persona", "legacy"):
-        for is_phone in (True, False):
-            prompt = build_system_prompt(is_phone=is_phone, style=style)
-            for rule in _NON_NEGOTIABLES:
-                assert rule in prompt, f"{rule!r} missing from {style}/{'phone' if is_phone else 'web'}"
+def test_non_negotiables_present_on_both_channels():
+    for is_phone in (True, False):
+        prompt = build_system_prompt(is_phone=is_phone)
+        for rule in _NON_NEGOTIABLES:
+            assert rule in prompt, f"{rule!r} missing from {'phone' if is_phone else 'web'}"
 
 
 def test_channel_blocks():
@@ -52,29 +51,22 @@ def test_channel_blocks():
         assert "unless" in prompt and "price" in prompt.lower()  # no-volunteered-price policy
 
 
-def test_persona_style_uses_approved_persona():
-    prompt = build_system_prompt(is_phone=True, style="persona")
+def test_prompt_uses_approved_persona():
+    prompt = build_system_prompt(is_phone=True)
     assert persona_section() in prompt
     assert "AI cashier" in prompt
     assert "ONE short sentence per turn" not in prompt  # scripted delivery rule gone
     assert "TONE EXAMPLES" in prompt
 
 
-def test_legacy_style_is_the_old_prompt():
-    prompt = build_system_prompt(is_phone=True, style="legacy")
-    assert "ONE short sentence per turn" in prompt
-    assert "AI cashier" not in prompt
-    assert "Sure, let me connect you — one moment." in prompt
-
-
-def test_prompt_style_env(monkeypatch):
+def test_prompt_style_env_is_inert(monkeypatch):
+    """A stale PROMPT_STYLE=legacy on a deployed host must change nothing (PR 099)."""
     monkeypatch.delenv("PROMPT_STYLE", raising=False)
-    assert prompt_style() == "persona"
+    default = build_system_prompt(is_phone=True)
     monkeypatch.setenv("PROMPT_STYLE", "legacy")
-    assert prompt_style() == "legacy"
-    assert "ONE short sentence per turn" in build_system_prompt(is_phone=True)
-    monkeypatch.setenv("PROMPT_STYLE", "weird")
-    assert prompt_style() == "persona"
+    assert build_system_prompt(is_phone=True) == default
+    assert "ONE short sentence per turn" not in build_system_prompt(is_phone=True)
+    assert "Sure, let me connect you — one moment." not in build_system_prompt(is_phone=True)
 
 
 def test_persona_reanchor_turns_env(monkeypatch):
@@ -118,7 +110,6 @@ def _run_turns(agent: RestaurantAgent, count: int) -> list[list[tuple[str, str]]
 
 def test_reanchor_injected_every_n_turns(monkeypatch):
     monkeypatch.setenv("PERSONA_REANCHOR_TURNS", "3")
-    monkeypatch.delenv("PROMPT_STYLE", raising=False)
     agent = RestaurantAgent(is_phone=False)
     turns = _run_turns(agent, 6)
     assert turns[0] == [] and turns[1] == []
@@ -133,8 +124,11 @@ def test_reanchor_disabled_by_zero(monkeypatch):
     assert all(msgs == [] for msgs in _run_turns(agent, 4))
 
 
-def test_reanchor_skipped_in_legacy_style(monkeypatch):
+def test_reanchor_still_fires_with_stale_legacy_env(monkeypatch):
+    """PROMPT_STYLE no longer gates the drift re-anchor (PR 099)."""
     monkeypatch.setenv("PERSONA_REANCHOR_TURNS", "2")
     monkeypatch.setenv("PROMPT_STYLE", "legacy")
     agent = RestaurantAgent(is_phone=False)
-    assert all(msgs == [] for msgs in _run_turns(agent, 4))
+    turns = _run_turns(agent, 4)
+    assert turns[1] == [("system", PERSONA_REANCHOR_LINE)]
+    assert turns[3] == [("system", PERSONA_REANCHOR_LINE)]
