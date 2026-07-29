@@ -529,6 +529,26 @@ _SPOKEN_CONTACT_ALT = (
 )
 
 
+class _SpeechHandle:
+    def done(self) -> bool:
+        return True
+
+
+class _SayingSession:
+    """Captures what code speaks through the session (PR 101)."""
+
+    def __init__(self):
+        self.said: list[str] = []
+
+    @property
+    def current_speech(self):
+        return None
+
+    async def say(self, text, allow_interruptions=True):
+        self.said.append(text)
+        return _SpeechHandle()
+
+
 class _EventRecorder:
     """Minimal recorder stub — only what the tools touch."""
 
@@ -680,6 +700,95 @@ def test_contact_speech_buffered_while_unconfirmed(agent):
     assert agent.state.contact_confirmed
     agent.note_agent_speech("Reading your order back now.")
     assert agent.state.contact_spoken == [_SPOKEN_CONTACT_ALT]
+
+
+def _ready_for_contact_readback(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    _record_wrapup(agent, "no")
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+
+
+def test_contact_readback_is_spoken_by_code_in_english(agent):
+    # PR 101 — the tool speaks the details itself, so the script can't depend on
+    # the LLM. The caller hears English digits no matter the conversation
+    # language, and the confirm needs no LLM speech at all.
+    session = _SayingSession()
+    agent.bind_session(session)
+    _ready_for_contact_readback(agent)
+
+    result = run(agent.get_contact_readback())
+    assert len(session.said) == 1
+    spoken = session.said[0]
+    assert "Aman Singh, A-M-A-N S-I-N-G-H" in spoken
+    assert "seven, eight, zero, four, four, four, one, two, three, four" in spoken
+    assert not any(ch.isdigit() for ch in spoken)
+
+    # The LLM is told the details are already out loud and must not repeat them.
+    assert "CONTACT READBACK ALREADY SPOKEN" in result
+    assert "Do NOT repeat" in result
+
+    # The code line feeds the same gate an LLM line would, so the customer's
+    # yes confirms with no assistant speech of its own.
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+
+
+def test_contact_correction_respeaks_the_new_details(agent):
+    session = _SayingSession()
+    agent.bind_session(session)
+    _ready_for_contact_readback(agent)
+    run(agent.get_contact_readback())
+
+    run(agent.set_customer_contact(phone="7804445678"))
+    run(agent.get_contact_readback())
+    assert len(session.said) == 2
+    assert "five, six, seven, eight" in session.said[1]
+    # The stale first readback can't confirm the corrected number.
+    assert "four, four, four, one, two, three, four" not in session.said[1]
+    assert "confirmed" in run(agent.confirm_contact())
+
+
+def test_contact_readback_is_uninterruptible(agent):
+    # The confirm gate treats the code line as proof the customer heard their
+    # details, so a half-spoken number must not be able to satisfy it.
+    class _Recording(_SayingSession):
+        def __init__(self):
+            super().__init__()
+            self.interruptible: list[bool] = []
+
+        async def say(self, text, allow_interruptions=True):
+            self.interruptible.append(allow_interruptions)
+            return await super().say(text, allow_interruptions)
+
+    session = _Recording()
+    agent.bind_session(session)
+    _ready_for_contact_readback(agent)
+    run(agent.get_contact_readback())
+    assert session.interruptible == [False]
+
+
+def test_contact_readback_falls_back_to_llm_when_say_fails(agent):
+    class _BrokenSession(_SayingSession):
+        async def say(self, text, allow_interruptions=True):
+            raise RuntimeError("session closed")
+
+    agent.bind_session(_BrokenSession())
+    _ready_for_contact_readback(agent)
+    result = run(agent.get_contact_readback())
+    # Falls back to the LLM reading the facts, with the verifier still armed.
+    assert "CONTACT FACTS" in result
+    assert "CONTACT READBACK INCOMPLETE" in run(agent.confirm_contact())
+
+
+def test_contact_readback_falls_back_to_llm_without_a_session(agent):
+    # Web RPC path / tests: no session to speak through, so the facts are listed
+    # for the LLM to read and the spoken verifier still guards the confirm.
+    _ready_for_contact_readback(agent)
+    result = run(agent.get_contact_readback())
+    assert "CONTACT FACTS" in result
+    assert "CONTACT READBACK INCOMPLETE" in run(agent.confirm_contact())
 
 
 def test_contact_confirm_survives_a_correction_without_a_fresh_getter(agent):

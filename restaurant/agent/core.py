@@ -67,6 +67,7 @@ from restaurant.agent.tts_transform import (
 )
 from restaurant.agent.replies import (
     background_repeat_phrase,
+    contact_readback_line,
     echo_recovery_phrase,
     false_add_correction_phrase,
     format_order_status,
@@ -1131,9 +1132,9 @@ class RestaurantAgent(Agent):
 
     @function_tool
     async def get_contact_readback(self) -> str:
-        """Get the customer's saved name and phone spelled out, to read back
-        for confirmation right after collecting them. Call again after any
-        correction to either one."""
+        """Read the customer's saved name and phone back to them for
+        confirmation, right after collecting them. This SPEAKS the details
+        itself. Call again after any correction to either one."""
         blockers = contact_readback_blockers(self.cart)
         if blockers:
             result = "Cannot read the contact details back yet:\n- " + "\n- ".join(
@@ -1141,12 +1142,42 @@ class RestaurantAgent(Agent):
             )
             self._record_tool("get_contact_readback", {}, result)
             return result
-        result = format_contact_readback_facts(self.cart)
         # Start a fresh capture window — only the readback that follows this
         # call should be able to satisfy the confirm.
         self.state.contact_spoken.clear()
+        spoken = await self._speak_contact_readback()
+        result = format_contact_readback_facts(self.cart, spoken_by_code=spoken)
         self._record_tool("get_contact_readback", {}, result)
         return result
+
+    async def _speak_contact_readback(self) -> bool:
+        """PR 101 — speak the name-spelling and phone digits from code, so the
+        script they are spoken in can't depend on the LLM. Returns False when
+        there is no session to speak through (web RPC path, tests), where the
+        LLM reads the facts out itself as before."""
+        if self._session is None:
+            return False
+        line = contact_readback_line(
+            name=self.cart.customer_name,
+            phone=self.cart.customer_phone,
+            language=getattr(self.state, "preferred_language", None),
+        )
+        try:
+            # Uninterruptible, like the greeting and the goodbye: the confirm
+            # gate treats this line as proof the customer heard their details,
+            # so a half-spoken number must not be able to satisfy it.
+            await self._session.say(line, allow_interruptions=False)
+        except Exception:
+            # Never lose the readback to a session hiccup — fall back to the
+            # facts block and let the LLM read them, verifier still armed.
+            logger.exception("Contact readback say() failed — LLM will read it")
+            return False
+        # Feeds the confirm-time verifier exactly like an LLM line would, so the
+        # gate is satisfied by speech that is correct by construction.
+        self.note_agent_speech(line)
+        if self._recorder is not None:
+            self._recorder.append_sierra(line)
+        return True
 
     @function_tool
     async def confirm_contact(self) -> str:
