@@ -119,6 +119,16 @@ _ADD_CLARIFY_MIN_CONF = _add_clarify_min_conf()
 
 _MAX_ITEM_QTY = 20
 
+# PR 101 — contact-confirmation capture window. A readback is 1–2 lines; the
+# cap only stops the buffer growing across a long unconfirmed stretch.
+_CONTACT_SPOKEN_LINES = 12
+
+# PR 101 — confirm_contact attempts allowed before the gate gives up and lets
+# the confirm through (so: two refusals, then the third attempt passes). Bounds
+# the verifier's blast radius — a gap costs one possibly-unheard readback, never
+# a call that can never place its order.
+_MAX_CONTACT_CONFIRM_ATTEMPTS = 3
+
 _NO_ALLERGIES_RE = re.compile(
     r"^\s*(?:no|none|nope|nah|nothing|no allergies|nahi+n?|ਨਹੀਂ|नहीं|कोई नहीं)[\s.!]*$",
     re.I,
@@ -295,9 +305,18 @@ class RestaurantAgent(Agent):
         # PR 078 — capture the spoken readback for the confirm-time verifier.
         if self.state.readback_pending:
             self.state.readback_spoken.append(line)
-        # PR 092 — same capture for the name/phone confirmation step.
-        if self.state.contact_readback_pending:
+        # PR 092/101 — same capture for the name/phone confirmation step, but
+        # armed by having details to confirm rather than by a getter call: the
+        # correction path (set_customer_contact then re-read) skips the getter,
+        # and gating on it made the strict gate permanently unsatisfiable.
+        if (
+            not self.state.contact_confirmed
+            and self.cart.customer_name
+            and self.cart.customer_phone
+        ):
             self.state.contact_spoken.append(line)
+            # Bounded — capture now spans turns, and a readback is 1–2 lines.
+            del self.state.contact_spoken[:-_CONTACT_SPOKEN_LINES]
         # PR 095 — the wrap-up question must be heard by the customer before
         # its answer can be recorded. Any line that raises allergies or
         # special instructions arms record_additional_requests.
@@ -1123,7 +1142,8 @@ class RestaurantAgent(Agent):
             self._record_tool("get_contact_readback", {}, result)
             return result
         result = format_contact_readback_facts(self.cart)
-        self.state.contact_readback_pending = True
+        # Start a fresh capture window — only the readback that follows this
+        # call should be able to satisfy the confirm.
         self.state.contact_spoken.clear()
         self._record_tool("get_contact_readback", {}, result)
         return result
@@ -1131,8 +1151,8 @@ class RestaurantAgent(Agent):
     @function_tool
     async def confirm_contact(self) -> str:
         """Call when the customer confirms their name and phone number are
-        correct. Must come after get_contact_readback, and only once you have
-        actually spoken the name and every phone digit."""
+        correct — only once you have actually spoken the name and every phone
+        digit to them, which this checks."""
         blockers = contact_readback_blockers(self.cart)
         if blockers:
             result = "Cannot confirm contact details:\n- " + "\n- ".join(blockers)
@@ -1153,25 +1173,47 @@ class RestaurantAgent(Agent):
                 "\n".join(self.state.contact_spoken), self.cart
             )
             if not check.ok:
-                if mode == "strict":
-                    # Keep pending so the fresh re-read is captured; the buffer
-                    # restarts so stale speech can't satisfy the next check.
+                attempt = self.state.contact_verify_refusals + 1
+                if mode == "strict" and attempt < _MAX_CONTACT_CONFIRM_ATTEMPTS:
+                    self.state.contact_verify_refusals = attempt
+                    # The buffer restarts so stale speech can't satisfy the next
+                    # check; the re-read that follows is captured regardless of
+                    # whether the LLM calls get_contact_readback again.
                     self.state.contact_spoken.clear()
                     return (
                         "CONTACT READBACK INCOMPLETE — the customer has not "
                         "heard their details:\n- " + "\n- ".join(check.problems)
-                        + "\nCall get_contact_readback and read the name and "
-                        "the phone number back before confirming."
+                        + "\nRead the name and the phone number back to the "
+                        "customer, then call confirm_contact again."
                     )
-                logger.warning(
-                    "Contact verify (warn mode) problems: %s", check.problems
-                )
-                if self._recorder is not None:
-                    self._recorder.add_event(
-                        "contact_verify_warn", {"problems": check.problems}
+                if mode == "strict":
+                    # PR 101 — a call must never be trapped by the verifier. The
+                    # live repro looped here until the caller gave up, so the
+                    # last attempt is allowed through and the gap is recorded
+                    # instead of refused again.
+                    logger.warning(
+                        "Contact verify forced through after %d refusals: %s",
+                        self.state.contact_verify_refusals,
+                        check.problems,
                     )
+                    if self._recorder is not None:
+                        self._recorder.add_event(
+                            "contact_verify_forced",
+                            {
+                                "problems": check.problems,
+                                "refusals": self.state.contact_verify_refusals,
+                            },
+                        )
+                else:
+                    logger.warning(
+                        "Contact verify (warn mode) problems: %s", check.problems
+                    )
+                    if self._recorder is not None:
+                        self._recorder.add_event(
+                            "contact_verify_warn", {"problems": check.problems}
+                        )
         self.state.contact_confirmed = True
-        self.state.contact_readback_pending = False
+        self.state.contact_verify_refusals = 0
         return (
             "Name and phone confirmed. Continue with the order read-back "
             "(get_order_readback)."

@@ -169,8 +169,9 @@ def format_contact_readback_facts(cart: "OrderCart") -> str:
         "GUIDE: phrase the ask warmly in your own words in the customer's "
         "language, but the name letters and the phone digits themselves must "
         "be spoken exactly as above. If the customer corrects either one, "
-        "call set_customer_contact with the fix and read it back again. Only "
-        "when they say both are right, call confirm_contact."
+        "call set_customer_contact with the fix, then get_contact_readback "
+        "again, and read the corrected details back. Only when they say both "
+        "are right, call confirm_contact."
     )
     return "\n".join(lines)
 

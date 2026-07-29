@@ -49,12 +49,17 @@ class OrderSessionState:
     phone_buffer: str = ""
     # PR 092 — name/phone are read back and confirmed right after they are
     # collected, not during the final order read-back. Any later change to
-    # either re-arms this gate. Same capture shape as the order readback:
-    # pending is set by get_contact_readback, every assistant line while
-    # pending lands in contact_spoken, and confirm_contact verifies it.
+    # either re-arms this gate.
     contact_confirmed: bool = False
-    contact_readback_pending: bool = False
+    # PR 101 — every assistant line spoken while the contact is unconfirmed
+    # lands here, and confirm_contact verifies the buffer. Deliberately NOT
+    # armed by get_contact_readback: the correction path (set_customer_contact
+    # then re-read, no getter call) used to drop the capture on the floor and
+    # deadlock the gate. Staleness is handled by clearing on any change.
     contact_spoken: list[str] = field(default_factory=list)
+    # PR 101 — consecutive strict refusals of confirm_contact. The Nth refusal
+    # gives up and allows the confirm, so a verifier gap can never trap a call.
+    contact_verify_refusals: int = 0
     real_user_turns: int = 0
 
 
@@ -73,8 +78,9 @@ def invalidate_contact_readback(state: OrderSessionState) -> None:
     """A changed name/phone voids the confirmation and any in-flight capture —
     speech about the OLD details must not satisfy the next check."""
     state.contact_confirmed = False
-    state.contact_readback_pending = False
     state.contact_spoken.clear()
+    # The refusal streak was about the old details; the new ones start clean.
+    state.contact_verify_refusals = 0
 
 
 def readback_blockers(cart: "OrderCart", state: OrderSessionState) -> list[str]:
