@@ -171,9 +171,10 @@ def format_contact_readback_facts(
                 "Do NOT repeat the name or the number — the customer has heard "
                 "them. Say only your next line: ask warmly, in the customer's "
                 "language, whether both are correct.",
-                "On yes: confirm_contact. If they correct either one: "
-                "set_customer_contact with the fix, then get_contact_readback "
-                "again (which re-speaks the corrected details for you).",
+                "On yes: confirm_contact. If they correct either one: call "
+                "set_customer_contact with the fix and nothing else — it "
+                "re-speaks the corrected details for you, so do not call "
+                "get_contact_readback again; just ask if it is right now.",
             ]
         )
     lines = [

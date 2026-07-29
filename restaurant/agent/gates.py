@@ -60,6 +60,11 @@ class OrderSessionState:
     # PR 101 — consecutive strict refusals of confirm_contact. The Nth refusal
     # gives up and allows the confirm, so a verifier gap can never trap a call.
     contact_verify_refusals: int = 0
+    # PR 102 — True once code has spoken a contact readback in this session.
+    # A session milestone, NOT part of the per-details state: it survives
+    # invalidate_contact_readback, because it answers "have we been through the
+    # readback step yet?", which is what makes a later change an EDIT.
+    contact_readback_ever_spoken: bool = False
     real_user_turns: int = 0
 
 
