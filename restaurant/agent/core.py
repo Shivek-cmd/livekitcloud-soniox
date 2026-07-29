@@ -1072,7 +1072,8 @@ class RestaurantAgent(Agent):
             invalidate_contact_readback(self.state)
             facts.append(f'NAME SAVED: "{clean}".')
             guides.append(
-                "confirm the name briefly in the customer's language."
+                "acknowledge briefly in the customer's language and move on — "
+                "get_contact_readback reads the name back, not you."
             )
             if not self.cart.customer_phone and not (phone and phone.strip()):
                 guides.append("Then ask for their phone number.")
@@ -1100,8 +1101,9 @@ class RestaurantAgent(Agent):
                 facts.append(f"PHONE SAVED: {spoken}.")
                 guides.append(
                     "the number is already saved — do NOT ask the customer "
-                    "to repeat or re-say it. Call get_contact_readback next "
-                    "and read the name and number back for confirmation."
+                    "to repeat or re-say it. Call get_contact_readback next: "
+                    "it speaks the name and the number to the customer for "
+                    "you, so never say either of them in your own line."
                 )
             else:
                 self.state.phone_buffer = new_buffer

@@ -710,6 +710,23 @@ def _ready_for_contact_readback(agent):
     run(agent.set_customer_contact(phone="7804441234"))
 
 
+def test_contact_guides_do_not_ask_the_llm_to_read_details_back(agent):
+    # PR 102 — get_contact_readback speaks the details and tells the LLM not to
+    # repeat them, so set_customer_contact must not say the opposite one tool
+    # call earlier. Pins the two texts together.
+    run(agent.add_item("garlic naan", quantity=2))
+    _record_wrapup(agent, "no")
+    run(agent.set_order_type("pickup"))
+
+    name_guide = run(agent.set_customer_contact(name="Aman Singh"))
+    phone_guide = run(agent.set_customer_contact(phone="7804441234"))
+    for guide in (name_guide, phone_guide):
+        assert "read the name and number back" not in guide
+        assert "read it back" not in guide
+    # The phone guide still has to point at the tool that does the reading.
+    assert "get_contact_readback" in phone_guide
+
+
 def test_contact_readback_is_spoken_by_code_in_english(agent):
     # PR 101 — the tool speaks the details itself, so the script can't depend on
     # the LLM. The caller hears English digits no matter the conversation
