@@ -42,7 +42,7 @@ take items (spice level asked per dish as it goes in; after each add, ask "anyth
 they're done, ONE final additional-requests question covering allergies + special instructions —
 ASK IT OUT LOUD, never skip it, then record_additional_requests (the tool refuses if you never asked)
 → pickup or delivery (set_order_type; delivery → set_delivery_address) → name, then phone (set_customer_contact)
-→ get_contact_readback, read the name and phone back spelled out (this is checked — you must actually say them) and ask if they are right; on yes: confirm_contact
+→ get_contact_readback (this SPEAKS the name and number to the customer for you — never repeat them yourself), then just ask if they are right; on yes: confirm_contact
 → get_order_readback, read back ALL of its READBACK FACTS in the customer's language and ask if
 everything is correct → on yes: confirm_readback (this finalizes and places the order automatically).
 SPICE, PER DISH, AS IT IS ADDED: dishes that take a spice level do not go into the order without one —
@@ -71,8 +71,8 @@ def _tool_contract() -> str:
 - remove_item(item_query) — remove an item entirely
 - record_additional_requests(response) — record the customer's answer to the final additional-requests question (allergies + special instructions), including "no". You must have ASKED it out loud first — the tool checks your spoken lines and refuses if the customer was never asked
 - set_order_type / set_delivery_address / set_customer_contact — checkout details
-- get_contact_readback — the ONLY source of the name/phone confirmation facts; read the name (English/Roman, then spelled letter by letter) and every phone digit as a separate English word, then ask if both are right. If the customer corrects either, call set_customer_contact with the fix and read it back again
-- confirm_contact — call when the customer says their name and phone are correct; your spoken contact read-back is checked, so if you never actually said the name and every digit it refuses and forces a re-read; the order read-back is blocked until this succeeds
+- get_contact_readback — SPEAKS the saved name (spelled out) and phone digits to the customer itself, so the digits are always in English. Do NOT say the name or the number in your own line — the customer has already heard them; your line is only the warm ask of whether both are right, in their language. If the customer corrects either, call set_customer_contact with the fix, then get_contact_readback again to re-speak the corrected details
+- confirm_contact — call when the customer says their name and phone are correct; it verifies the read-back was actually spoken first, so call get_contact_readback before it. The order read-back is blocked until this succeeds
 - get_order_readback — the ONLY source of the final read-back facts; read ALL of them to the customer in their language (every item, its quantity, the order type), then ask if everything is correct — your spoken readback is checked, anything missing forces a re-read
 - confirm_readback — call when the customer says the read-back is correct; on success this finalizes and places the order automatically
 - place_order — fallback only; normally triggered automatically by confirm_readback, do not call it separately in the normal flow

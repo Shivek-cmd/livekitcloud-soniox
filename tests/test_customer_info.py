@@ -120,6 +120,28 @@ def test_extract_phone_digits():
     assert extract_phone_digits("9413752688") == "9413752688"
 
 
+def test_extract_phone_digits_from_in_script_english_digit_words():
+    # PR 101 — Sierra speaks English digit words inside a Punjabi/Hindi
+    # sentence, and both the LLM and STT render them in-script. "ਜ਼ੀਰੋ" missing
+    # from the lexicon is what broke the contact readback verifier live.
+    gurmukhi = "ਸੱਤ ਸੱਤ ਅੱਠ ਜ਼ੀਰੋ ਜ਼ੀਰੋ ਤਿੰਨ ਨੌ ਅੱਠ ਇੱਕ ਇੱਕ"
+    assert extract_phone_digits(gurmukhi) == "7780039811"
+    devanagari = "सात सात आठ ज़ीरो ज़ीरो तीन नौ आठ एक एक"
+    assert extract_phone_digits(devanagari) == "7780039811"
+    transliterated = "ਸੈਵਨ ਸੈਵਨ ਏਟ ਜ਼ੀਰੋ ਜ਼ੀਰੋ ਥਰੀ ਨਾਈਨ ਏਟ ਵਨ ਵਨ"
+    assert extract_phone_digits(transliterated) == "7780039811"
+
+
+def test_in_script_digit_words_are_enforced_to_english_in_speech():
+    # Same lexicon drives the TTS rewrite, so the caller never hears a phone
+    # digit spoken in Gurmukhi (a CLAUDE.md non-negotiable).
+    out = enforce_english_phone_in_speech(
+        "ਫੋਨ ਨੰਬਰ ਸੱਤ ਸੱਤ ਅੱਠ ਜ਼ੀਰੋ ਜ਼ੀਰੋ ਤਿੰਨ ਨੌ ਅੱਠ ਇੱਕ ਇੱਕ ਹੈ।", "7780039811"
+    )
+    assert "zero" in out
+    assert "ਜ਼ੀਰੋ" not in out
+
+
 def test_looks_like_phone_utterance():
     assert looks_like_phone_utterance("94137 52688")
     assert not looks_like_phone_utterance("one paneer tikka")

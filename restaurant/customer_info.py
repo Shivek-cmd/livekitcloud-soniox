@@ -19,6 +19,16 @@ _INDIC_NUMERAL_MAP = str.maketrans(
 )
 
 # Spoken number words Sierra sometimes wrongly uses for phone readback.
+#
+# Shared three ways, so an entry here must be an unambiguous digit word and
+# nothing else (matching is whole-token, so substrings are safe):
+#   - verification — readback_verify._check_spoken_phone, on the pre-TTS buffer
+#   - caller-side parsing — extract_phone_digits
+#   - TTS enforcement — tts_transform._DIGIT_WORD_KEYS, which decides what
+#     counts as part of a phone run to rewrite into English words
+# A missing form therefore breaks all three at once: PR 101's live loop was
+# "ਜ਼ੀਰੋ" (Gurmukhi-script "zero") being absent — the verifier read the number
+# as 8 digits and refused, and TTS spoke the Gurmukhi word to the caller.
 _SPOKEN_DIGIT_WORDS: dict[str, str] = {
     "zero": "0",
     "oh": "0",
@@ -44,6 +54,8 @@ _SPOKEN_DIGIT_WORDS: dict[str, str] = {
     "chhe": "6",
     "ਸਿਫ਼ਰ": "0",
     "ਸਫ਼ਰ": "0",
+    "ਸਿਫਰ": "0",
+    "ਸੁੰਨ": "0",
     "ਇੱਕ": "1",
     "ਐਕ": "1",
     "ਦੋ": "2",
@@ -59,11 +71,42 @@ _SPOKEN_DIGIT_WORDS: dict[str, str] = {
     "तीन": "3",
     "चार": "4",
     "पांच": "5",
+    "पाँच": "5",
     "छह": "6",
     "सात": "7",
     "आठ": "8",
     "नौ": "9",
     "शून्य": "0",
+    "सिफ़र": "0",
+    "सिफर": "0",
+    "sifar": "0",
+    # PR 101 — English digit words written in Indic script. Sierra is told to
+    # speak phone digits as English words while the surrounding sentence is
+    # Punjabi/Hindi, and both the LLM and Soniox render them in-script.
+    "ਜ਼ੀਰੋ": "0",
+    "ਜੀਰੋ": "0",
+    "ਵਨ": "1",
+    "ਟੂ": "2",
+    "ਥਰੀ": "3",
+    "ਫੋਰ": "4",
+    "ਫ਼ੋਰ": "4",
+    "ਫਾਈਵ": "5",
+    "ਸਿਕਸ": "6",
+    "ਸੈਵਨ": "7",
+    "ਏਟ": "8",
+    "ਨਾਈਨ": "9",
+    "ज़ीरो": "0",
+    "जीरो": "0",
+    "वन": "1",
+    "टू": "2",
+    "थ्री": "3",
+    "फोर": "4",
+    "फ़ोर": "4",
+    "फाइव": "5",
+    "सिक्स": "6",
+    "सेवन": "7",
+    "एट": "8",
+    "नाइन": "9",
 }
 
 

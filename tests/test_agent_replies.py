@@ -5,6 +5,7 @@ log-only speech guard was deleted in PR 079.)"""
 from restaurant.agent import replies
 from restaurant.agent.language import CustomerLanguage
 from restaurant.agent.replies import (
+    contact_readback_line,
     format_order_status,
     order_placed_goodbye,
 )
@@ -109,3 +110,52 @@ def test_ambiguous_correction_does_not_deny_the_dish():
 def test_not_found_correction_still_denies():
     line = replies.false_add_correction_phrase("sushi", language="en")
     assert "don't have" in line
+
+
+# ── code-spoken contact readback (PR 101) ────────────────────────────────────
+
+
+def test_contact_readback_line_is_always_english_digits():
+    # The whole point: the digits and the name spelling come from code, so no
+    # LLM rendering choice (live: Gurmukhi "ਜ਼ੀਰੋ") can reach the caller.
+    line = contact_readback_line(
+        name="Paneer Tikka Singh", phone="7780039811", language="pa"
+    )
+    assert "Paneer Tikka Singh, P-A-N-E-E-R T-I-K-K-A S-I-N-G-H" in line
+    assert "seven, seven, eight, zero, zero, three, nine, eight, one, one" in line
+    for indic_digit in ("ਜ਼ੀਰੋ", "ਸੱਤ", "ਅੱਠ", "ज़ीरो", "सात", "੭", "७"):
+        assert indic_digit not in line
+    assert not any(ch.isdigit() for ch in line)
+
+
+def test_contact_readback_line_language_variants():
+    # Only the lead-in follows the customer's language; Punjabi is the default
+    # for pa / mixed / unknown, like order_placed_goodbye.
+    for lang in (None, "pa", "mixed"):
+        assert "ਦੁਹਰਾ ਦਿੰਦੀ ਹਾਂ" in contact_readback_line(
+            name="Aman", phone="7804441234", language=lang
+        )
+    assert "Let me just repeat" in contact_readback_line(
+        name="Aman", phone="7804441234", language="en"
+    )
+    assert "दोहरा देती हूँ" in contact_readback_line(
+        name="Aman", phone="7804441234", language="hi"
+    )
+    # Accepts the CustomerLanguage enum as well as a bare string.
+    assert "Let me just repeat" in contact_readback_line(
+        name="Aman", phone="7804441234", language=CustomerLanguage.ENGLISH
+    )
+
+
+def test_contact_readback_line_satisfies_the_confirm_verifier():
+    # The code line is what feeds the confirm-time gate, so it must pass the
+    # verifier by construction — that is what makes the deadlock unreachable.
+    from restaurant.agent.readback_verify import verify_contact_readback
+
+    cart = OrderCart()
+    cart.customer_name = "Paneer Tikka Singh"
+    cart.customer_phone = "7780039811"
+    line = contact_readback_line(
+        name=cart.customer_name, phone=cart.customer_phone, language="pa"
+    )
+    assert verify_contact_readback(line, cart).ok

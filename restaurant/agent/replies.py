@@ -13,7 +13,8 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from restaurant.agent.facts import _qty_word
+from restaurant.agent.facts import _qty_word, _spell_out
+from restaurant.customer_info import format_phone_spoken
 
 if TYPE_CHECKING:
     from restaurant.orders import OrderCart
@@ -46,6 +47,33 @@ def order_placed_goodbye(*, order_type: str | None, language: str | None = None)
     return (
         f"ਤੁਹਾਡਾ ਆਰਡਰ ਮਿਲ ਗਿਆ ਜੀ! {wait} ਵਿੱਚ ਤਿਆਰ ਹੋ ਜਾਵੇਗਾ। ਬਹੁਤ ਬਹੁਤ ਧੰਨਵਾਦ ਜੀ!"
     )
+
+
+def contact_readback_line(
+    *, name: str, phone: str, language: str | None = None
+) -> str:
+    """PR 101 — the name-spelling and phone digits, spoken by CODE.
+
+    The LLM used to say these itself, which made correctness depend on it
+    rendering every digit as an English word. It doesn't reliably: live it
+    spoke "ਜ਼ੀਰੋ", which both the TTS phone enforcement and the confirm-time
+    verifier failed to recognize as a digit (they share one word list), so the
+    caller heard a Gurmukhi digit and the gate refused a correct readback.
+
+    Code owns the segment that must be verbatim — Roman name, spelled letters,
+    English word digits — so the script is right by construction rather than by
+    a lexicon that has to anticipate every rendition. The LLM still owns the
+    turn around it: it asks whether the details are correct, in the customer's
+    language. Only the short lead-in is language-keyed, like
+    order_placed_goodbye.
+    """
+    details = f"{name}, {_spell_out(name)}, {format_phone_spoken(phone)}"
+    lang = str(getattr(language, "value", language) or "").lower()
+    if lang == "en":
+        return f"Let me just repeat that back — {details}."
+    if lang == "hi":
+        return f"एक बार दोहरा देती हूँ जी — {details}."
+    return f"ਇੱਕ ਵਾਰ ਦੁਹਰਾ ਦਿੰਦੀ ਹਾਂ ਜੀ — {details}."
 
 
 def _cart_items_str(cart: "OrderCart") -> str:

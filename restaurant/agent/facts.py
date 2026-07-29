@@ -148,11 +148,34 @@ def _spell_out(name: str) -> str:
     return " ".join("-".join(word.upper()) for word in name.split() if word)
 
 
-def format_contact_readback_facts(cart: "OrderCart") -> str:
+def format_contact_readback_facts(
+    cart: "OrderCart", *, spoken_by_code: bool = False
+) -> str:
     """CONTACT FACTS block — name and phone spelled out for the customer to
     confirm right after they are collected. Kept out of the final order
     read-back on purpose: contact is verified once, here, where a correction
-    is cheap and doesn't force a whole-order re-read."""
+    is cheap and doesn't force a whole-order re-read.
+
+    PR 101 — when `spoken_by_code`, the details have ALREADY been said aloud by
+    get_contact_readback (in guaranteed English digits), so the LLM must not
+    repeat them; it only asks whether they are right. The facts are still listed
+    because the LLM needs to recognize what the customer is correcting.
+    """
+    if spoken_by_code:
+        return "\n".join(
+            [
+                "CONTACT READBACK ALREADY SPOKEN — the customer just heard, in "
+                "your voice:",
+                f'  "{cart.customer_name}, {_spell_out(cart.customer_name)}, '
+                f'{format_phone_spoken(cart.customer_phone)}"',
+                "Do NOT repeat the name or the number — the customer has heard "
+                "them. Say only your next line: ask warmly, in the customer's "
+                "language, whether both are correct.",
+                "On yes: confirm_contact. If they correct either one: "
+                "set_customer_contact with the fix, then get_contact_readback "
+                "again (which re-speaks the corrected details for you).",
+            ]
+        )
     lines = [
         "CONTACT FACTS — read BOTH of these back to the customer, then ask "
         "if they are correct:"
@@ -169,8 +192,9 @@ def format_contact_readback_facts(cart: "OrderCart") -> str:
         "GUIDE: phrase the ask warmly in your own words in the customer's "
         "language, but the name letters and the phone digits themselves must "
         "be spoken exactly as above. If the customer corrects either one, "
-        "call set_customer_contact with the fix and read it back again. Only "
-        "when they say both are right, call confirm_contact."
+        "call set_customer_contact with the fix, then get_contact_readback "
+        "again, and read the corrected details back. Only when they say both "
+        "are right, call confirm_contact."
     )
     return "\n".join(lines)
 

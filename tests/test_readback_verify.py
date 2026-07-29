@@ -2,8 +2,10 @@
 verifier (PR 078). False negatives fail safe toward a re-read."""
 
 from restaurant.agent.readback_verify import (
+    contact_verify_mode,
     normalize_tokens,
     readback_verify_mode,
+    verify_contact_readback,
     verify_readback,
 )
 from restaurant.orders import OrderCart
@@ -197,3 +199,59 @@ def test_mode_env(monkeypatch):
     assert readback_verify_mode() == "off"
     monkeypatch.setenv("READBACK_VERIFY", "bogus")
     assert readback_verify_mode() == "strict"
+
+
+# ── contact readback, in-script digit words (PR 101) ─────────────────────────
+
+
+def _contact_cart(phone: str = "7780039811") -> OrderCart:
+    cart = _cart()
+    cart.customer_name = "Paneer Singh"
+    cart.customer_phone = phone
+    return cart
+
+
+def test_contact_readback_accepts_gurmukhi_digit_words():
+    # The live PR 101 loop: Sierra spoke the number in Gurmukhi script and the
+    # verifier read it as 8 digits, because "ਜ਼ੀਰੋ" was not a known digit word.
+    spoken = (
+        "ਤੁਹਾਡਾ ਨਾਮ Paneer Singh ਹੈ। ਫੋਨ ਨੰਬਰ ਸੱਤ, ਸੱਤ, ਅੱਠ, ਜ਼ੀਰੋ, ਜ਼ੀਰੋ, "
+        "ਤਿੰਨ, ਨੌ, ਅੱਠ, ਇੱਕ, ਇੱਕ ਹੈ। ਕੀ ਇਹ ਸਹੀ ਹੈ?"
+    )
+    assert verify_contact_readback(spoken, _contact_cart()).ok
+
+
+def test_contact_readback_accepts_devanagari_digit_words():
+    spoken = (
+        "आपका नाम Paneer Singh है, और फ़ोन नंबर सात, सात, आठ, ज़ीरो, ज़ीरो, "
+        "तीन, नौ, आठ, एक, एक है। सही है?"
+    )
+    assert verify_contact_readback(spoken, _contact_cart()).ok
+
+
+def test_contact_readback_rejects_a_wrong_number():
+    spoken = (
+        "ਤੁਹਾਡਾ ਨਾਮ Paneer Singh ਹੈ। ਫੋਨ ਨੰਬਰ ਸੱਤ, ਸੱਤ, ਅੱਠ, ਜ਼ੀਰੋ, ਜ਼ੀਰੋ, "
+        "ਤਿੰਨ, ਨੌ, ਅੱਠ, ਜ਼ੀਰੋ, ਜ਼ੀਰੋ ਹੈ।"
+    )
+    check = verify_contact_readback(spoken, _contact_cart())
+    assert not check.ok
+    assert "phone number" in check.problems[0]
+
+
+def test_contact_readback_requires_the_name():
+    spoken = "Your number is seven seven eight zero zero three nine eight one one."
+    check = verify_contact_readback(spoken, _contact_cart())
+    assert not check.ok
+    assert "Paneer Singh" in check.problems[0]
+
+
+def test_contact_verify_mode_env(monkeypatch):
+    monkeypatch.delenv("CONTACT_VERIFY", raising=False)
+    assert contact_verify_mode() == "strict"
+    monkeypatch.setenv("CONTACT_VERIFY", "warn")
+    assert contact_verify_mode() == "warn"
+    monkeypatch.setenv("CONTACT_VERIFY", "OFF")
+    assert contact_verify_mode() == "off"
+    monkeypatch.setenv("CONTACT_VERIFY", "bogus")
+    assert contact_verify_mode() == "strict"

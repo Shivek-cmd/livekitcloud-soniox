@@ -522,6 +522,49 @@ _SPOKEN_CONTACT = (
     "number is seven eight zero four four four one two three four."
 )
 
+# The same readback for the corrected number 7804445678.
+_SPOKEN_CONTACT_ALT = (
+    "Just to confirm — the name is Aman Singh, A-M-A-N S-I-N-G-H, and the "
+    "number is seven eight zero four four four five six seven eight."
+)
+
+
+class _SpeechHandle:
+    def done(self) -> bool:
+        return True
+
+
+class _SayingSession:
+    """Captures what code speaks through the session (PR 101)."""
+
+    def __init__(self):
+        self.said: list[str] = []
+
+    @property
+    def current_speech(self):
+        return None
+
+    async def say(self, text, allow_interruptions=True):
+        self.said.append(text)
+        return _SpeechHandle()
+
+
+class _EventRecorder:
+    """Minimal recorder stub — only what the tools touch."""
+
+    def __init__(self):
+        self.session_id = "sess-stub"
+        self.events: list[tuple[str, dict | None]] = []
+
+    def log_tool(self, name, args, result):
+        pass
+
+    def add_event(self, event_type, payload=None):
+        self.events.append((event_type, payload))
+
+    def set_outcome(self, outcome):
+        pass
+
 
 def test_non_roman_name_refused_and_not_saved(agent):
     # PR 092 — the kitchen ticket, the spelled-out contact read-back and the
@@ -633,12 +676,14 @@ def test_contact_confirm_refused_until_details_spoken(agent):
     assert agent.state.contact_confirmed
 
 
-def test_contact_speech_buffered_only_while_pending(agent):
+def test_contact_speech_buffered_while_unconfirmed(agent):
     run(agent.add_item("garlic naan", quantity=2))
     _record_wrapup(agent, "no")
     run(agent.set_order_type("pickup"))
     run(agent.set_customer_contact(name="Aman Singh"))
-    agent.note_agent_speech("And your phone number?")  # before the readback
+    agent.note_agent_speech("And your phone number?")  # nothing to confirm yet
+    assert agent.state.contact_spoken == []
+
     run(agent.set_customer_contact(phone="7804441234"))
     run(agent.get_contact_readback())
     agent.note_agent_speech(_SPOKEN_CONTACT)
@@ -647,8 +692,171 @@ def test_contact_speech_buffered_only_while_pending(agent):
     # A correction voids the in-flight capture — speech about the OLD number
     # must not satisfy the check for the new one.
     run(agent.set_customer_contact(phone="7804445678"))
-    assert not agent.state.contact_readback_pending
     assert agent.state.contact_spoken == []
+
+    # Once confirmed, later speech stops accumulating.
+    agent.note_agent_speech(_SPOKEN_CONTACT_ALT)
+    run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+    agent.note_agent_speech("Reading your order back now.")
+    assert agent.state.contact_spoken == [_SPOKEN_CONTACT_ALT]
+
+
+def _ready_for_contact_readback(agent):
+    run(agent.add_item("garlic naan", quantity=2))
+    _record_wrapup(agent, "no")
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+
+
+def test_contact_readback_is_spoken_by_code_in_english(agent):
+    # PR 101 — the tool speaks the details itself, so the script can't depend on
+    # the LLM. The caller hears English digits no matter the conversation
+    # language, and the confirm needs no LLM speech at all.
+    session = _SayingSession()
+    agent.bind_session(session)
+    _ready_for_contact_readback(agent)
+
+    result = run(agent.get_contact_readback())
+    assert len(session.said) == 1
+    spoken = session.said[0]
+    assert "Aman Singh, A-M-A-N S-I-N-G-H" in spoken
+    assert "seven, eight, zero, four, four, four, one, two, three, four" in spoken
+    assert not any(ch.isdigit() for ch in spoken)
+
+    # The LLM is told the details are already out loud and must not repeat them.
+    assert "CONTACT READBACK ALREADY SPOKEN" in result
+    assert "Do NOT repeat" in result
+
+    # The code line feeds the same gate an LLM line would, so the customer's
+    # yes confirms with no assistant speech of its own.
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+
+
+def test_contact_correction_respeaks_the_new_details(agent):
+    session = _SayingSession()
+    agent.bind_session(session)
+    _ready_for_contact_readback(agent)
+    run(agent.get_contact_readback())
+
+    run(agent.set_customer_contact(phone="7804445678"))
+    run(agent.get_contact_readback())
+    assert len(session.said) == 2
+    assert "five, six, seven, eight" in session.said[1]
+    # The stale first readback can't confirm the corrected number.
+    assert "four, four, four, one, two, three, four" not in session.said[1]
+    assert "confirmed" in run(agent.confirm_contact())
+
+
+def test_contact_readback_is_uninterruptible(agent):
+    # The confirm gate treats the code line as proof the customer heard their
+    # details, so a half-spoken number must not be able to satisfy it.
+    class _Recording(_SayingSession):
+        def __init__(self):
+            super().__init__()
+            self.interruptible: list[bool] = []
+
+        async def say(self, text, allow_interruptions=True):
+            self.interruptible.append(allow_interruptions)
+            return await super().say(text, allow_interruptions)
+
+    session = _Recording()
+    agent.bind_session(session)
+    _ready_for_contact_readback(agent)
+    run(agent.get_contact_readback())
+    assert session.interruptible == [False]
+
+
+def test_contact_readback_falls_back_to_llm_when_say_fails(agent):
+    class _BrokenSession(_SayingSession):
+        async def say(self, text, allow_interruptions=True):
+            raise RuntimeError("session closed")
+
+    agent.bind_session(_BrokenSession())
+    _ready_for_contact_readback(agent)
+    result = run(agent.get_contact_readback())
+    # Falls back to the LLM reading the facts, with the verifier still armed.
+    assert "CONTACT FACTS" in result
+    assert "CONTACT READBACK INCOMPLETE" in run(agent.confirm_contact())
+
+
+def test_contact_readback_falls_back_to_llm_without_a_session(agent):
+    # Web RPC path / tests: no session to speak through, so the facts are listed
+    # for the LLM to read and the spoken verifier still guards the confirm.
+    _ready_for_contact_readback(agent)
+    result = run(agent.get_contact_readback())
+    assert "CONTACT FACTS" in result
+    assert "CONTACT READBACK INCOMPLETE" in run(agent.confirm_contact())
+
+
+def test_contact_confirm_survives_a_correction_without_a_fresh_getter(agent):
+    """PR 101 live repro — the caller fixed the last two digits, Sierra read the
+    corrected number back and asked for a yes, but capture had been armed only
+    by get_contact_readback. Every re-read was dropped and confirm_contact
+    refused forever: the call looped five turns and never placed the order."""
+    run(agent.add_item("garlic naan", quantity=2))
+    _record_wrapup(agent, "no")
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+    agent.note_agent_speech(_SPOKEN_CONTACT)
+
+    # The correction, then a re-read with NO second get_contact_readback —
+    # exactly what the contact facts GUIDE used to tell the LLM to do.
+    run(agent.set_customer_contact(phone="7804445678"))
+    agent.note_agent_speech(_SPOKEN_CONTACT_ALT)
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+
+
+def test_contact_confirm_still_refuses_a_stale_readback(agent):
+    # The flip side of the fix: dropping the pending flag must not let speech
+    # about the OLD number satisfy the check for the corrected one.
+    run(agent.add_item("garlic naan", quantity=2))
+    _record_wrapup(agent, "no")
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+    agent.note_agent_speech(_SPOKEN_CONTACT)
+
+    run(agent.set_customer_contact(phone="7804445678"))
+    agent.note_agent_speech(_SPOKEN_CONTACT)  # re-reads the OLD number
+    result = run(agent.confirm_contact())
+    assert "CONTACT READBACK INCOMPLETE" in result
+    assert "phone number" in result
+    assert not agent.state.contact_confirmed
+
+
+def test_contact_verify_gives_up_after_repeated_refusals(agent):
+    # PR 101 — the deadlock breaker. A verifier gap must cost one unheard
+    # readback, never a call that can never place its order.
+    recorder = _EventRecorder()
+    agent.bind_recorder(recorder)
+    run(agent.add_item("garlic naan", quantity=2))
+    _record_wrapup(agent, "no")
+    run(agent.set_order_type("pickup"))
+    run(agent.set_customer_contact(name="Aman Singh"))
+    run(agent.set_customer_contact(phone="7804441234"))
+    run(agent.get_contact_readback())
+
+    for _ in range(2):
+        agent.note_agent_speech("So we're all set then, yes?")
+        assert "CONTACT READBACK INCOMPLETE" in run(agent.confirm_contact())
+        assert not agent.state.contact_confirmed
+
+    agent.note_agent_speech("All good?")
+    assert "confirmed" in run(agent.confirm_contact())
+    assert agent.state.contact_confirmed
+    # The gap is recorded rather than silently swallowed.
+    forced = [e for e in recorder.events if e[0] == "contact_verify_forced"]
+    assert len(forced) == 1
+    assert forced[0][1]["refusals"] == 2
+    # The streak resets, so a later correction gets the full strict treatment.
+    assert agent.state.contact_verify_refusals == 0
 
 
 def test_contact_verify_warn_and_off_modes(agent, monkeypatch):
