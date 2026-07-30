@@ -264,6 +264,8 @@ voice.bizbull.ai {
   handle /health { reverse_proxy localhost:8001 }
   handle {
     root * /opt/livekit-sarvam/web/dist
+    @store_html path / /index.html
+    header @store_html Cache-Control "no-cache, no-store, must-revalidate"
     file_server
     try_files {path} /index.html
   }
@@ -271,6 +273,8 @@ voice.bizbull.ai {
 ```
 
 > **Store tab (PR 089 + 090):** `handle /store*` must reach the token server (`/store/checkout`, `/store/config`, `/store/payment-status`, `/store/clover-hco-webhook`). Without it, Caddy serves `index.html` and Store APIs fail. After changing Caddy: `systemctl reload caddy`.
+
+> **Store payment returns (PR 098 + 099):** Keep `/` and `/index.html` uncached as shown above. A Clover return can otherwise reuse an older HTML document after a deployment, reference a removed hashed JavaScript bundle, and show a blank page until refresh. Hashed files under `/assets/` keep their normal caching behavior. Validate with `caddy validate --config /etc/caddy/Caddyfile` before `systemctl reload caddy`.
 
 > **`sarvam.bizbull.ai` retired** (PR 009). Use **`voice.bizbull.ai`** only.
 
