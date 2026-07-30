@@ -13,6 +13,7 @@ from restaurant.clover.hco_webhook import (
 from restaurant.store_pay_now_store import (
     get_by_checkout_session,
     get_by_order_id,
+    mark_kitchen_placed,
     public_payment_view,
     receipt_url_for_ids,
     receipt_url_for_payment,
@@ -85,6 +86,48 @@ def test_record_pending_and_approved(tmp_path, monkeypatch):
     assert view is not None
     assert "webhook_raw" not in view
     assert view["receipt_url"] == paid["receipt_url"]
+
+
+def test_public_payment_view_includes_pay_now_dispatch_outcome(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("STORE_PAY_NOW_STORE_PATH", str(tmp_path / "pay.json"))
+    summary = {
+        "eta": "30-40 min",
+        "uber_delivery_id": "del-pay-now",
+        "uber_tracking_url": "https://tracking.example/del-pay-now",
+        "uber_delivery_status": "pending",
+        "uber_dispatch_state": "dispatched",
+        "uber_dispatch_required": False,
+        "uber_dispatch_reason": None,
+        "uber_dispatch_attempts": 1,
+        "uber_dispatch_uncertain": False,
+    }
+    record_pending_checkout(
+        checkout_session_id="sess-dispatched",
+        order_id=None,
+        place_summary=summary,
+    )
+    record_payment_approved(
+        checkout_session_id="sess-dispatched",
+        payment_id="PAY-DISPATCHED",
+        clover_payment_order_id="HCO-DISPATCHED",
+    )
+    mark_kitchen_placed(
+        checkout_session_id="sess-dispatched",
+        order_id="CLOVER-DISPATCHED",
+        place_summary=summary,
+    )
+
+    view = public_payment_view(get_by_checkout_session("sess-dispatched"))
+    assert view is not None
+    assert view["order_id"] == "CLOVER-DISPATCHED"
+    assert view["uber_delivery_id"] == "del-pay-now"
+    assert view["uber_tracking_url"] == "https://tracking.example/del-pay-now"
+    assert view["uber_dispatch_state"] == "dispatched"
+    assert view["uber_dispatch_required"] is False
+    assert view["uber_dispatch_attempts"] == 1
+    assert "place_summary" not in view
 
 
 def test_parse_hco_payload_title_case():

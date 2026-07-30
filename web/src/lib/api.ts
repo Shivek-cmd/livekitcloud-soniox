@@ -237,6 +237,14 @@ export interface StorePaymentStatus {
   paid_at?: string | null
   kitchen_placed_at?: string | null
   eta?: string | null
+  uber_delivery_id?: string | null
+  uber_tracking_url?: string | null
+  uber_delivery_status?: string | null
+  uber_dispatch_state?: 'creating' | 'dispatched' | 'dispatch_required' | null
+  uber_dispatch_required?: boolean | null
+  uber_dispatch_reason?: string | null
+  uber_dispatch_attempts?: number | null
+  uber_dispatch_uncertain?: boolean | null
 }
 
 export async function fetchStorePaymentStatus(opts: {

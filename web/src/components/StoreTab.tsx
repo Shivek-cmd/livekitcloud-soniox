@@ -8,6 +8,7 @@ import {
   type MenuCatalog,
   type MenuItem,
   type StoreCheckoutSummary,
+  type StorePaymentStatus,
   type StorePaymentPreference,
 } from '../lib/api'
 import { sortCategories } from '../lib/menuSort'
@@ -31,6 +32,38 @@ type DietFilter = 'all' | 'veg' | 'nonveg'
 type CartPane = 'cart' | 'checkout' | 'validated' | 'awaiting_payment' | 'placed'
 
 const DELIVERY_FEE_HINT = 5 // display hint when Direct off; server is authoritative
+
+function mergePaymentStatus(
+  summary: StoreCheckoutSummary,
+  payment: StorePaymentStatus,
+): StoreCheckoutSummary {
+  const orderId = payment.order_id ?? summary.order_id
+  return {
+    ...summary,
+    placed: Boolean(orderId) || summary.placed,
+    order_id: orderId,
+    eta: payment.eta ?? summary.eta,
+    clover_submitted: orderId
+      ? !String(orderId).startsWith('LOG-')
+      : summary.clover_submitted,
+    uber_delivery_id:
+      payment.uber_delivery_id ?? summary.uber_delivery_id,
+    uber_tracking_url:
+      payment.uber_tracking_url ?? summary.uber_tracking_url,
+    uber_delivery_status:
+      payment.uber_delivery_status ?? summary.uber_delivery_status,
+    uber_dispatch_state:
+      payment.uber_dispatch_state ?? summary.uber_dispatch_state,
+    uber_dispatch_required:
+      payment.uber_dispatch_required ?? summary.uber_dispatch_required,
+    uber_dispatch_reason:
+      payment.uber_dispatch_reason ?? summary.uber_dispatch_reason,
+    uber_dispatch_attempts:
+      payment.uber_dispatch_attempts ?? summary.uber_dispatch_attempts,
+    uber_dispatch_uncertain:
+      payment.uber_dispatch_uncertain ?? summary.uber_dispatch_uncertain,
+  }
+}
 
 /**
  * Store browse + cart + checkout (S1–S7).
@@ -275,13 +308,7 @@ export function StoreTab() {
           if (pay.order_id) {
             setSummary((prev) => {
               if (!prev) return prev
-              const next = {
-                ...prev,
-                placed: true,
-                order_id: pay.order_id ?? prev.order_id,
-                eta: pay.eta ?? prev.eta,
-                clover_submitted: !String(pay.order_id || '').startsWith('LOG-'),
-              }
+              const next = mergePaymentStatus(prev, pay)
               saveStorePayPending({
                 checkout_session_id: sessionId,
                 summary: next,
@@ -323,6 +350,9 @@ export function StoreTab() {
     fetchStorePaymentStatus({ checkoutSessionId: sessionId }).then((pay) => {
       if (cancelled) return
       if (pay?.receipt_url) setReceiptUrl(pay.receipt_url)
+      if (pay?.order_id) {
+        setSummary((prev) => (prev ? mergePaymentStatus(prev, pay) : prev))
+      }
     })
     return () => {
       cancelled = true

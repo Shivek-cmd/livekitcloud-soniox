@@ -378,6 +378,11 @@ def public_payment_view(rec: dict[str, Any] | None) -> dict[str, Any] | None:
     """Strip internals for API responses."""
     if not rec:
         return None
+    place_summary = (
+        rec.get("place_summary")
+        if isinstance(rec.get("place_summary"), dict)
+        else {}
+    )
     return {
         "checkout_session_id": rec.get("checkout_session_id"),
         "order_id": rec.get("order_id"),
@@ -386,7 +391,13 @@ def public_payment_view(rec: dict[str, Any] | None) -> dict[str, Any] | None:
         "receipt_url": rec.get("receipt_url"),
         "paid_at": rec.get("paid_at"),
         "kitchen_placed_at": rec.get("kitchen_placed_at"),
-        "eta": (rec.get("place_summary") or {}).get("eta")
-        if isinstance(rec.get("place_summary"), dict)
-        else None,
+        "eta": place_summary.get("eta"),
+        "uber_delivery_id": place_summary.get("uber_delivery_id"),
+        "uber_tracking_url": place_summary.get("uber_tracking_url"),
+        "uber_delivery_status": place_summary.get("uber_delivery_status"),
+        "uber_dispatch_state": place_summary.get("uber_dispatch_state"),
+        "uber_dispatch_required": place_summary.get("uber_dispatch_required"),
+        "uber_dispatch_reason": place_summary.get("uber_dispatch_reason"),
+        "uber_dispatch_attempts": place_summary.get("uber_dispatch_attempts"),
+        "uber_dispatch_uncertain": place_summary.get("uber_dispatch_uncertain"),
     }
