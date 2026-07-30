@@ -65,6 +65,14 @@ function mergePaymentStatus(
   }
 }
 
+function awaitsUberDispatch(summary: StoreCheckoutSummary): boolean {
+  if (summary.order_type !== 'delivery' || !summary.uber_quote_id) return false
+  return (
+    summary.uber_dispatch_state !== 'dispatched' &&
+    summary.uber_dispatch_state !== 'dispatch_required'
+  )
+}
+
 /**
  * Store browse + cart + checkout (S1–S7).
  * Full-bleed menu until first add; Your order slides in from the right.
@@ -122,7 +130,11 @@ export function StoreTab() {
       skipAutoOpenCheckout.current = true
       setPaymentPreference('now')
       setSummary(pending.summary)
-      if (pending.summary.placed && pending.summary.order_id) {
+      if (
+        pending.summary.placed &&
+        pending.summary.order_id &&
+        !awaitsUberDispatch(pending.summary)
+      ) {
         setPane('placed')
       } else {
         setPane('awaiting_payment')
@@ -288,8 +300,10 @@ export function StoreTab() {
   // Pay now — poll until paid + kitchen order id (then thank-you).
   useEffect(() => {
     if (pane !== 'awaiting_payment') return
-    if ((summary?.payment_preference ?? paymentPreference) !== 'now') return
-    const sessionId = summary?.checkout_session_id
+    const activeSummary = summary
+    if (!activeSummary) return
+    if ((activeSummary.payment_preference ?? paymentPreference) !== 'now') return
+    const sessionId = activeSummary.checkout_session_id
     if (!sessionId) return
 
     let cancelled = false
@@ -304,19 +318,22 @@ export function StoreTab() {
         if (cancelled) return
         if (pay?.status === 'paid' && pay.receipt_url) {
           setReceiptUrl(pay.receipt_url)
-          setPayReturnNote(null)
           if (pay.order_id) {
-            setSummary((prev) => {
-              if (!prev) return prev
-              const next = mergePaymentStatus(prev, pay)
-              saveStorePayPending({
-                checkout_session_id: sessionId,
-                summary: next,
-              })
-              return next
+            const next = mergePaymentStatus(activeSummary, pay)
+            setSummary(next)
+            saveStorePayPending({
+              checkout_session_id: sessionId,
+              summary: next,
             })
-            setPane('placed')
-            return
+            if (awaitsUberDispatch(next)) {
+              setPayReturnNote(
+                'Payment received. The kitchen has your order. Arranging your courier…',
+              )
+            } else {
+              setPayReturnNote(null)
+              setPane('placed')
+              return
+            }
           }
         }
       } catch {
@@ -1396,7 +1413,9 @@ export function StoreTab() {
           {pane === 'awaiting_payment' && summary && (
             <div className="store-placed">
               <p className="store-placed-banner">
-                Complete payment to send your order to the kitchen.
+                {summary.order_id
+                  ? 'Payment received. The kitchen has your order.'
+                  : 'Complete payment to send your order to the kitchen.'}
               </p>
               {payReturnNote && (
                 <p className="store-pay-note">{payReturnNote}</p>
@@ -1453,7 +1472,7 @@ export function StoreTab() {
                   <span>Total</span>
                   <span>${summary.total.toFixed(2)}</span>
                 </div>
-                {summary.checkout_url && (
+                {summary.checkout_url && !summary.order_id && (
                   <a
                     className="store-checkout-btn ready store-pay-now-link"
                     href={summary.checkout_url}
@@ -1465,16 +1484,22 @@ export function StoreTab() {
                 )}
                 <p className="store-pay-note">
                   {paymentPollTimedOut
-                    ? 'Still waiting for payment. Open the checkout link again if it expired (~15 min). Your order is not sent to the kitchen until payment succeeds.'
-                    : 'Pay on the Clover page. This screen updates when payment is confirmed — then we place your order.'}
+                    ? summary.order_id
+                      ? 'Payment is confirmed and the kitchen has your order. Courier confirmation is taking longer than expected; the restaurant will verify delivery.'
+                      : 'Still waiting for payment. Open the checkout link again if it expired (~15 min). Your order is not sent to the kitchen until payment succeeds.'
+                    : summary.order_id
+                      ? 'Courier confirmation is in progress. This usually takes only a few seconds.'
+                      : 'Pay on the Clover page. This screen updates when payment is confirmed — then we place your order.'}
                 </p>
-                <button
-                  type="button"
-                  className="store-back-btn"
-                  onClick={startNewOrder}
-                >
-                  Cancel / new order
-                </button>
+                {!summary.order_id && (
+                  <button
+                    type="button"
+                    className="store-back-btn"
+                    onClick={startNewOrder}
+                  >
+                    Cancel / new order
+                  </button>
+                )}
               </div>
             </div>
           )}
