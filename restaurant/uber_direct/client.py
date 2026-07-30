@@ -17,6 +17,7 @@ from restaurant.uber_direct.config import (
     StructuredAddress,
     UberDirectCredentials,
     credentials_from_env,
+    robo_courier_enabled,
 )
 
 logger = logging.getLogger("uber-direct")
@@ -272,8 +273,13 @@ def create_delivery(
         body["dropoff_notes"] = dropoff.notes
     if external_id:
         body["external_id"] = external_id
-    if pickup_ready_dt:
+    use_robo_courier = robo_courier_enabled()
+    if pickup_ready_dt and not use_robo_courier:
         body["pickup_ready_dt"] = pickup_ready_dt
+    if use_robo_courier:
+        body["test_specifications"] = {
+            "robo_courier_specification": {"mode": "auto"}
+        }
 
     url = f"{API_BASE}/v1/customers/{creds.customer_id}/deliveries"
     try:

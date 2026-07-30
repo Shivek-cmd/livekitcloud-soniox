@@ -27,6 +27,14 @@ def uber_direct_env() -> str:
     return raw if raw in ("sandbox", "production") else "sandbox"
 
 
+def robo_courier_enabled() -> bool:
+    """Automated lifecycle testing; hard-disabled outside Uber sandbox."""
+    return (
+        uber_direct_env() == "sandbox"
+        and _env_bool("UBER_DIRECT_ROBO_COURIER_ENABLED", False)
+    )
+
+
 def webhook_secret() -> str:
     """Signing key for the configured Uber Direct webhook endpoint."""
     return (os.getenv("UBER_DIRECT_WEBHOOK_SECRET") or "").strip()

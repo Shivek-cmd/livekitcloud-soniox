@@ -15,6 +15,7 @@ from restaurant.uber_direct.client import (
     CreatedDelivery,
     UberDirectError,
     clear_token_cache,
+    create_delivery,
     create_delivery_quote,
     fetch_access_token,
 )
@@ -22,6 +23,7 @@ from restaurant.uber_direct.config import (
     StructuredAddress,
     UberDirectCredentials,
     public_store_flags,
+    robo_courier_enabled,
     store_uber_direct_enabled,
 )
 from restaurant.uber_direct.service import (
@@ -324,6 +326,82 @@ def test_public_store_flags(monkeypatch):
     assert flags["uber_direct_enabled"] is True
     assert flags["uber_direct_prep_minutes"] == 25
     assert store_uber_direct_enabled() is True
+
+
+@pytest.mark.parametrize(
+    ("environment", "flag", "expected"),
+    [
+        ("sandbox", "1", True),
+        ("sandbox", "0", False),
+        ("production", "1", False),
+    ],
+)
+def test_robo_courier_requires_sandbox_and_explicit_flag(
+    monkeypatch, environment, flag, expected
+):
+    monkeypatch.setenv("UBER_DIRECT_ENV", environment)
+    monkeypatch.setenv("UBER_DIRECT_ROBO_COURIER_ENABLED", flag)
+    assert robo_courier_enabled() is expected
+
+
+@pytest.mark.parametrize(
+    ("environment", "flag", "expected_robo"),
+    [
+        ("sandbox", "1", True),
+        ("sandbox", "0", False),
+        ("production", "1", False),
+    ],
+)
+def test_create_delivery_adds_robo_courier_only_in_enabled_sandbox(
+    monkeypatch, environment, flag, expected_robo
+):
+    monkeypatch.setenv("UBER_DIRECT_ENV", environment)
+    monkeypatch.setenv("UBER_DIRECT_ROBO_COURIER_ENABLED", flag)
+    monkeypatch.setattr(
+        "restaurant.uber_direct.client.fetch_access_token",
+        lambda _creds: "token",
+    )
+    requests = []
+
+    def fake_request(method, url, *, headers=None, body=None, **_kwargs):
+        requests.append(
+            {
+                "method": method,
+                "url": url,
+                "headers": headers,
+                "body": body,
+            }
+        )
+        return {
+            "id": "del-robo-test",
+            "status": "pending",
+            "tracking_url": "https://tracking.example/del-robo-test",
+        }
+
+    monkeypatch.setattr(
+        "restaurant.uber_direct.client._request_json",
+        fake_request,
+    )
+
+    create_delivery(
+        quote_id="dqt-robo-test",
+        pickup=_pickup(),
+        dropoff=_dropoff(),
+        manifest_items=[{"name": "Test item", "quantity": 1, "size": "small"}],
+        external_id="ORDER-ROBO-TEST",
+        pickup_ready_dt="2099-01-01T00:00:00.000Z",
+        creds=CREDS,
+    )
+
+    body = requests[0]["body"]
+    if expected_robo:
+        assert body["test_specifications"] == {
+            "robo_courier_specification": {"mode": "auto"}
+        }
+        assert "pickup_ready_dt" not in body
+    else:
+        assert "test_specifications" not in body
+        assert body["pickup_ready_dt"] == "2099-01-01T00:00:00.000Z"
 
 
 def test_dispatch_uses_checked_out_dropoff_not_quote_copy(monkeypatch, tmp_path):

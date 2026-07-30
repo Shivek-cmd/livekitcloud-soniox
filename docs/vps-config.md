@@ -102,6 +102,26 @@ N8N_WEBHOOK_ORDERS_URL=https://n8n.bizbull.ai/webhook/sierra-ghl-sync
 
 Plan: `docs/plan/13-ghl-n8n-order-sync.md`. Workflow export: `n8n/`.
 
+### Uber Direct sandbox lifecycle testing (PR 101)
+
+Uber Robo Courier can automatically simulate courier assignment, pickup, and
+dropoff for a Store delivery. It sends the normal delivery-status and
+courier-update webhooks, allowing the complete n8n/GHL/SMS lifecycle to be
+tested without a real courier.
+
+```dotenv
+UBER_DIRECT_ENV=sandbox
+UBER_DIRECT_ROBO_COURIER_ENABLED=1
+```
+
+The feature is off by default and is hard-disabled unless
+`UBER_DIRECT_ENV=sandbox`. When enabled, the delivery request uses Robo Courier
+`auto` mode and omits the normal pickup-ready timestamp so the sandbox lifecycle
+finishes in roughly three minutes. Set
+`UBER_DIRECT_ROBO_COURIER_ENABLED=0` after testing. Production delivery requests
+never include Uber `test_specifications`, even if the flag is accidentally left
+enabled.
+
 ### Ambient audio (optional — PR 020 web, PR 022 phone)
 
 Quiet background loop via LiveKit `BackgroundAudioPlayer`. Same `restaurant_ambience.mp3` on web and phone.
